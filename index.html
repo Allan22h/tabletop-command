@@ -104,9 +104,14 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
   <div class="screen" id="menu">
     <div class="sheet">
-      <span class="lbl">Raid prototype · Operation Iron Delta</span>
+      <span class="lbl">Raid prototype · <span id="mapName">Operation Iron Delta</span></span>
       <h1>Tabletop <span>Command</span></h1>
       <p>Deploy units from your cards, break into the compound and destroy the HQ before the 3-minute timer runs out. Loot drops from every building you destroy.</p>
+      <div style="display:grid;gap:8px"><span class="lbl">Map</span>
+        <div class="facs">
+          <button type="button" data-map="delta" data-label="Iron Delta · wetlands" aria-pressed="true">Iron Delta · wetlands</button>
+          <button type="button" data-map="dust" data-label="Dust Crown · desert" aria-pressed="false">Dust Crown · desert</button>
+        </div></div>
       <div style="display:grid;gap:8px"><span class="lbl">Your faction</span>
         <div class="facs">
           <button type="button" data-f="nato" aria-pressed="true">USA / NATO</button>
@@ -165,6 +170,11 @@ const riverX=z=>-7.2+Math.sin(z*.45)*1.1+Math.sin(z*1.3+1)*.25;
 const BRIDGE={x:riverX(1.05),z:1.05,len:2.2,w:.64};
 const coastZ=x=>mix(9.4+Math.sin(x*.9)*.3,5.35+Math.sin(x*.6)*.35+Math.sin(x*1.7)*.1,smooth(-4,-1.2,x));
 const seaAt=(x,z)=>smooth(-.15,.45,z-coastZ(x));
+const MAPS={delta:{name:'Operation Iron Delta',k:[.52,.58,.5],mud:true,water:0x46676a,sea:0x3a5d61,rock:0x4f4a42,shrub:0x2f3a20,boulder:0x3a3630},
+  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358}};
+let MAPT=MAPS.delta;
+const MUD=[[-4.3,-1.3,1.3,.8],[-3.3,2.7,1.1,.9],[-.7,-3.3,1.0,.7],[-5.6,4.3,.9,.6],[-.9,1.9,.8,.55]];
+function mudAt(x,z){if(!MAPT.mud)return 0;let m=0;for(const [cx,cz,rx,rz] of MUD){const d=Math.hypot((x-cx)/rx,(z-cz)/rz);m=Math.max(m,1-smooth(.55,1,d+(noise(x*3,z*3)-.5)*.35));}return m;}
 // height above the board: rolling ground, northern mountains, a south-west hill, a carved river; the base and defense line stay flat
 function H(x,z){
   let h=(fbm(x*.5,z*.5,3)-.5)*.14;
@@ -199,7 +209,8 @@ function terrain(){
     const hill=smooth(.12,.45,h)*(1-smooth(.7,1.1,h));r=mix(r,104+k*.4,hill*.7);gg=mix(gg,112+k*.4,hill*.7);bb=mix(bb,66,hill*.7);
     const rock=smooth(.55,1.0,h+(n2-.5)*.3),st=(noise(x*1.5,h*22)-.5)*40;r=mix(r,124+st+k*.3,rock);gg=mix(gg,118+st+k*.3,rock);bb=mix(bb,108+st,rock);
     const snow=smooth(1.45,1.75,h+(n3-.5)*.25);r=mix(r,234,snow);gg=mix(gg,236,snow);bb=mix(bb,238,snow);
-    const i=(py*W+px)*4;d[i]=r;d[i+1]=gg;d[i+2]=bb;d[i+3]=255;
+    const md=mudAt(x,z);if(md>0){const w=(n3-.5)*14;r=mix(r,78+w,md);gg=mix(gg,62+w,md);bb=mix(bb,44+w,md);}
+    const i=(py*W+px)*4;d[i]=r*MAPT.k[0];d[i+1]=gg*MAPT.k[1];d[i+2]=bb*MAPT.k[2];d[i+3]=255;
     const hb=(n1*.45+n2*.35+n3*.2)*255;bd[i]=bd[i+1]=bd[i+2]=hb;bd[i+3]=255;
   }
   cx.putImageData(im,0,0);bx.putImageData(bm,0,0);
@@ -255,8 +266,8 @@ const M={
   sandbag:new T.MeshStandardMaterial({color:0xa48e66,roughness:1}),
   trench:new T.MeshStandardMaterial({color:0x3a3024,roughness:1}),
   wire:new T.MeshStandardMaterial({color:0x8d9196,roughness:.4,metalness:.8}),
-  shrub:new T.MeshStandardMaterial({color:0x4e5a33,roughness:1,flatShading:true}),
-  rock:new T.MeshStandardMaterial({color:0x8b8170,roughness:1,flatShading:true}),
+  shrub:new T.MeshStandardMaterial({color:MAPT.shrub,roughness:1,flatShading:true}),
+  rock:new T.MeshStandardMaterial({color:MAPT.rock,roughness:1,flatShading:true}),
   soldier:new T.MeshStandardMaterial({color:0x5b5c45,roughness:.9}),
   skin:new T.MeshStandardMaterial({color:0x8d6a52,roughness:.8}),
   red:new T.MeshStandardMaterial({color:0xa8352a,roughness:.6}),
@@ -335,9 +346,9 @@ const ground=new T.Mesh(gg,M.terrain);ground.position.y=G;ground.receiveShadow=t
 // river water: a ribbon following the channel, ripples scroll downstream
 let water;{const segs=140,pos=[],uv=[],idx=[];for(let i=0;i<=segs;i++){const z=-8+20*i/segs,x=riverX(z),w=.64;pos.push(x-w,0,z,x+w,0,z);uv.push(0,i/segs*12,1,i/segs*12);if(i<segs){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
  const wg=new T.BufferGeometry();wg.setAttribute('position',new T.Float32BufferAttribute(pos,3));wg.setAttribute('uv',new T.Float32BufferAttribute(uv,2));wg.setIndex(idx);wg.computeVertexNormals();
- water=new T.Mesh(wg,new T.MeshStandardMaterial({color:0x4d6f70,map:rippleTex(),roughness:.08,metalness:.3,transparent:true,opacity:.86}));water.position.y=G-.035;water.receiveShadow=true;scene.add(water);}
+ water=new T.Mesh(wg,new T.MeshStandardMaterial({color:MAPT.water,map:rippleTex(),roughness:.08,metalness:.3,transparent:true,opacity:.86}));water.position.y=G-.035;water.receiveShadow=true;scene.add(water);}
 const seaMap=rippleTex();seaMap.repeat.set(10,3);
-const seaMat=new T.MeshStandardMaterial({color:0x3f6468,map:seaMap,roughness:.06,metalness:.3,transparent:true,opacity:.88});
+const seaMat=new T.MeshStandardMaterial({color:MAPT.sea,map:seaMap,roughness:.06,metalness:.3,transparent:true,opacity:.88});
 {const sp=new T.Mesh(new T.PlaneGeometry(24,7.6),seaMat);sp.rotation.x=-Math.PI/2;sp.position.set(0,G-.04,8.2);sp.receiveShadow=true;scene.add(sp);}
 
 [[0,-8.25,25,.5],[0,12.25,25,.5]].forEach(r=>mesh(box(r[2],0.44,r[3]),M.woodDark,r[0],0.22,r[1]));
@@ -361,7 +372,7 @@ let flashIdx=0;
  // boulder fields on the slopes and around the hill (infantry cover)
  const bould=[];[[-2.4,5.0,7],[-4.9,5.1,6],[-2.3,-5.3,8],[-5.2,-5.6,6],[-9.6,-5.8,6],[-10.6,3.2,5]].forEach(c=>{for(let i=0;i<c[2];i++){const x=c[0]+rand(-.7,.7),z=c[1]+rand(-.5,.5);if(Math.abs(x-riverX(z))<.8)continue;bould.push([x,groundY(x,z)+.05,z,rand(0,6),rand(0,2),rand(0,1),rand(1.6,3.4)]);}});
  const bgeo=new T.DodecahedronGeometry(.1,1);{const p=bgeo.attributes.position;for(let i=0;i<p.count;i++){const v=1+noise(p.getX(i)*40+9,p.getY(i)*40+p.getZ(i)*20)*.35;p.setXYZ(i,p.getX(i)*v,p.getY(i)*v*.7,p.getZ(i)*v);}bgeo.computeVertexNormals();}
- instanced(bgeo,new T.MeshStandardMaterial({color:0x6a6358,roughness:.95,flatShading:true}),bould);
+ instanced(bgeo,(M.boulder=new T.MeshStandardMaterial({color:MAPT.boulder,roughness:.95,flatShading:true})),bould);
  const sg=new T.IcosahedronGeometry(.16,0);sg.scale(1,.7,1);instanced(sg,M.shrub,shrubs);
  const rg=new T.DodecahedronGeometry(.1,0);rg.scale(1.3,.6,1);instanced(rg,M.rock,rocks);
  const trees=[[-11,6.8],[10.4,-6.9],[-3.6,-6.9],[-2.8,-6.4]];
@@ -538,6 +549,13 @@ const jit=(v,a)=>v.clone().add(V(rand(-a,a),rand(0,a*.4),rand(-a,a)));
 M.burnt=new T.MeshStandardMaterial({color:0x2a2622,roughness:1});
 M.gold=new T.MeshStandardMaterial({color:0xd4af37,roughness:.3,metalness:.8});
 scene.add(sun.target);
+// darker naval grey for the carrier, destroyer and patrol boat
+M.navy.color.setHex(0x4a5157);M.navy.metalness=.2;M.navy.roughness=.7;M.deck.color.setHex(0x26292c);
+// wet puddles in the mud patches
+const puddles=new T.Group();scene.add(puddles);
+{const pm=new T.MeshStandardMaterial({color:0x2a2218,roughness:.12,metalness:.25});MUD.forEach(([cx,cz,rx,rz],k)=>{for(let i=0;i<4;i++){const m=new T.Mesh(new T.CircleGeometry(rand(.12,.28),18),pm);m.rotation.x=-Math.PI/2;m.scale.y=rand(.5,1);
+  m.position.set(cx+rand(-rx,rx)*.5,groundY(cx,cz)+.006,cz+rand(-rz,rz)*.5);m.receiveShadow=true;puddles.add(m);}});}
+puddles.visible=MAPT.mud;
 
 const NAMES={
   nato:{tank:'M1X Abram',truck:'Humvex',jlav:'JLAV Javlin',heli:'AH-66 Apachi',jet:'F-53',drone:'FPV drone',rifle:'Rifle squad',mortar:'M226 mortar'},
@@ -692,7 +710,10 @@ function shoot(e,t,from){const st=e.st,tp=tpos(t).clone();if(!t.st&&!t.wall)tp.y
 function muzzleOf(e){if(e.turret)return toLocal(e.turret,e.tipX,e.kind==='tank'||e.kind==='gtank'?.01:.06,0);if(e.kind==='mortar')return e.g.position.clone().add(V(.18,.28,0));return e.g.position.clone().add(V(0,e.air?-.1:.18,0));}
 
 function moveGround(e,tx,tz,dt,ignoreWalls){const p=e.g.position,dx=tx-p.x,dz=tz-p.z,d=Math.hypot(dx,dz);if(d<.05)return null;
-  e.heading=lerpAngle(e.heading,Math.atan2(-dz,dx),dt*3);let sp=e.st.speed;if(groundY(p.x,p.z)<G-.02)sp*=.45;const st=Math.min(d,sp*dt);
+  e.heading=lerpAngle(e.heading,Math.atan2(-dz,dx),dt*3);let sp=e.st.speed;if(groundY(p.x,p.z)<G-.02)sp*=.45;
+  // mud: wheeled vehicles lose half their speed, tracked 20%, infantry 30%
+  const md=mudAt(p.x,p.z);if(md>.2){const tracked=e.kind==='tank'||e.kind==='gtank';sp*=1-md*(tracked?.2:e.wheels.length?.5:.3);
+    if(e.wheels.length&&Math.random()<dt*10*md)emit(SMK,V(p.x+rand(-.2,.2),G+.03,p.z+rand(-.2,.2)),{life:.7,s0:.06,s1:.25,vy:.4,g:-1.2,op:.8,c:0x4a3a28});}const st=Math.min(d,sp*dt);
   const nx=p.x+Math.cos(e.heading)*st,nz=p.z-Math.sin(e.heading)*st;
   if(!ignoreWalls){const w=wallAt(nx,nz,.3);if(w)return w;}
   p.x=nx;p.z=nz;const gy=groundY(nx,nz);
@@ -909,12 +930,21 @@ $('xrBtn').onclick=enterXR;
 function setFaction(f){cur=f;M.camo.map=camoTex(FACTIONS[f].camo);M.camo.needsUpdate=true;$('rch').textContent=`CH 2 · ${CALL[f]} net`;
   document.querySelectorAll('[data-f]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.f===f)));refreshCards();}
 document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>setFaction(b.dataset.f));
+// switching maps regenerates the terrain texture and recolors water, rocks and plants
+function setMap(id){if(MAPT===MAPS[id])return;MAPT=MAPS[id];const t=terrain();M.terrain.map.dispose();M.terrain.bumpMap.dispose();M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
+  water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
+  [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());puddles.visible=MAPT.mud;
+  $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
+document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent='Loading…';setTimeout(()=>{setMap(b.dataset.map);b.textContent=b.dataset.label;},20);});
 function begin(m){if(!AC){try{audioInit();}catch(_){}}if(AC){AC.resume();soundOn=true;}syncSnd();startBattle(m);}
 $('goTut').onclick=()=>begin('tutorial');$('goFull').onclick=()=>begin('full');
 $('endNext').onclick=()=>begin(mode==='tutorial'?'full':'full');$('endMenu').onclick=()=>{state='menu';clearBattle();buildLayout('full');cards=[];refreshCards();show('end',false);show('menu',true);$('radio').hidden=true;prompt('',0);};
 function syncSnd(){$('snd').textContent=soundOn?'Sound on':'Sound off';$('snd').setAttribute('aria-pressed',String(soundOn));}
 $('snd').onclick=()=>{if(!AC)audioInit();soundOn=!soundOn;soundOn?AC.resume():AC.suspend();syncSnd();};
 setFaction('nato');buildLayout('full');
+// hex colors are written in sRGB, but the renderer outputs sRGB from linear values: convert every solid color once so it isn't washed out
+function linearize(m){if(!m||m._lin)return;m._lin=true;if(m.color)m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();}
+scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(linearize);});Object.values(M).forEach(m=>[].concat(m).forEach(linearize));
 
 /* ---------- loop ---------- */
 let last=performance.now();
@@ -926,7 +956,7 @@ rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-
   const w=canvasEl.clientWidth,h=canvasEl.clientHeight;if(rr._w!==w||rr._h!==h){rr.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();rr._w=w;rr._h=h;
     orb.r=clamp(w<h?34:24,orb.minR,orb.maxR);}
   if(state==='menu')orb.theta+=dt*.05;orb.apply();rr.render(stage,cam);});
-window.__tcDebug={get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={M,scene,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 
 }
