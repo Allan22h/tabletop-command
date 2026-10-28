@@ -854,18 +854,49 @@ function updateDefenses(dt){for(const b of blds){if(!b.alive)continue;
     else if(d.type==='atgm'){const from=V(b.x,G+.25,b.z);emit(ADD,from,{life:.15,s0:.12,s1:.4,c:0xffd090});fire(from,tp,{kind:'missile',dur:1,arc:.5,trail:true,onHit:p=>{if(aliveT(t))dmgUnit(t,d.dmg);explode(p,.6);}});}
     else if(d.type==='sam'){const from=V(b.x,G+.45,b.z);muzzle(from,true);fire(from,tp,{kind:'missile',dur:1.1,arc:.8,trail:true,onHit:p=>{if(aliveT(t))dmgUnit(t,d.dmg);explode(p,.6,false);}});}}}
 
-/* air strike: jet launches from the carrier deck, drops one heavy bomb */
-function callStrike(x,z){const j=makeJet();battle.add(j.g);j.g.visible=true;j.g.scale.setScalar(.75);
-  const P=V(x,groundY(x,z)+.05,z),A=V(CARRIER.x-1.6,CARRIER.deck+.07,CARRIER.z-.25),D=V(x+2.2,4.2,z+2.2),B=V(x-9,6.5,z-7);
-  strikes.push({j,A,D,B,P,t:0,dropped:false,prev:A.clone()});radio(`${NAMES[cur].jet} cleared hot. Ten seconds.`,true);jetRoar();}
-function updateStrikes(dt){for(let i=strikes.length-1;i>=0;i--){const s=strikes[i];s.t+=dt;let pos;
-    if(s.t<.5)pos=s.A.clone().lerp(V(CARRIER.x+2.8,CARRIER.deck+.07,CARRIER.z-.25),(s.t/.5)**2);
-    else if(s.t<2.4){const k=(s.t-.5)/1.9;pos=V(CARRIER.x+2.8,CARRIER.deck+.07,CARRIER.z-.25).lerp(s.D,k*k*(3-2*k));}
-    else pos=s.D.clone().lerp(s.B,(s.t-2.4)/1.6);
-    const dir=pos.clone().sub(s.prev);if(dir.lengthSq()>1e-6)s.j.g.rotation.set(0,Math.atan2(-dir.z,dir.x),Math.atan2(dir.y,Math.hypot(dir.x,dir.z)));
-    s.prev.copy(pos);s.j.g.position.copy(pos);s.j.ab.scale.setScalar(.45+Math.random()*.15);
-    if(!s.dropped&&s.t>=2.4){s.dropped=true;fire(pos.clone(),s.P,{kind:'bomb',dur:1,onHit:p=>{explode(p,1.9);splashDmg('att',p,1.7,1000);}});}
-    if(s.t>4){battle.remove(s.j.g);strikes.splice(i,1);}}}
+/* air strike: jet launches from the carrier deck, drops one heavy bomb.
+   The route is planned like a real flight path: catapult run, a constant-radius turn onto a straight bombing run
+   that passes over the target, then a climbing turn back toward the carrier. The jet banks into every turn. */
+const JET={v:7.5,R:5}; // about 85 degrees of turn per second
+function planStrike(A,E,P){const R=JET.R,pts=[],PI2=Math.PI*2,add=(x,z)=>{const l=pts[pts.length-1];if(!l||Math.hypot(x-l.x,z-l.z)>.05)pts.push(V(x,0,z));};
+  for(let x=A.x;x<E.x;x+=.25)add(x,A.z);
+  let S={x:E.x,z:A.z},a=0,turn=null;
+  // turn left or right (whichever is shorter) until the nose points at the target, then fly straight at it
+  for(let tries=0;tries<4&&!turn;tries++){
+    for(const sg of [1,-1]){const O={x:S.x-Math.sin(a)*sg*R,z:S.z+Math.cos(a)*sg*R},d=Math.hypot(P.x-O.x,P.z-O.z);if(d<R*1.05)continue;
+      const th0=Math.atan2(S.z-O.z,S.x-O.x),thT=Math.atan2(P.z-O.z,P.x-O.x)-sg*Math.acos(R/d);const sw=(((sg>0?thT-th0:th0-thT)%PI2)+PI2)%PI2;
+      const len=sw*R+Math.sqrt(d*d-R*R);if(!turn||len<turn.len)turn={O,th0,sw,sg,len};}
+    if(!turn){for(let k=0;k<8;k++){S.x+=Math.cos(a)*R/8;S.z+=Math.sin(a)*R/8;add(S.x,S.z);}}}
+  const n=Math.max(2,Math.ceil(turn.sw*R/.25));for(let k=0;k<=n;k++){const th=turn.th0+turn.sg*turn.sw*k/n;add(turn.O.x+R*Math.cos(th),turn.O.z+R*Math.sin(th));}
+  const T=pts[pts.length-1],u=V(P.x-T.x,0,P.z-T.z).normalize(),runLen=Math.hypot(P.x-T.x,P.z-T.z);
+  for(let d=.25;d<runLen+3;d+=.25)add(T.x+u.x*d,T.z+u.z*d);
+  const Q=pts[pts.length-1],toC=V(CARRIER.x-P.x,0,CARRIER.z-P.z),sg=u.x*toC.z-u.z*toC.x>0?1:-1,R2=R*1.3,a2=Math.atan2(u.z,u.x);
+  const O2={x:Q.x-Math.sin(a2)*sg*R2,z:Q.z+Math.cos(a2)*sg*R2},t0=Math.atan2(Q.z-O2.z,Q.x-O2.x);
+  for(let k=1;k<=28;k++){const th=t0+sg*1.9*k/28;add(O2.x+R2*Math.cos(th),O2.z+R2*Math.sin(th));}
+  const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+pts[i].distanceTo(pts[i-1]));
+  let iP=0,best=1e9;pts.forEach((p,i)=>{const d=Math.hypot(p.x-P.x,p.z-P.z);if(i>0&&d<best){best=d;iP=i;}});
+  const sE=Math.max(0,(E.x-A.x)),sP=cum[iP],end=cum[cum.length-1],sRun=Math.max(sE+6,sP-6);
+  // height along the route: deck, climb to the run-in, hold steady over the target, climb away
+  const ss=(a,b,s)=>{const k=clamp((s-a)/Math.max(b-a,1e-3),0,1);return k*k*(3-2*k);};
+  const hy=s=>s<=sE?A.y:s<sP?mix(A.y,4.2,ss(sE,sRun,s)):mix(4.2,7.5,ss(sP,end,s));
+  return {pts,cum,sE,sP,end,hy};}
+function callStrike(x,z){const j=makeJet();battle.add(j.g);j.g.visible=true;j.g.scale.setScalar(.75);j.g.rotation.order='YZX'; // yaw, then pitch, then roll around the nose
+  const P=V(x,groundY(x,z)+.05,z),A=V(CARRIER.x-1.6,CARRIER.deck+.07,CARRIER.z-.25),E=V(CARRIER.x+2.8,CARRIER.deck+.07,CARRIER.z-.25);
+  strikes.push({j,P,path:planStrike(A,E,P),s:0,t:0,spd:0,yaw:0,rate:0,roll:0,pos:A.clone(),dropped:false});radio(`${NAMES[cur].jet} cleared hot. Ten seconds.`,true);jetRoar();}
+const _ja=V(),_jb=V();
+function pathAt(pa,s,out){let lo=0,hi=pa.cum.length-1;s=clamp(s,0,pa.end);while(hi-lo>1){const m=(lo+hi)>>1;if(pa.cum[m]<=s)lo=m;else hi=m;}
+  const p0=pa.pts[lo],p1=pa.pts[hi],k=clamp((s-pa.cum[lo])/Math.max(pa.cum[hi]-pa.cum[lo],1e-4),0,1);return out.set(mix(p0.x,p1.x,k),pa.hy(s),mix(p0.z,p1.z,k));}
+function dropBomb(s){s.dropped=true;fire(s.pos.clone(),s.P,{kind:'bomb',dur:1,onHit:p=>{explode(p,1.9);splashDmg('att',p,1.7,1000);}});}
+function updateStrikes(dt){for(let i=strikes.length-1;i>=0;i--){const s=strikes[i],pa=s.path;s.t+=dt;
+    s.spd=s.s<pa.sE?Math.min(JET.v,s.spd+dt*14):Math.min(JET.v*1.1,s.spd+dt*1.5);s.s+=s.spd*dt; // catapult, then cruise
+    pathAt(pa,s.s,s.pos);pathAt(pa,s.s+.6,_ja);pathAt(pa,s.s-.6,_jb); // heading from points either side, so it turns smoothly between path samples
+    const yaw=Math.atan2(-(_ja.z-_jb.z),_ja.x-_jb.x),pitch=Math.atan2(pa.hy(s.s+.5)-pa.hy(s.s-.5),1);
+    const r=s.t>dt?wrapA(yaw-s.yaw)/dt:0;s.yaw=yaw;s.rate+=(r-s.rate)*Math.min(1,dt*5);
+    s.roll+=(clamp(-s.rate*.6,-1,1)-s.roll)*Math.min(1,dt*3.5); // bank into the turn, roll out smoothly
+    s.j.g.rotation.set(s.roll,s.yaw,pitch);s.j.g.position.copy(s.pos);s.j.ab.scale.setScalar(.45+Math.random()*.15);
+    if(!s.dropped&&s.s>=pa.sP-3.5)dropBomb(s); // release a little before the target; the bomb carries forward
+    if(s.s>=pa.end){battle.remove(s.j.g);strikes.splice(i,1);}}}
+function wrapA(a){return Math.atan2(Math.sin(a),Math.cos(a));}
 
 /* ---------- cards, deploy, stars ---------- */
 function deploy(ci,x,z){const c=cards[ci];if(!c||c.n<=0)return false;
@@ -1152,7 +1183,7 @@ rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-
   if(state==='menu')orb.theta+=dt*.05;
   else if(state==='ended'&&result){orb.theta+=dt*.12;orb.target.lerp(result.focus,Math.min(1,dt*1.5));orb.r=mix(orb.r,Math.max(orb.minR,orb.r*.97),Math.min(1,dt));} // slow victory lap around the HQ
   orb.apply();rr.render(stage,cam);});
-window.__tcDebug={M,scene,cam,orb,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={M,scene,cam,orb,get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 
 }
