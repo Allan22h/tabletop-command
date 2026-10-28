@@ -1022,7 +1022,7 @@ function onGroundTap(x,z){if(state!=='battle')return;if(armed==null){prompt(xrMo
 $('zIn').onclick=()=>{orb.r=clamp(orb.r*.8,orb.minR,orb.maxR);};$('zOut').onclick=()=>{orb.r=clamp(orb.r*1.25,orb.minR,orb.maxR);};
 
 /* ---------- Quest mixed reality ---------- */
-const XS=.045;let xrMode=false,xrDirty=true,xrRadio='',xrPrompt='',grab=null,grab2=null,turnLeft=0,uiYaw=null,bannerT=-1;
+const XS=.045,TERRAIN_BUMP=M.terrain.bumpScale;let xrMode=false,xrDirty=true,xrRadio='',xrPrompt='',grab=null,grab2=null,turnLeft=0,uiYaw=null,bannerT=-1;
 const PIV=V(1.5,0,1.5); // board center: the board turns and resizes around this point
 // the UI lives in room space, not on the board: it follows the board's position and size but always turns to face the player
 const xrUI=new T.Group();xrUI.visible=false;stage.add(xrUI);
@@ -1092,6 +1092,8 @@ function xrFrame(dt){
   ctrls.forEach((c,i)=>{const gp=c.userData.src&&c.userData.src.gamepad;if(!gp)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0);
     if(!sticks[i]&&Math.abs(ax)>.75){sticks[i]=1;turnLeft+=ax>0?-Math.PI/4:Math.PI/4;haptic();}else if(Math.abs(ax)<.3)sticks[i]=0;});
   if(turnLeft&&!grab&&!grab2){const st=Math.sign(turnLeft)*Math.min(Math.abs(turnLeft),dt*Math.PI);turnLeft-=st;turnBoard(st);}
+  // bump strength is measured against surface size, so a board shrunk onto a table needs it shrunk too, or the ground looks embossed
+  M.terrain.bumpScale=TERRAIN_BUMP*scene.scale.x;
   // UI follows the board and swings smoothly to face the player wherever they stand
   scene.updateMatrixWorld();const pw=scene.localToWorld(PIV.clone()),hp=V().setFromMatrixPosition((rr.xr.isPresenting?rr.xr.getCamera(cam):cam).matrixWorld);
   const want=Math.atan2(hp.z-pw.z,-(hp.x-pw.x));uiYaw=uiYaw==null?want:lerpAngle(uiYaw,want,dt*2.5);
@@ -1111,7 +1113,7 @@ async function enterXR(){try{const s=await navigator.xr.requestSession('immersiv
     scene.scale.setScalar(XS);scene.rotation.y=Math.PI/2;scene.position.set(-2*XS,.74-G*XS,-.35-12*XS);setShadow(XS);xrUI.visible=true;xrDirty=true;uiYaw=null;turnLeft=0;
     $('app').classList.add('xr');s.addEventListener('end',exitXR);}
   catch(err){prompt('Mixed reality could not start here. Open this page in the Meta Quest browser from its own address.',5);}}
-function exitXR(){xrMode=false;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
+function exitXR(){xrMode=false;M.terrain.bumpScale=TERRAIN_BUMP;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
   setShadow(1);xrUI.visible=false;reticle.visible=false;$('app').classList.remove('xr');}
 if(navigator.xr&&navigator.xr.isSessionSupported){navigator.xr.isSessionSupported('immersive-ar').then(ok=>{if(ok)$('xrBtn').hidden=false;}).catch(()=>{});}
 $('xrBtn').onclick=enterXR;
@@ -1150,7 +1152,7 @@ rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-
   if(state==='menu')orb.theta+=dt*.05;
   else if(state==='ended'&&result){orb.theta+=dt*.12;orb.target.lerp(result.focus,Math.min(1,dt*1.5));orb.r=mix(orb.r,Math.max(orb.minR,orb.r*.97),Math.min(1,dt));} // slow victory lap around the HQ
   orb.apply();rr.render(stage,cam);});
-window.__tcDebug={M,scene,cam,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={M,scene,cam,orb,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 
 }
