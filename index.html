@@ -563,7 +563,13 @@ function muzzle(pos,big){emit(ADD,pos,{life:.09,s0:big?.15:.06,s1:big?.6:.22,c:0
 const projs=[];
 const tracerGeo=box(.03,.03,.32),tracerMat=new T.MeshBasicMaterial({color:0xffcf7a});
 const missileGeo=cyl(.025,.025,.22,6);missileGeo.rotateX(Math.PI/2);
-function fire(from,to,o){let m;if(o.kind==='tracer'){m=new T.Mesh(tracerGeo,tracerMat);}else{m=new T.Mesh(missileGeo,M.white);m.scale.setScalar(o.kind==='bomb'?1.8:1);}
+const finMat=new T.MeshStandardMaterial({color:0xc0261c,roughness:.6});finMat.color.convertSRGBToLinear();
+const rocketProto=(()=>{const g=new T.Group(),bg=cyl(.017,.017,.15,8),ng=new T.ConeGeometry(.017,.045,8);bg.rotateX(Math.PI/2);ng.rotateX(Math.PI/2);
+  g.add(new T.Mesh(bg,M.white));const n=new T.Mesh(ng,M.white);n.position.z=.097;g.add(n);
+  const fin=new T.Shape();fin.moveTo(0,0);fin.lineTo(.026,-.012);fin.lineTo(.026,-.04);fin.lineTo(0,-.05);fin.closePath();
+  const fg=new T.ExtrudeGeometry(fin,{depth:.004,bevelEnabled:false});fg.translate(.015,0,-.002);fg.rotateX(Math.PI/2);
+  for(let i=0;i<4;i++){const f=new T.Mesh(fg,finMat);f.rotation.z=i*Math.PI/2;f.position.z=-.03;g.add(f);}return g;})();
+function fire(from,to,o){let m;if(o.kind==='tracer'){m=new T.Mesh(tracerGeo,tracerMat);}else{m=rocketProto.clone();m.scale.setScalar(o.kind==='bomb'?1.55:.85);}
   m.position.copy(from);scene.add(m);projs.push({m,from:from.clone(),to:to.clone(),t:0,dur:o.dur,arc:o.arc||0,trail:o.trail,kind:o.kind,onHit:o.onHit,acc:0});}
 const _v=new T.Vector3();
 function updProjs(dt){for(let i=projs.length-1;i>=0;i--){const p=projs[i];p.t+=dt/p.dur;const k=Math.min(1,p.t);
@@ -1183,7 +1189,7 @@ rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-
   if(state==='menu')orb.theta+=dt*.05;
   else if(state==='ended'&&result){orb.theta+=dt*.12;orb.target.lerp(result.focus,Math.min(1,dt*1.5));orb.r=mix(orb.r,Math.max(orb.minR,orb.r*.97),Math.min(1,dt));} // slow victory lap around the HQ
   orb.apply();rr.render(stage,cam);});
-window.__tcDebug={M,scene,cam,orb,get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={M,scene,cam,orb,fire,get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 
 }
