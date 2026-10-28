@@ -561,7 +561,7 @@ function muzzle(pos,big){emit(ADD,pos,{life:.09,s0:big?.15:.06,s1:big?.6:.22,c:0
 
 /* projectiles */
 const projs=[];
-const brassMat=new T.MeshStandardMaterial({color:0xc9a04a,metalness:.85,roughness:.32,emissive:0x2e2108});brassMat.color.convertSRGBToLinear();brassMat.emissive.convertSRGBToLinear();
+const brassMat=new T.MeshStandardMaterial({color:0xc9a04a,metalness:.85,roughness:.32,emissive:0x9a7020});brassMat.color.convertSRGBToLinear();brassMat.emissive.convertSRGBToLinear();
 const bulletProto=(()=>{const g=new T.Group(),bg=cyl(.01,.01,.07,8),ng=new T.ConeGeometry(.01,.03,8);bg.rotateX(Math.PI/2);ng.rotateX(Math.PI/2);
   g.add(new T.Mesh(bg,brassMat));const n=new T.Mesh(ng,brassMat);n.position.z=.05;g.add(n);return g;})();
 const missileGeo=cyl(.025,.025,.22,6);missileGeo.rotateX(Math.PI/2);
@@ -571,7 +571,7 @@ const rocketProto=(()=>{const g=new T.Group(),bg=cyl(.017,.017,.15,8),ng=new T.C
   const fin=new T.Shape();fin.moveTo(0,0);fin.lineTo(.026,-.012);fin.lineTo(.026,-.04);fin.lineTo(0,-.05);fin.closePath();
   const fg=new T.ExtrudeGeometry(fin,{depth:.004,bevelEnabled:false});fg.translate(.015,0,-.002);fg.rotateX(Math.PI/2);
   for(let i=0;i<4;i++){const f=new T.Mesh(fg,finMat);f.rotation.z=i*Math.PI/2;f.position.z=-.03;g.add(f);}return g;})();
-function fire(from,to,o){let m;if(o.kind==='tracer'){m=bulletProto.clone();}else{m=rocketProto.clone();m.scale.setScalar(o.kind==='bomb'?1.55:.85);}
+function fire(from,to,o){let m;if(o.kind==='tracer'){m=bulletProto.clone();m.scale.set(1.6,1.6,2.2);}else{m=rocketProto.clone();m.scale.setScalar(o.kind==='bomb'?1.55:.85);}
   m.position.copy(from);scene.add(m);m.lookAt(scene.localToWorld(to.clone()));projs.push({m,from:from.clone(),to:to.clone(),t:0,dur:o.dur,arc:o.arc||0,trail:o.trail,kind:o.kind,onHit:o.onHit,acc:0});}
 const _v=new T.Vector3();
 function updProjs(dt){for(let i=projs.length-1;i>=0;i--){const p=projs[i];p.t+=dt/p.dur;const k=Math.min(1,p.t);
