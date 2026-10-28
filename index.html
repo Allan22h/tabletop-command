@@ -754,6 +754,7 @@ function fin(g,pts,mat,z=0,y=0,lean=0){const m=plan(pts,.018,mat,g,0,y,z);m.rota
 function side(pts,w,mat,parent,x=0,y=0,z=0,bev=.025,segs=2){const s=new T.Shape();pts.forEach((p,i)=>i?s.lineTo(p[0],p[1]):s.moveTo(p[0],p[1]));
   const d=Math.max(.005,w-2*bev),geo=new T.ExtrudeGeometry(s,{depth:d,bevelEnabled:bev>0,bevelThickness:bev,bevelSize:bev,bevelSegments:segs});geo.translate(0,0,-d/2);return mesh(geo,mat,x,y,z,parent);}
 // tinted helicopter glazing: dark blue-grey and glossy instead of black
+const raptorGlass=new T.MeshStandardMaterial({color:new T.Color(0x8a7440).convertSRGBToLinear(),metalness:.75,roughness:.15}); // the F-22's gold-tinted canopy
 const heliGlass=new T.MeshStandardMaterial({color:new T.Color(0x41606c).convertSRGBToLinear(),metalness:.55,roughness:.12});
 // a body from its top outline, extruded to a thickness with rounded edges (jets seen from above)
 function planB(pts,h,mat,parent,y=0,bev=.02){const s=new T.Shape();pts.forEach((p,i)=>i?s.lineTo(p[0],p[1]):s.moveTo(p[0],p[1]));
@@ -769,7 +770,7 @@ function heliFor(f){const g=new T.Group(),mat=M.camo,rot=new T.Group(),tr=new T.
     side([[.63,.08],[.48,.24],[.24,.25],[.22,.1]],.28,heliGlass,g,0,0,0,.02);
     for(const s of[-1,1]){alongX(mesh(cyl(.06,.065,.4,12),mat,-.1,.15,s*.19,g));alongX(mesh(cyl(.045,.045,.02,10),M.dark,.11,.15,s*.19,g));wheel(-.15,-.25,s*.15);}
     wheel(.56,-.25,0);mesh(box(.32,.06,.05),M.dark,0,-.07,.17,g);alongX(mesh(cyl(.014,.014,.44,6),M.dark,.36,-.07,.18,g));
-    wing(1.02,-.05,0,[[.3,'rk'],[.42,'at']]);for(const s of[-1,1])alongX(mesh(cyl(.035,.035,.26,10),mat,-.04,0,s*.52,g));mesh(new T.SphereGeometry(.045,12,8),M.dark,.66,-.19,0,g);frustum(.76,.16,.16,.09,.11,mat,g,-.95,.05,0,.03);
+    wing(1.02,-.05,0,[[.3,'rk'],[.42,'at']]);for(const s of[-1,1])alongX(mesh(cyl(.035,.035,.26,10),mat,-.04,0,s*.52,g));mesh(new T.SphereGeometry(.045,12,8),M.dark,.66,-.19,0,g);frustum(.76,.08,.09,.17,.17,mat,g,-.95,.07,0,.0);
     mesh(box(.14,.02,.58),mat,-1.26,.09,0,g);for(const s of[-1,1])fin(g,[[-1.16,-.07],[-1.25,.22],[-1.35,.22],[-1.34,-.09]],mat,s*.29,.09);
     mesh(cyl(.04,.05,.5,8),M.dark,0,.42,0,g);rot.position.y=.45;bladeSet(rot,3,2.25,0);bladeSet(rot,3,2.25,.21);mesh(cyl(.05,.05,.08,10),M.dark,0,.095,0,rot);mesh(new T.SphereGeometry(.04,10,8),M.dark,0,.21,0,rot);
     g.add(tr);tr.visible=false;}
@@ -778,7 +779,7 @@ function heliFor(f){const g=new T.Group(),mat=M.camo,rot=new T.Group(),tr=new T.
     side([[.74,0],[.52,.11],[.39,.11],[.39,.06]],.13,heliGlass,g,0,0,0,.01);side([[.39,.08],[.21,.19],[.06,.19],[.06,.13]],.14,heliGlass,g,0,0,0,.01);
     mesh(new T.SphereGeometry(.04,10,8),M.dark,.72,-.16,0,g);mesh(new T.SphereGeometry(.025,8,6),M.dark,.45,-.18,0,g);alongX(mesh(cyl(.01,.01,.14,6),M.dark,.52,-.19,0,g));
     for(const s of[-1,1]){frustum(.4,.09,.09,.08,.07,mat,g,-.17,.17,s*.11);wheel(.3,-.25,s*.12);}wheel(-1.2,-.04,0,.025);
-    wing(.8,-.02,0,[[.24,'rk'],[.35,'at']]);frustum(.85,.11,.13,.05,.07,mat,g,-1.02,.05,0,.02);
+    wing(.8,-.02,0,[[.24,'rk'],[.35,'at']]);frustum(.85,.05,.07,.12,.15,mat,g,-1.02,.06,0,.0);
     fin(g,[[-1.3,0],[-1.46,.36],[-1.58,.36],[-1.54,-.04]],mat,0,.05);mesh(box(.13,.02,.4),mat,-1.38,.03,0,g);for(const s of[-1,1])fin(g,[[-1.34,-.03],[-1.38,.06],[-1.45,.06],[-1.44,-.04]],mat,s*.2,.03);
     tailRotor(-1.53,.33,-.05,[0,Math.PI/2],.3);mesh(cyl(.035,.045,.24,8),M.dark,0,.3,0,g);rot.position.y=.42;bladeSet(rot,5,2.05);}
   else if(f==='eu'){ // Tiger: small smooth rounded body, tandem bubble canopies, sight ball on top of the mast, chin gun, endplate fins on the tailplane
@@ -786,7 +787,7 @@ function heliFor(f){const g=new T.Group(),mat=M.camo,rot=new T.Group(),tr=new T.
     side([[.66,.05],[.5,.14],[.36,.14],[.36,.08]],.17,heliGlass,g,0,0,0,.04);side([[.36,.1],[.2,.22],[.04,.22],[.04,.14]],.19,heliGlass,g,0,0,0,.04);
     mesh(new T.SphereGeometry(.035,10,8),M.dark,.5,-.17,0,g);alongX(mesh(cyl(.01,.01,.14,6),M.dark,.58,-.18,0,g));
     for(const s of[-1,1]){mesh(new T.SphereGeometry(.08,12,8),mat,-.2,.16,s*.1,g).scale.set(2.2,.8,.8);wheel(.3,-.24,s*.13);}wheel(-1.05,-.04,0,.025);
-    wing(.74,-.04,.01,[[.22,'rk'],[.32,'at']]);frustum(.8,.1,.12,.05,.07,mat,g,-.92,.05,0,.02);
+    wing(.74,-.04,.01,[[.22,'rk'],[.32,'at']]);frustum(.8,.05,.07,.12,.15,mat,g,-.92,.06,0,.0);
     fin(g,[[-1.14,0],[-1.26,.26],[-1.36,.26],[-1.34,-.05]],mat,0,.05);mesh(box(.12,.02,.42),mat,-1.27,.04,0,g);for(const s of[-1,1])fin(g,[[-1.21,-.05],[-1.27,.08],[-1.35,.08],[-1.33,-.07]],mat,s*.21,.04);
     tailRotor(-1.33,.24,.05,[0,Math.PI/2],.26);mesh(cyl(.03,.04,.46,8),M.dark,0,.38,0,g);rot.position.y=.42;bladeSet(rot,4,2.0);
     mesh(cyl(.012,.012,.16,6),M.dark,0,.55,0,g);mesh(new T.SphereGeometry(.055,12,8),M.dark,0,.64,0,g);}
@@ -796,18 +797,21 @@ function heliFor(f){const g=new T.Group(),mat=M.camo,rot=new T.Group(),tr=new T.
     mesh(box(.09,.08,.1),M.dark,.78,-.05,0,g);mesh(new T.SphereGeometry(.028,8,6),M.dark,.74,.04,0,g);
     mesh(new T.SphereGeometry(.03,8,6),M.dark,.42,-.19,0,g);alongX(mesh(cyl(.011,.011,.18,6),M.dark,.52,-.2,0,g));
     for(const s of[-1,1]){mesh(box(.56,.11,.1),mat,.04,-.09,s*.13,g);alongX(mesh(cyl(.055,.06,.36,10),mat,-.18,.17,s*.14,g));alongX(mesh(cyl(.045,.045,.03,10),M.dark,-.37,.17,s*.14,g));wheel(.38,-.26,s*.12);}
-    wheel(-1.25,-.05,0,.025);wing(.92,-.02,.02,[[.27,'rk'],[.42,'at']]);frustum(.82,.13,.14,.07,.08,mat,g,-1,.06,0,.01);
+    wheel(-1.25,-.05,0,.025);wing(.92,-.02,.02,[[.27,'rk'],[.42,'at']]);frustum(.82,.06,.08,.14,.16,mat,g,-1,.07,0,.0);
     fin(g,[[-1.3,0],[-1.44,.38],[-1.55,.38],[-1.5,-.02]],mat,0,.05);mesh(box(.16,.02,.46),mat,-1.45,.02,0,g);tailRotor(-1.5,.36,-.05,[0,.95],.3);
     mesh(cyl(.035,.045,.22,8),M.dark,0,.32,0,g);rot.position.y=.42;bladeSet(rot,4,2.15);side([[.12,.15],[.06,.27],[-.3,.27],[-.4,.2]],.16,mat,g,0,0,0,.02);mesh(new T.SphereGeometry(.1,14,8),mat,0,.5,0,g).scale.set(1,.42,1);}
   return {g,rot,tr};}
 function abSprite(g,x,s=.5){const a=new T.Sprite(new T.SpriteMaterial({map:radial([[0,'rgba(255,255,240,1)'],[.25,'rgba(255,170,80,.9)'],[1,'rgba(255,80,20,0)']]),blending:T.AdditiveBlending,depthWrite:false}));
   a.position.set(x,0,0);a.scale.set(s,s,s);g.add(a);return a;}
 function jetFor(f){const g=new T.Group();g.rotation.order='YXZ';scene.add(g);const mat=M.camo,glass=(x,y,l)=>mesh(new T.SphereGeometry(.07,14,8),M.glass,x,y,0,g).scale.set(l,.85,.85);let ab;
-  if(f==='ru'){ // Su-57 Felon: long nose with a sensor ball, wide flat lifting body, engines set far apart with a tunnel and a tail sting between, long wing roots, small canted all-moving fins
-    planB(mirror([[1.25,0],[1,.06],[.7,.11],[.4,.14],[-.5,.13],[-.88,.05],[-.95,0]]),.1,mat,g,.01,.03);glass(.72,.08,2.6);mesh(new T.SphereGeometry(.025,8,6),M.glass,.92,.06,.04,g);plan(mirror([[.7,.11],[.5,.23],[.42,.23],[.46,.11]]),.016,M.dark,g,0,.005,0);
-    for(const s of[-1,1]){frustum(1,.13,.11,.15,.12,mat,g,-.25,-.05,s*.21);mesh(box(.02,.1,.13),M.dark,.26,-.05,s*.21,g);alongX(mesh(cyl(.06,.065,.08,12),M.dark,-.78,-.05,s*.21,g));}
+  if(f==='ru'){ // Su-57 Felon: long rounded nose with a sensor ball on the right, cockpit hump, wide flat lifting body, engines set far apart with a tail sting between, long wing roots with LEVCONs, small canted all-moving fins
+    alongX(mesh(new T.ConeGeometry(.085,.42,14),mat,1.04,.015,0,g)).scale.set(1,1,.85);frustum(.42,.24,.12,.17,.11,mat,g,.62,.01,0);
+    planB(mirror([[.46,0],[.45,.12],[.3,.15],[-.5,.13],[-.88,.05],[-.98,0]]),.08,mat,g,0,.025);planB(mirror([[.86,0],[.7,.075],[.3,.095],[-.3,.06],[-.5,0]]),.07,mat,g,.055,.02);
+    mesh(new T.SphereGeometry(.07,14,8),M.glass,.72,.1,0,g).scale.set(2.7,.9,.85);mesh(new T.SphereGeometry(.024,8,6),M.glass,.93,.07,.04,g);
+    plan(mirror([[.7,.11],[.5,.23],[.42,.23],[.46,.11]]),.016,M.dark,g,0,.005,0);
+    for(const s of[-1,1]){frustum(1,.13,.11,.15,.12,mat,g,-.25,-.06,s*.21);mesh(box(.02,.1,.13),M.dark,.26,-.06,s*.21,g);alongX(mesh(cyl(.06,.065,.08,12),M.dark,-.78,-.06,s*.21,g));}
     plan(mirror([[.62,.1],[.2,.3],[-.25,.78],[-.42,.78],[-.47,.3]]),.02,mat,g,0,-.02,0);plan(mirror([[-.47,.28],[-.74,.56],[-.88,.56],[-.88,.3]]),.018,mat,g,0,-.04,0);
-    for(const s of[-1,1])fin(g,[[-.48,0],[-.64,.22],[-.76,.22],[-.74,0]],mat,s*.25,.04,s*.45);ab=abSprite(g,-.85,.6);}
+    for(const s of[-1,1])fin(g,[[-.47,0],[-.64,.24],[-.77,.24],[-.75,0]],mat,s*.25,.04,s*.45);ab=abSprite(g,-.85,.6);}
   else if(f==='cn'){ // J-20: long slender body, canards, big delta wing, twin canted all-moving fins and belly fins, chined nose
     frustum(.55,.17,.1,.02,.02,mat,g,1.12,0,0,-.01);frustum(1.5,.28,.12,.2,.12,mat,g,.1,0,0);glass(.84,.08,2.5);
     for(const s of[-1,1]){frustum(.42,.1,.12,.07,.1,mat,g,.48,-.01,s*.16);alongX(mesh(cyl(.05,.055,.08,10),M.dark,-.7,0,s*.07,g));}
@@ -819,11 +823,13 @@ function jetFor(f){const g=new T.Group();g.rotation.order='YXZ';scene.add(g);con
     alongX(mesh(cyl(.006,.006,.26,5),M.dark,.8,.09,.07,g));for(const s of[-1,1]){alongX(mesh(cyl(.05,.05,.32,10,1,false,0,Math.PI),mat,.22,-.06,s*.1,g));alongX(mesh(cyl(.05,.055,.08,10),M.dark,-.74,0,s*.05,g));}
     plan(mirror([[.44,.09],[.3,.33],[.23,.33],[.25,.09]]),.015,mat,g,0,.03,0);plan(mirror([[.2,.09],[-.52,.72],[-.64,.72],[-.64,.09]]),.02,mat,g,0,-.03,0);
     fin(g,[[-.3,0],[-.62,.42],[-.74,.42],[-.72,0]],mat,0,.06);ab=abSprite(g,-.84,.55);}
-  else{ // F-22 Raptor: wide flat diamond-edged body, chined nose, angled side intakes, diamond wing with forward-swept trailing edge, diamond tailplanes, twin outward-canted fins, flat nozzles
-    planB(mirror([[1.18,0],[.92,.07],[.66,.12],[.5,.23],[.15,.24],[-.6,.2],[-.74,.12],[-.74,0]]),.12,mat,g,0,.03);glass(.66,.09,2.8);
-    for(const s of[-1,1]){frustum(.42,.13,.13,.07,.11,mat,g,.36,-.005,s*.22,-.01);mesh(box(.02,.1,.08),M.dark,.56,-.01,s*.21,g).rotation.y=s*.6;mesh(box(.07,.05,.11),M.dark,-.76,0,s*.07,g);}
+  else{ // F-22 Raptor: chined nose with a diamond cross-section, long gold-tinted canopy, raised spine, wide flat body, caret intakes on the shoulders, diamond wing (42 deg leading edge, -17 deg trailing edge), parallel diamond tailplanes, big outward-canted fins, flat nozzles
+    frustum(.46,.24,.13,.02,.03,mat,g,.96,0,0,-.01);planB(mirror([[.76,0],[.75,.11],[.66,.13],[.5,.23],[.15,.24],[-.6,.2],[-.74,.12],[-.74,0]]),.1,mat,g,0,.025);
+    planB(mirror([[.64,0],[.5,.1],[.1,.13],[-.55,.1],[-.7,0]]),.06,mat,g,.06,.02);mesh(new T.SphereGeometry(.07,14,8),raptorGlass,.66,.11,0,g).scale.set(3,.9,.85);
+    for(const s of[-1,1]){frustum(.42,.13,.13,.07,.11,mat,g,.36,-.005,s*.22,-.01);mesh(box(.02,.1,.08),M.dark,.56,-.01,s*.21,g).rotation.y=s*.6;
+      alongX(mesh(cyl(.065,.07,.8,10),mat,-.32,-.045,s*.085,g));mesh(box(.07,.05,.11),M.dark,-.77,-.01,s*.075,g);}
     plan(mirror([[.2,.22],[-.21,.68],[-.33,.68],[-.47,.22]]),.02,mat,g,0,-.02,0);plan(mirror([[-.5,.2],[-.72,.45],[-.82,.45],[-.86,.2]]),.018,mat,g,0,-.03,0);
-    for(const s of[-1,1])fin(g,[[-.42,0],[-.62,.3],[-.74,.3],[-.78,0]],mat,s*.17,.05,s*.49);ab=abSprite(g,-.85,.6);}
+    for(const s of[-1,1])fin(g,[[-.36,0],[-.58,.33],[-.72,.33],[-.78,0]],mat,s*.18,.05,s*.49);ab=abSprite(g,-.85,.6);}
   g.visible=false;return {g,ab};}
 
 // Lancet-style loitering munition: a slim body with two X-shaped wing sets (the other factions fly FPV quadcopters)
