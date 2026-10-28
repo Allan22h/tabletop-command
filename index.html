@@ -97,6 +97,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #rkName small{font:600 13px var(--f-mono);color:var(--gold);letter-spacing:.04em;margin-left:4px}
 .card.locked{opacity:.5}.card.locked .cc{font-size:15px;color:var(--muted)}
 .lvup{font:700 15px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}.lvup.new{color:var(--ok)}
+.testsw{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}.testsw input{accent-color:var(--gold);width:16px;height:16px}
 /* end-of-raid banner: the title slams in, stars pop one by one, then the score sheet */
 .banner{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:12px;text-align:center;cursor:pointer;overflow:hidden;
   background:radial-gradient(ellipse at center,rgba(255,196,80,.32),rgba(8,10,9,.6) 72%);animation:bfade .35s ease-out}
@@ -164,6 +165,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
           <button type="button" data-f="cn" aria-pressed="false">China</button>
           <button type="button" data-f="eu" aria-pressed="false">Europe / Middle East</button>
         </div></div>
+      <label class="testsw"><input type="checkbox" id="unlockAll"> Prototype testing: unlock all equipment</label>
       <button type="button" class="primary" id="goTut">Start tutorial raid</button>
       <button type="button" class="secondary" id="goFull">Skip to the full raid</button>
       <p>Phone: tap a card, then tap the map. Drag to rotate, pinch to zoom. Quest: open this page in the Quest browser and press "Enter mixed reality" (top right) to put the board on your table. Squeeze the grip to move it, twist your wrist while squeezing or flick the thumbstick to turn it, squeeze with both hands to turn and resize it.</p>
@@ -649,11 +651,12 @@ function levelXp(L){if(L<=1)return 0;if(L>200)return XP_MAX;const r=rankOfLevel(
 function levelFor(xp,hq){let byXp=1;while(byXp<200&&levelXp(byXp+1)<=xp)byXp++;let rMax=RANKS.length-1;while(rMax>0&&hq<rankGate(rMax))rMax--;
   const L=Math.min(byXp,RSTART[rMax+1]-1),r=rankOfLevel(L);return {L,r,sub:L-RSTART[r]+1,subMax:RSTART[r+1]-RSTART[r],byXp,pending:byXp>L};}
 const levelName=(L,f)=>{const r=rankOfLevel(L);return `${rankName(r,f)} Lv ${L-RSTART[r]+1}`;};
-// equipment unlocks by commander level: a new tool every session or two early on, counters before the threats they answer
-const UNLOCKS=[[1,'rifle','Rifle squad'],[1,'truck','Light vehicle'],[3,'tank','Main battle tank'],[5,'mortar','Mortar team'],[8,'jlav','Anti-armor vehicle'],
-  [12,'drone','Kamikaze drone'],[16,'strike','Air strike'],[20,'heli','Attack helicopter'],[26,null,'Sniper team'],[32,null,'Infantry fighting vehicle'],
-  [40,null,'Self-propelled artillery'],[48,null,'Electronic-warfare jammer'],[56,null,'Second air-strike sortie'],[65,null,'Naval gunfire (destroyer)'],
-  [80,null,'Special forces team'],[100,null,'Cruise-missile strike'],[125,null,'Heavy airlift reinforcements'],[150,null,'Theater command ability']];
+// equipment unlocks by commander level, spread over levels 1-70: infantry and drones first, counters before the threats
+// they answer, and tanks and attack helicopters last because they dominate low-level bases. Past 70 only extra sorties and abilities.
+const UNLOCKS=[[1,'rifle','Rifle squad'],[4,'drone','Kamikaze drone'],[8,'truck','Light vehicle'],[12,null,'Sniper team'],[16,'mortar','Mortar team'],
+  [22,'jlav','Anti-armor vehicle'],[28,null,'Electronic-warfare jammer'],[34,'strike','Air strike'],[40,null,'Infantry fighting vehicle'],
+  [46,null,'Self-propelled artillery'],[52,null,'Special forces team'],[58,'tank','Main battle tank'],[64,null,'Naval gunfire (destroyer)'],
+  [70,'heli','Attack helicopter'],[85,null,'Second air-strike sortie'],[100,null,'Cruise-missile strike'],[125,null,'Heavy airlift reinforcements'],[150,null,'Theater command ability']];
 const unlockLv=k=>{const u=UNLOCKS.find(u=>u[1]===k);return u?u[0]:1;};
 
 /* ---------- faction vehicles ----------
@@ -1215,7 +1218,9 @@ let promptTimer=0;
 function prompt(text,secs){const el=$('prompt');el.textContent=text;el.hidden=!text;clearTimeout(promptTimer);if(text&&secs)promptTimer=setTimeout(()=>{el.hidden=true;xrDirty=true;},secs*1000);xrPrompt=text;xrDirty=true;}
 function radio(text,force){const now=performance.now()/1000;if(!force&&now-lastRadio<4)return;lastRadio=now;$('rtx').textContent='"'+text+'"';xrRadio=text;xrDirty=true;
   const box=$('radio');box.hidden=false;box.classList.add('live');clearTimeout(liveTimer);let d=2.6;if(soundOn&&AC)d=radioSfx(text);liveTimer=setTimeout(()=>box.classList.remove('live'),d*1000);}
-const levelLocked=c=>!tut&&unlockLv(c.k)>levelFor(serviceXp,PLAYER_HQ).L;
+// prototype test switch on the menu: field every unit without grinding to level 70
+let unlockAll=false;try{unlockAll=localStorage.getItem('tc.unlockAll')==='1';}catch(_){}
+const levelLocked=c=>!tut&&!unlockAll&&unlockLv(c.k)>levelFor(serviceXp,PLAYER_HQ).L;
 function cardLocked(i){return levelLocked(cards[i])||(tut&&((tut.step<2&&cards[i].k==='strike')||(tut.step>=2&&cards[i].k!=='strike')));}
 function armCard(i){if(state!=='battle'||!cards[i]||cards[i].n<=0||cardLocked(i))return;armed=armed===i?null:i;zone.visible=zoneEdge.visible=armed!=null&&cards[armed].k!=='strike';refreshCards();haptic();}
 function refreshCards(){const tray=$('tray');tray.innerHTML='';
@@ -1365,6 +1370,7 @@ document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent=
 function begin(m){if(!AC){try{audioInit();}catch(_){}}if(AC){AC.resume();soundOn=true;}syncSnd();startBattle(m);}
 $('goTut').onclick=()=>begin('tutorial');$('goFull').onclick=()=>begin('full');
 $('endNext').onclick=()=>begin(mode==='tutorial'?'full':'full');$('endMenu').onclick=goMenu;
+$('unlockAll').checked=unlockAll;$('unlockAll').onchange=e=>{unlockAll=e.target.checked;try{localStorage.setItem('tc.unlockAll',unlockAll?'1':'0');}catch(_){}};
 $('banner').onclick=finishCelebrate;
 $('menuBtn').onclick=()=>{if(state!=='battle')return;leaveArmed()?goMenu():armLeave();};
 function syncSnd(){$('snd').textContent=soundOn?'Sound on':'Sound off';$('snd').setAttribute('aria-pressed',String(soundOn));}
