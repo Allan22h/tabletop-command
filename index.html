@@ -94,6 +94,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .banner .pl{font:600 15px var(--f-mono);letter-spacing:.35em;text-transform:uppercase;animation:bfade .4s .35s both}
 .banner .pn{font:700 clamp(42px,10vw,88px)/1 var(--f-display);text-transform:uppercase;color:var(--gold);padding:0 16px;text-shadow:0 0 30px rgba(255,200,90,.6);animation:slam .6s .5s cubic-bezier(.2,1.5,.4,1) both}
 @media (prefers-reduced-motion: reduce){.banner .pins svg,.banner .pl,.banner .pn{animation:none}.xp i{transition:none}}
+#rkName small{font:600 13px var(--f-mono);color:var(--gold);letter-spacing:.04em;margin-left:4px}
+.card.locked{opacity:.5}.card.locked .cc{font-size:15px;color:var(--muted)}
+.lvup{font:700 15px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}.lvup.new{color:var(--ok)}
 /* end-of-raid banner: the title slams in, stars pop one by one, then the score sheet */
 .banner{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:12px;text-align:center;cursor:pointer;overflow:hidden;
   background:radial-gradient(ellipse at center,rgba(255,196,80,.32),rgba(8,10,9,.6) 72%);animation:bfade .35s ease-out}
@@ -636,6 +639,22 @@ function insignia(r,f,px){const [bd,pip]=RCOL[f]||RCOL.nato,g='#e8c25e',t=RANKS[
     for(let i=0;i<n;i++)s+=star(20,36+i*14,t===2?5.4:6.6);}
   else{s+=`<path d="M6 16 ${Array.from({length:12},(_,i)=>`L${i%2?34:6} ${16+(i+1)*5}`).join(' ')}" fill="none" stroke="${g}" stroke-width="1.4" opacity=".55"/>`;for(let i=0;i<r-14;i++)s+=star(20,30+i*13,6.4);}
   return `<svg viewBox="0 0 40 84" width="${px*40/84}" height="${px}" aria-hidden="true"><path d="M4 14L20 3L36 14V80H4Z" fill="${t===4?'#6b5a2a':bd}" stroke="${pip}" stroke-width="2.4"/><circle cx="20" cy="10" r="2.6" fill="${g}"/>${s}</svg>`;}
+// 200 commander levels spread over the 19 ranks: each rank has its own sub-levels (Sergeant Lv 1, Lv 2 ...)
+const RSTART=[1,6,11,16,23,31,39,47,56,65,75,85,97,109,121,135,149,163,179,201],XP_MAX=1500000;
+const rankOfLevel=L=>{let r=0;while(RSTART[r+1]<=L)r++;return r;};
+// XP for a level grows smoothly from one rank threshold to the next; level 200 needs 1.5 million
+function levelXp(L){if(L<=1)return 0;if(L>200)return XP_MAX;const r=rankOfLevel(L),a=RANKS[r][1],b=r+1<RANKS.length?RANKS[r+1][1]:XP_MAX,k=(L-RSTART[r])/(RSTART[r+1]-RSTART[r]);
+  return Math.round(a===0?b*k:a*Math.pow(b/a,k));}
+// level the XP earns, capped at the last level of the highest rank the HQ allows; XP above the cap is banked
+function levelFor(xp,hq){let byXp=1;while(byXp<200&&levelXp(byXp+1)<=xp)byXp++;let rMax=RANKS.length-1;while(rMax>0&&hq<rankGate(rMax))rMax--;
+  const L=Math.min(byXp,RSTART[rMax+1]-1),r=rankOfLevel(L);return {L,r,sub:L-RSTART[r]+1,subMax:RSTART[r+1]-RSTART[r],byXp,pending:byXp>L};}
+const levelName=(L,f)=>{const r=rankOfLevel(L);return `${rankName(r,f)} Lv ${L-RSTART[r]+1}`;};
+// equipment unlocks by commander level: a new tool every session or two early on, counters before the threats they answer
+const UNLOCKS=[[1,'rifle','Rifle squad'],[1,'truck','Light vehicle'],[3,'tank','Main battle tank'],[5,'mortar','Mortar team'],[8,'jlav','Anti-armor vehicle'],
+  [12,'drone','Kamikaze drone'],[16,'strike','Air strike'],[20,'heli','Attack helicopter'],[26,null,'Sniper team'],[32,null,'Infantry fighting vehicle'],
+  [40,null,'Self-propelled artillery'],[48,null,'Electronic-warfare jammer'],[56,null,'Second air-strike sortie'],[65,null,'Naval gunfire (destroyer)'],
+  [80,null,'Special forces team'],[100,null,'Cruise-missile strike'],[125,null,'Heavy airlift reinforcements'],[150,null,'Theater command ability']];
+const unlockLv=k=>{const u=UNLOCKS.find(u=>u[1]===k);return u?u[0]:1;};
 
 /* ---------- faction vehicles ----------
    Each faction's model keeps the few silhouette cues that identify the real vehicle it stands for
@@ -1108,8 +1127,9 @@ let result=null;
 function endBattle(){state='ended';armed=null;zone.visible=zoneEdge.visible=false;const s=stats();
   const won=s.stars>0,hq=blds.find(b=>b.hq);
   result={title:s.stars===3?'Total victory':won?'Victory':'Defeat',stars:s.stars,pct:s.pct,won,t0:battleT,focus:hq?V(hq.x,G,hq.z):V(1.5,0,1.5)};
-  const before=rankFor(serviceXp,PLAYER_HQ),x0=serviceXp;result.xp=raidXp(s);serviceXp+=result.xp;saveXp();const after=rankFor(serviceXp,PLAYER_HQ);
-  result.promo=after.r>before.r?after.r:null;result.pendingNow=after.pending&&!before.pending;endXp(x0,after);renderBadge();radio(won?`${CALL[cur]}, objective taken. ${s.stars} star${s.stars>1?'s':''}.`:`${CALL[cur]}, pull back. Mission failed.`,true);
+  const before=levelFor(serviceXp,PLAYER_HQ),x0=serviceXp;result.xp=raidXp(s);serviceXp+=result.xp;saveXp();const after=levelFor(serviceXp,PLAYER_HQ);
+  result.promo=after.r>before.r?after.r:null;result.levelUp=after.L>before.L;result.L=after.L;
+  result.unlocked=UNLOCKS.filter(u=>u[1]&&u[0]>before.L&&u[0]<=after.L).map(u=>NAME(u[1]));endXp(x0,before,after);renderBadge();radio(won?`${CALL[cur]}, objective taken. ${s.stars} star${s.stars>1?'s':''}.`:`${CALL[cur]}, pull back. Mission failed.`,true);
   document.getElementById('endStars').innerHTML='★'.repeat(s.stars)+'<span class="off">'+'★'.repeat(3-s.stars)+'</span>';
   document.getElementById('endTitle').textContent=s.stars===3?'Total victory':s.stars>0?'Victory':'Defeat';
   document.getElementById('endPct').textContent=s.pct+'% destroyed in '+fmtClock(180-timeLeft);
@@ -1140,8 +1160,8 @@ function finishCelebrate(){if(state!=='ended'||$('banner').hidden)return;
   if(result.promo!=null&&!result.promoShown){result.promoShown=true;promoBanner(result.promo);timers.push({t:3.4,fn:finishCelebrate});return;}
   show('banner',false);show('end',true);requestAnimationFrame(()=>{const f=$('endXp').querySelector('i');if(f)f.style.width=f.dataset.to;});xrDirty=true;}
 // promotion: the new shoulder board pops in and the radio addresses you by your new rank
-function promoBanner(r){const b=$('banner'),n=rankName(r,cur);b.className='banner promo';sting(true);
-  b.innerHTML=`<div class="flash"></div><div class="pins">${insignia(r,cur,150)}</div><div class="pl">Promoted</div><div class="pn">${n}</div><div class="bp">${RTIERS[RANKS[r][0]][0]} · reward: ${RANKS[r][6]}</div>`;
+function promoBanner(r){const b=$('banner'),n=rankName(r,cur);const lv=levelName(result.L,cur).slice(n.length+1);b.className='banner promo';sting(true);
+  b.innerHTML=`<div class="flash"></div><div class="pins">${insignia(r,cur,150)}</div><div class="pl">Promoted</div><div class="pn">${n}</div><div class="bp">${lv} · level ${result.L} of 200 · reward: ${RANKS[r][6]}</div>`;
   radio(`${n}, congratulations on your promotion. Command out.`,true);result.promoT=battleT;xrDirty=true;}
 /* ---------- ranks in the prototype ---------- */
 const PLAYER_HQ=3; // the prototype has no base to build yet, so the player's HQ is fixed
@@ -1149,15 +1169,16 @@ const enemyHq=()=>mode==='tutorial'?1:4;
 let serviceXp=0;try{serviceXp=+localStorage.getItem('tc.serviceXp')||0;}catch(_){}
 function saveXp(){try{localStorage.setItem('tc.serviceXp',String(serviceXp));}catch(_){}}
 function raidXp(s){return Math.round((20+25*s.stars+s.pct)*(1+.1*(enemyHq()-1)));}
-function nextInfo(xp,rk){const n=rk.byXp+1<RANKS.length?rk.byXp+1:null,lo=RANKS[rk.byXp][1],hi=n!=null?RANKS[n][1]:lo;
-  return {n,lo,hi,frac:n!=null?(xp-lo)/(hi-lo):1};}
-function rankLine(xp,rk){const ni=nextInfo(xp,rk);
-  if(rk.pending)return `${fmtN(xp)} XP · promotion to ${rankName(rk.byXp,cur)} waits for HQ ${rankGate(rk.byXp)}`;
-  return ni.n!=null?`${fmtN(xp)} / ${fmtN(ni.hi)} XP to ${rankName(ni.n,cur)}`:`${fmtN(xp)} XP · top rank`;}
-function renderBadge(){const rk=rankFor(serviceXp,PLAYER_HQ),ni=nextInfo(serviceXp,rk);$('rkIns').innerHTML=insignia(rk.r,cur,52);$('rkName').textContent=rankName(rk.r,cur);
-  $('rkSub').textContent=rankLine(serviceXp,rk);$('rkFill').style.width=(rk.pending?100:ni.frac*100).toFixed(1)+'%';$('rkFill').classList.toggle('held',rk.pending);$('rkHq').textContent=PLAYER_HQ;}
-function endXp(x0,rk){const ni=nextInfo(serviceXp,rk),from=rk.byXp===rankFor(x0,99).byXp?(x0-ni.lo)/(ni.hi-ni.lo||1):0,to=rk.pending?1:ni.frac;
-  $('endXp').innerHTML=`<div class="top"><span>Service XP</span><b>+${fmtN(result.xp)}</b></div><div class="xp"><i style="width:${(from*100).toFixed(1)}%" data-to="${(to*100).toFixed(1)}%"></i></div><small>${rankName(rk.r,cur)} · ${rankLine(serviceXp,rk)}</small>`;}
+// XP progress inside the current level, and what the next level is called
+function lvlProgress(xp,lv){const lo=levelXp(lv.L),hi=levelXp(lv.L+1);return lv.L>=200?1:clamp((xp-lo)/Math.max(1,hi-lo),0,1);}
+function rankLine(xp,lv){if(lv.pending){const nr=lv.r+1;return `Level ${lv.L} · ${fmtN(xp)} XP · ${rankName(nr,cur)} waits for HQ ${rankGate(nr)}`;}
+  if(lv.L>=200)return `Level 200 · ${fmtN(xp)} XP · top level`;
+  return `Level ${lv.L} of 200 · ${fmtN(xp-levelXp(lv.L))} / ${fmtN(levelXp(lv.L+1)-levelXp(lv.L))} XP to ${levelName(lv.L+1,cur)}`;}
+function renderBadge(){const lv=levelFor(serviceXp,PLAYER_HQ);$('rkIns').innerHTML=insignia(lv.r,cur,52);$('rkName').innerHTML=`${rankName(lv.r,cur)} <small>Lv ${lv.sub}</small>`;
+  $('rkSub').textContent=rankLine(serviceXp,lv);$('rkFill').style.width=(lv.pending?100:lvlProgress(serviceXp,lv)*100).toFixed(1)+'%';$('rkFill').classList.toggle('held',lv.pending);$('rkHq').textContent=PLAYER_HQ;}
+function endXp(x0,before,lv){const from=before.L===lv.L?lvlProgress(x0,before):0,to=lv.pending?1:lvlProgress(serviceXp,lv);
+  const up=result.levelUp?`<div class="lvup">Level up · ${levelName(lv.L,cur)}</div>`:'',un=result.unlocked.length?`<div class="lvup new">Unlocked: ${result.unlocked.join(', ')}</div>`:'';
+  $('endXp').innerHTML=`<div class="top"><span>Service XP</span><b>+${fmtN(result.xp)}</b></div>${up}${un}<div class="xp"><i style="width:${(from*100).toFixed(1)}%" data-to="${(to*100).toFixed(1)}%"></i></div><small>${rankLine(serviceXp,lv)}</small>`;}
 // a flag over the enemy HQ with its level, so you read the base before deploying
 function hqFlag(){const hq=blds.find(b=>b.hq);if(!hq)return;const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');
   x.fillStyle='rgba(12,14,12,.82)';x.beginPath();x.moveTo(16,8);x.lineTo(240,8);x.quadraticCurveTo(250,8,250,18);x.lineTo(250,96);x.lineTo(150,96);x.lineTo(128,122);x.lineTo(106,96);x.lineTo(6,96);x.lineTo(6,18);x.quadraticCurveTo(6,8,16,8);x.fill();
@@ -1178,7 +1199,7 @@ function step(dt){battleT+=dt;
   if(state==='battle'){timeLeft=Math.max(0,timeLeft-dt);
     for(const e of atts)if(e.alive)updateUnit(e,dt);for(const e of defs)if(e.alive)updateUnit(e,dt);
     separate(atts);separate(defs);updateDefenses(dt);tutTick(dt);
-    const s=stats(),cardsLeft=cards.some(c=>c.n>0),alive=atts.some(a=>a.alive);
+    const s=stats(),cardsLeft=cards.some(c=>c.n>0&&!levelLocked(c)),alive=atts.some(a=>a.alive);
     if(timeLeft<=0||s.pct>=100||(!cardsLeft&&!alive&&!strikes.length&&!projs.length)){endT+=dt;if(endT>1.6||timeLeft<=0)endBattle();}else endT=0;}
   updateStrikes(dt);updProjs(dt);
   burnAcc+=dt;if(burnAcc>.15){burnAcc=0;[...blds,...wrecks].forEach(b=>{if(!(b.burn>0))return;b.burn-=.15;const p=(b.p||b.g.position).clone().add(V(rand(-.2,.2),.1,rand(-.2,.2)));
@@ -1194,11 +1215,13 @@ let promptTimer=0;
 function prompt(text,secs){const el=$('prompt');el.textContent=text;el.hidden=!text;clearTimeout(promptTimer);if(text&&secs)promptTimer=setTimeout(()=>{el.hidden=true;xrDirty=true;},secs*1000);xrPrompt=text;xrDirty=true;}
 function radio(text,force){const now=performance.now()/1000;if(!force&&now-lastRadio<4)return;lastRadio=now;$('rtx').textContent='"'+text+'"';xrRadio=text;xrDirty=true;
   const box=$('radio');box.hidden=false;box.classList.add('live');clearTimeout(liveTimer);let d=2.6;if(soundOn&&AC)d=radioSfx(text);liveTimer=setTimeout(()=>box.classList.remove('live'),d*1000);}
-function cardLocked(i){return tut&&((tut.step<2&&cards[i].k==='strike')||(tut.step>=2&&cards[i].k!=='strike'));}
+const levelLocked=c=>!tut&&unlockLv(c.k)>levelFor(serviceXp,PLAYER_HQ).L;
+function cardLocked(i){return levelLocked(cards[i])||(tut&&((tut.step<2&&cards[i].k==='strike')||(tut.step>=2&&cards[i].k!=='strike')));}
 function armCard(i){if(state!=='battle'||!cards[i]||cards[i].n<=0||cardLocked(i))return;armed=armed===i?null:i;zone.visible=zoneEdge.visible=armed!=null&&cards[armed].k!=='strike';refreshCards();haptic();}
 function refreshCards(){const tray=$('tray');tray.innerHTML='';
   cards.forEach((c,i)=>{const b=document.createElement('button');b.type='button';b.className='card'+(armed===i?' on':'')+(tut&&!cardLocked(i)&&armed!==i&&c.n>0?' hint':'');
-    b.disabled=c.n<=0||cardLocked(i);b.innerHTML=`<span class="cn">${c.per?c.per+'× ':''}${NAME(c.k)}</span><span class="ck">${c.k==='strike'?'Air strike':KIND[c.k]}</span><b class="cc">×${c.n}</b>`;
+    b.disabled=c.n<=0||cardLocked(i);const lk=levelLocked(c);if(lk)b.classList.add('locked');
+    b.innerHTML=`<span class="cn">${c.per?c.per+'× ':''}${NAME(c.k)}</span><span class="ck">${c.k==='strike'?'Air strike':KIND[c.k]}</span><b class="cc">${lk?'🔒 Lv '+unlockLv(c.k):'×'+c.n}</b>`;
     b.onclick=()=>armCard(i);tray.appendChild(b);});
   zone.visible=zoneEdge.visible=armed!=null&&cards[armed]&&cards[armed].k!=='strike';xrDirty=true;}
 const KIND={rifle:'Infantry',truck:'Light vehicle',jlav:'Anti-armor',tank:'Main battle tank',mortar:'Indirect fire',heli:'Attack helicopter',drone:'Kamikaze drone'};
@@ -1246,11 +1269,11 @@ function drawBanner(){const {ctx:x,c,t}=xrBanner.userData,r=result,won=r&&r.star
   x.strokeStyle=won?'#ffd27a':'#e0503c';x.lineWidth=8;x.stroke();x.textAlign='center';x.fillStyle=won?'#ffd27a':'#ff7a5c';x.font='700 120px sans-serif';x.fillText(r.title.toUpperCase(),512,132);
   const shown=Math.min(r.stars,Math.max(0,Math.floor((battleT-r.t0-.6)/.45)+1));x.font='700 92px sans-serif';
   for(let i=0;i<3;i++){x.fillStyle=i<shown?'#ffd27a':'rgba(255,255,255,.22)';x.fillText('★',392+i*120,246);}
-  x.fillStyle='#f1ede2';x.font='500 32px sans-serif';const pr=r.promoShown?' · PROMOTED: '+rankName(r.promo,cur).toUpperCase():'';x.fillText(`${r.pct}% destroyed · +${fmtN(r.xp)} XP${pr}`,512,296);x.textAlign='left';t.needsUpdate=true;}
+  x.fillStyle='#f1ede2';x.font='500 32px sans-serif';const pr=r.promoShown?' · PROMOTED: '+rankName(r.promo,cur).toUpperCase():r.levelUp?' · '+levelName(r.L,cur).toUpperCase():'';x.fillText(`${r.pct}% destroyed · +${fmtN(r.xp)} XP${pr}`,512,296);x.textAlign='left';t.needsUpdate=true;}
 function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
   {const {ctx:x,c,t}=xrHud.userData;x.clearRect(0,0,c.width,c.height);x.fillStyle='rgba(10,14,12,.78)';rrect(x,0,0,c.width,c.height,22);x.fill();
     const s=stats();x.fillStyle='#ffd27a';x.font='700 64px sans-serif';x.fillText(state==='menu'?'TABLETOP COMMAND':fmtClock(timeLeft),28,74);
-    x.font='600 40px sans-serif';if(state==='menu'){const rk=rankFor(serviceXp,PLAYER_HQ);x.font='600 34px sans-serif';x.fillText(rankName(rk.r,cur)+' · HQ '+PLAYER_HQ,500,70);}
+    x.font='600 40px sans-serif';if(state==='menu'){const lv=levelFor(serviceXp,PLAYER_HQ);x.font='600 30px sans-serif';x.fillText(levelName(lv.L,cur)+' · HQ '+PLAYER_HQ,470,70);}
     else{x.fillText('★'.repeat(s.stars)+'☆'.repeat(3-s.stars)+'  '+s.pct+'%',230,70);x.fillStyle='#ff9a7a';x.font='600 32px sans-serif';x.fillText('Enemy HQ '+enemyHq(),560,68);}
     x.fillStyle='#f1ede2';x.font='500 30px sans-serif';x.fillText(`Gold ${fmtN(loot.g)}   Fuel ${fmtN(loot.f)}   Munitions ${fmtN(loot.m)}`,28,122);
     x.fillStyle='#a9d9e4';x.font='500 26px sans-serif';x.fillText(xrRadio?'RADIO › '+xrRadio.slice(0,58):'',28,168);
@@ -1259,7 +1282,7 @@ function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
   xrCards.forEach((m,i)=>{const c=cards[i],{ctx:x,c:cv,t}=m.userData;m.visible=state==='battle'&&!!c;if(!m.visible)return;const on=armed===i,lock=c.n<=0||cardLocked(i);
     x.clearRect(0,0,256,160);x.fillStyle=on?'rgba(255,210,122,.95)':lock?'rgba(30,32,28,.6)':'rgba(30,38,26,.92)';rrect(x,0,0,256,160,18);x.fill();
     x.strokeStyle=on?'#fff':'rgba(255,255,255,.35)';x.lineWidth=4;x.stroke();x.fillStyle=on?'#2a1e05':lock?'#888':'#efe9da';x.font='700 30px sans-serif';
-    const nm=(c.per?c.per+'× ':'')+NAME(c.k);x.fillText(nm.slice(0,14),14,52);if(nm.length>14)x.fillText(nm.slice(14,28),14,86);x.font='600 40px sans-serif';x.fillText('×'+c.n,14,140);t.needsUpdate=true;});
+    const nm=(c.per?c.per+'× ':'')+NAME(c.k);x.fillText(nm.slice(0,14),14,52);if(nm.length>14)x.fillText(nm.slice(14,28),14,86);x.font='600 40px sans-serif';x.fillText(levelLocked(c)?'Lv '+unlockLv(c.k):'×'+c.n,14,140);t.needsUpdate=true;});
   xrBtns.forEach(b=>{const u=b.userData;b.visible=u.when.split(' ').includes(state);if(!b.visible)return;
     const label=u.when==='battle'?(leaveArmed()?'Leave raid?':'Menu'):state==='ended'&&u.mode==='full'?(mode==='tutorial'?'Full raid':'Raid again'):u.label,hot=u.mode==='full'||(u.when==='battle'&&leaveArmed());
     const {ctx:x,t}=u;x.clearRect(0,0,380,120);x.fillStyle=hot?'rgba(255,210,122,.95)':'rgba(30,38,26,.92)';rrect(x,0,0,380,120,20);x.fill();
