@@ -73,6 +73,27 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .lootrows{display:grid;gap:6px}.lootrows div{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px}
 .lootrows b{margin-left:auto;font-variant-numeric:tabular-nums}
 .loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--bg);font:600 15px var(--f-mono);color:var(--muted)}
+/* rank badge, XP bar and promotion */
+.rank{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:12px;padding:10px 12px}
+.rank svg{display:block;flex:0 0 auto}
+.rank .rk{flex:1;display:grid;gap:6px;min-width:0}
+#rkName{font:700 24px/1 var(--f-display);text-transform:uppercase;letter-spacing:.02em}
+#rkSub{font-size:11.5px;color:var(--muted);line-height:1.35}
+.xp{height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden}
+.xp i{display:block;height:100%;width:0;background:var(--gold);border-radius:3px;transition:width 1.4s cubic-bezier(.2,.8,.3,1)}
+.xp i.held{background:repeating-linear-gradient(135deg,var(--gold) 0 6px,#8a6a2a 6px 12px)}
+.rkhq{text-align:center;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-left:1px solid var(--edge);padding-left:12px}
+.rkhq b{display:block;font:700 30px/1 var(--f-display);color:var(--gold);letter-spacing:0;margin-top:2px}
+.pill.enemy{color:#ffb39e;border-color:rgba(224,80,60,.5);font-weight:600}
+.xpline{display:grid;gap:7px;text-align:left;background:rgba(255,210,122,.08);border:1px solid rgba(255,210,122,.3);border-radius:10px;padding:10px 12px}
+.xpline:empty{display:none}
+.xpline .top{display:flex;justify-content:space-between;font-weight:600}.xpline .top b{color:var(--gold)}
+.xpline small{color:var(--muted);font-size:12px}
+.banner.promo{background:radial-gradient(ellipse at center,rgba(255,196,80,.34),rgba(8,10,9,.72) 72%)}
+.banner .pins svg{display:block;margin:0 auto;filter:drop-shadow(0 0 22px rgba(255,210,122,.65));animation:pop .7s cubic-bezier(.2,1.6,.4,1) both}
+.banner .pl{font:600 15px var(--f-mono);letter-spacing:.35em;text-transform:uppercase;animation:bfade .4s .35s both}
+.banner .pn{font:700 clamp(42px,10vw,88px)/1 var(--f-display);text-transform:uppercase;color:var(--gold);padding:0 16px;text-shadow:0 0 30px rgba(255,200,90,.6);animation:slam .6s .5s cubic-bezier(.2,1.5,.4,1) both}
+@media (prefers-reduced-motion: reduce){.banner .pins svg,.banner .pl,.banner .pn{animation:none}.xp i{transition:none}}
 /* end-of-raid banner: the title slams in, stars pop one by one, then the score sheet */
 .banner{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:12px;text-align:center;cursor:pointer;overflow:hidden;
   background:radial-gradient(ellipse at center,rgba(255,196,80,.32),rgba(8,10,9,.6) 72%);animation:bfade .35s ease-out}
@@ -102,6 +123,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <div class="hud">
     <div class="grp">
       <div class="pill timer"><b id="tm">3:00</b></div>
+      <div class="pill enemy" id="enemyHq" hidden>Enemy HQ 4</div>
       <div class="pill"><span class="stars" id="stars"><span class="off">★★★</span></span><span id="pct">0%</span></div>
     </div>
     <div class="grp">
@@ -124,6 +146,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <div class="sheet">
       <span class="lbl">Raid prototype · <span id="mapName">Operation Iron Delta</span></span>
       <h1>Tabletop <span>Command</span></h1>
+      <div class="rank" aria-label="Your rank and base"><span id="rkIns"></span><div class="rk"><b id="rkName">Recruit</b><div class="xp"><i id="rkFill"></i></div><span id="rkSub"></span></div><span class="rkhq">Your HQ<b id="rkHq">3</b></span></div>
       <p>Deploy units from your cards, break into the compound and destroy the HQ before the 3-minute timer runs out. Loot drops from every building you destroy.</p>
       <div style="display:grid;gap:8px"><span class="lbl">Map</span>
         <div class="facs">
@@ -150,6 +173,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <div class="big" id="endStars"></div>
       <p id="endPct"></p>
       <div class="lootrows" id="endLoot" style="text-align:left"></div>
+      <div class="xpline" id="endXp"></div>
       <button type="button" class="primary" id="endNext">Start full raid</button>
       <button type="button" class="secondary" id="endMenu">Back to menu</button>
     </div>
@@ -558,6 +582,48 @@ function orbit(el,cam,o){const ptr=new Map();let pinch=0;
   if(o.wheel)el.addEventListener('wheel',e=>{e.preventDefault();o.r=clamp(o.r*(1+e.deltaY*.0012),o.minR,o.maxR);},{passive:false});
   o.apply=(sx=0,sy=0)=>{const s=Math.sin(o.phi);cam.position.set(o.target.x+o.r*s*Math.cos(o.theta)+sx,o.target.y+o.r*Math.cos(o.phi)+sy,o.target.z+o.r*s*Math.sin(o.theta));cam.lookAt(o.target);};
   return o;}
+/* ---------- ranks: HQ level is the base, rank is the commander ---------- */
+// tier: [name, HQ needed for any rank in this tier]
+const RTIERS=[['Enlisted',1],['NCO',4],['Company officer',7],['Field officer',10],['General officer',13]];
+// [tier, total Service XP, USA/NATO, Russia, China, Europe/Middle East, promotion reward]
+const RANKS=[
+ [0,0,'Recruit','Novobranets','Xinbing','Recruit','—'],
+ [0,150,'Private','Ryadovoy','Liebing','Private','25 credits'],
+ [0,500,'Private First Class','Yefreytor','Shangdengbing','Lance Corporal','25 credits'],
+ [0,1200,'Corporal','Mladshiy Serzhant','Xiashi','Corporal','50 credits · nameplate'],
+ [1,2500,'Sergeant','Serzhant','Zhongshi','Sergeant','75 credits · NCO insignia'],
+ [1,5000,'Staff Sergeant','Starshiy Serzhant','Shangshi','Staff Sergeant','100 credits'],
+ [1,9000,'Sergeant First Class','Starshina','Siji Junshi','Colour Sergeant','100 credits'],
+ [1,15000,'Master Sergeant','Praporshchik','Sanji Junshi','Warrant Officer 2','150 credits'],
+ [1,24000,'Sergeant Major','Starshiy Praporshchik','Yiji Junshi','Warrant Officer 1','150 credits · camo pattern'],
+ [2,36000,'Second Lieutenant','Mladshiy Leytenant','Shaowei','Second Lieutenant','200 credits · can found a Coalition'],
+ [2,52000,'First Lieutenant','Leytenant','Zhongwei','Lieutenant','250 credits'],
+ [2,75000,'Captain','Kapitan','Shangwei','Captain','300 credits · officer table trim'],
+ [3,105000,'Major','Mayor','Shaoxiao','Major','400 credits · custom callsign'],
+ [3,145000,'Lieutenant Colonel','Podpolkovnik','Zhongxiao','Lieutenant Colonel','450 credits'],
+ [3,200000,'Colonel','Polkovnik','Shangxiao','Colonel','500 credits · HQ flag'],
+ [4,275000,'Brigadier General','General-Mayor','Daxiao','Brigadier','750 credits · general\'s staff car'],
+ [4,370000,'Major General','General-Leytenant','Shaojiang','Major General','800 credits'],
+ [4,490000,'Lieutenant General','General-Polkovnik','Zhongjiang','Lieutenant General','900 credits'],
+ [4,650000,'General','General Armii','Shangjiang','General','1,000 credits · gold table edge']];
+const RFAC={nato:2,ru:3,cn:4,eu:5};
+const rankName=(r,f)=>RANKS[r][RFAC[f]||2];
+const rankGate=r=>RTIERS[RANKS[r][0]][1];
+// highest rank the XP earns, and the highest the HQ allows; XP above the HQ limit is banked until the HQ is upgraded
+function rankFor(xp,hq){let byXp=0;RANKS.forEach((R,i)=>{if(xp>=R[1])byXp=i;});let r=byXp;while(r>0&&hq<rankGate(r))r--;return {r,byXp,pending:byXp>r};}
+// shoulder-board insignia, the same shape for every faction (board and piping colors differ)
+const RCOL={nato:['#4a5638','#d9b25a'],ru:['#3b4a3c','#c0392b'],cn:['#55603a','#c8402c'],eu:['#7c6c4a','#2f4f72']};
+function insignia(r,f,px){const [bd,pip]=RCOL[f]||RCOL.nato,g='#e8c25e',t=RANKS[r][0];let s='';
+  const star=(x,y,R)=>{let p='';for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?R*.42:R;p+=(i?'L':'M')+(x+rr*Math.cos(a)).toFixed(1)+' '+(y+rr*Math.sin(a)).toFixed(1);}return `<path d="${p}Z" fill="${g}" stroke="#1d1a10" stroke-width=".9" stroke-linejoin="round"/>`;};
+  const chev=y=>`<path d="M8 ${y+7}L20 ${y}L32 ${y+7}" fill="none" stroke="${g}" stroke-width="3.2" stroke-linejoin="round"/>`;
+  const rock=y=>`<path d="M8 ${y}Q20 ${y+7} 32 ${y}" fill="none" stroke="${g}" stroke-width="3.2"/>`;
+  if(t===0){for(let i=0;i<r;i++)s+=chev(30+i*9);}
+  else if(t===1){for(let i=0;i<3;i++)s+=chev(22+i*8);for(let i=0;i<r-4;i++)s+=rock(50+i*7);if(r===8)s=s+star(20,15,4);}
+  else if(t<4){const n=r-(t===2?8:11),k=t===2?1:2;for(let i=0;i<k;i++)s+=`<rect x="${k===1?18.5:14.5+i*8}" y="16" width="3" height="58" fill="${g}" opacity=".85"/>`;
+    for(let i=0;i<n;i++)s+=star(20,36+i*14,t===2?5.4:6.6);}
+  else{s+=`<path d="M6 16 ${Array.from({length:12},(_,i)=>`L${i%2?34:6} ${16+(i+1)*5}`).join(' ')}" fill="none" stroke="${g}" stroke-width="1.4" opacity=".55"/>`;for(let i=0;i<r-14;i++)s+=star(20,30+i*13,6.4);}
+  return `<svg viewBox="0 0 40 84" width="${px*40/84}" height="${px}" aria-hidden="true"><path d="M4 14L20 3L36 14V80H4Z" fill="${t===4?'#6b5a2a':bd}" stroke="${pip}" stroke-width="2.4"/><circle cx="20" cy="10" r="2.6" fill="${g}"/>${s}</svg>`;}
+
 /* ================= raid game ================= */
 warm=false;
 let cur='nato';
@@ -821,6 +887,7 @@ function clearBattle(){projs.forEach(p=>scene.remove(p.m));projs.length=0;timers
 function startBattle(m){clearBattle();mode=m;buildLayout(m);cards=(m==='tutorial'?TUT_CARDS:FULL_CARDS).map(c=>Object.assign({},c));
   armed=null;loot={g:0,f:0,m:0};timeLeft=180;battleT=0;state='battle';endT=0;
   tut=m==='tutorial'?{step:0,t:0}:null;result=null;show('menu',false);show('end',false);show('banner',false);refreshCards();
+  hqFlag();$('enemyHq').textContent='Enemy HQ '+enemyHq();$('enemyHq').hidden=false;orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);
   leaveAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=false;$('tray').hidden=false;orb.target.set(1.5,0,1.5);
   if(tut){radio('Commander, enemy outpost ahead. Deploy armor.',true);armCard(0);prompt(xrMode?'Point at the tank card and pinch, then point at open ground and pinch.':'Tap the tank card, then tap open ground outside the red zone.');}
   else{radio(`All units, ${CALL[cur]}. Begin the assault.`,true);prompt(xrMode?'Pinch a card, then pinch the ground to deploy. Squeeze to move the board, twist it or flick the stick to turn it.':'Pick a card, then tap the map to deploy. Drag to rotate, pinch to zoom.',5);}
@@ -835,7 +902,9 @@ function tutTick(dt){if(!tut)return;tut.t+=dt;
 let result=null;
 function endBattle(){state='ended';armed=null;zone.visible=zoneEdge.visible=false;const s=stats();
   const won=s.stars>0,hq=blds.find(b=>b.hq);
-  result={title:s.stars===3?'Total victory':won?'Victory':'Defeat',stars:s.stars,pct:s.pct,won,t0:battleT,focus:hq?V(hq.x,G,hq.z):V(1.5,0,1.5)};radio(won?`${CALL[cur]}, objective taken. ${s.stars} star${s.stars>1?'s':''}.`:`${CALL[cur]}, pull back. Mission failed.`,true);
+  result={title:s.stars===3?'Total victory':won?'Victory':'Defeat',stars:s.stars,pct:s.pct,won,t0:battleT,focus:hq?V(hq.x,G,hq.z):V(1.5,0,1.5)};
+  const before=rankFor(serviceXp,PLAYER_HQ),x0=serviceXp;result.xp=raidXp(s);serviceXp+=result.xp;saveXp();const after=rankFor(serviceXp,PLAYER_HQ);
+  result.promo=after.r>before.r?after.r:null;result.pendingNow=after.pending&&!before.pending;endXp(x0,after);renderBadge();radio(won?`${CALL[cur]}, objective taken. ${s.stars} star${s.stars>1?'s':''}.`:`${CALL[cur]}, pull back. Mission failed.`,true);
   document.getElementById('endStars').innerHTML='★'.repeat(s.stars)+'<span class="off">'+'★'.repeat(3-s.stars)+'</span>';
   document.getElementById('endTitle').textContent=s.stars===3?'Total victory':s.stars>0?'Victory':'Defeat';
   document.getElementById('endPct').textContent=s.pct+'% destroyed in '+fmtClock(180-timeLeft);
@@ -862,13 +931,40 @@ function celebrate(r){const b=$('banner'),c=r.focus;sting(r.won);
   else for(let i=0;i<14;i++)timers.push({t:i*.22,fn:()=>{const p=V(c.x-6+rand(-1.5,1.5),G+.2,c.z+rand(-3,3));
     emit(SMK,p,{life:rand(3.5,5),s0:.4,s1:2.2,vy:rand(.8,1.3),vx:.2,op:.8,c:0xa0261a});if(i%4===0){emit(ADD,p,{life:1.6,s0:.5,s1:.2,vy:3.5,g:-1,c:0xff4a2a});flash(p,4);}}});
   timers.push({t:3.6,fn:finishCelebrate});}
-function finishCelebrate(){if(state!=='ended'||$('banner').hidden)return;show('banner',false);show('end',true);xrDirty=true;}
+function finishCelebrate(){if(state!=='ended'||$('banner').hidden)return;
+  if(result.promo!=null&&!result.promoShown){result.promoShown=true;promoBanner(result.promo);timers.push({t:3.4,fn:finishCelebrate});return;}
+  show('banner',false);show('end',true);requestAnimationFrame(()=>{const f=$('endXp').querySelector('i');if(f)f.style.width=f.dataset.to;});xrDirty=true;}
+// promotion: the new shoulder board pops in and the radio addresses you by your new rank
+function promoBanner(r){const b=$('banner'),n=rankName(r,cur);b.className='banner promo';sting(true);
+  b.innerHTML=`<div class="flash"></div><div class="pins">${insignia(r,cur,150)}</div><div class="pl">Promoted</div><div class="pn">${n}</div><div class="bp">${RTIERS[RANKS[r][0]][0]} · reward: ${RANKS[r][6]}</div>`;
+  radio(`${n}, congratulations on your promotion. Command out.`,true);result.promoT=battleT;xrDirty=true;}
+/* ---------- ranks in the prototype ---------- */
+const PLAYER_HQ=3; // the prototype has no base to build yet, so the player's HQ is fixed
+const enemyHq=()=>mode==='tutorial'?1:4;
+let serviceXp=0;try{serviceXp=+localStorage.getItem('tc.serviceXp')||0;}catch(_){}
+function saveXp(){try{localStorage.setItem('tc.serviceXp',String(serviceXp));}catch(_){}}
+function raidXp(s){return Math.round((20+25*s.stars+s.pct)*(1+.1*(enemyHq()-1)));}
+function nextInfo(xp,rk){const n=rk.byXp+1<RANKS.length?rk.byXp+1:null,lo=RANKS[rk.byXp][1],hi=n!=null?RANKS[n][1]:lo;
+  return {n,lo,hi,frac:n!=null?(xp-lo)/(hi-lo):1};}
+function rankLine(xp,rk){const ni=nextInfo(xp,rk);
+  if(rk.pending)return `${fmtN(xp)} XP · promotion to ${rankName(rk.byXp,cur)} waits for HQ ${rankGate(rk.byXp)}`;
+  return ni.n!=null?`${fmtN(xp)} / ${fmtN(ni.hi)} XP to ${rankName(ni.n,cur)}`:`${fmtN(xp)} XP · top rank`;}
+function renderBadge(){const rk=rankFor(serviceXp,PLAYER_HQ),ni=nextInfo(serviceXp,rk);$('rkIns').innerHTML=insignia(rk.r,cur,52);$('rkName').textContent=rankName(rk.r,cur);
+  $('rkSub').textContent=rankLine(serviceXp,rk);$('rkFill').style.width=(rk.pending?100:ni.frac*100).toFixed(1)+'%';$('rkFill').classList.toggle('held',rk.pending);$('rkHq').textContent=PLAYER_HQ;}
+function endXp(x0,rk){const ni=nextInfo(serviceXp,rk),from=rk.byXp===rankFor(x0,99).byXp?(x0-ni.lo)/(ni.hi-ni.lo||1):0,to=rk.pending?1:ni.frac;
+  $('endXp').innerHTML=`<div class="top"><span>Service XP</span><b>+${fmtN(result.xp)}</b></div><div class="xp"><i style="width:${(from*100).toFixed(1)}%" data-to="${(to*100).toFixed(1)}%"></i></div><small>${rankName(rk.r,cur)} · ${rankLine(serviceXp,rk)}</small>`;}
+// a flag over the enemy HQ with its level, so you read the base before deploying
+function hqFlag(){const hq=blds.find(b=>b.hq);if(!hq)return;const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');
+  x.fillStyle='rgba(12,14,12,.82)';x.beginPath();x.moveTo(16,8);x.lineTo(240,8);x.quadraticCurveTo(250,8,250,18);x.lineTo(250,96);x.lineTo(150,96);x.lineTo(128,122);x.lineTo(106,96);x.lineTo(6,96);x.lineTo(6,18);x.quadraticCurveTo(6,8,16,8);x.fill();
+  x.strokeStyle='#e0503c';x.lineWidth=5;x.stroke();x.fillStyle='#ffd27a';x.font='700 64px sans-serif';x.textAlign='center';x.fillText('HQ '+enemyHq(),128,76);
+  const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;const s=new T.Sprite(new T.SpriteMaterial({map:t,transparent:true,depthWrite:false}));s.scale.set(1.9,.95,1);s.position.set(hq.x,G+2.3,hq.z);s.renderOrder=5;battle.add(s);}
+
 let leaveAt=-1e9;const leaveArmed=()=>performance.now()-leaveAt<3000;
 // leaving a raid takes two taps so a stray tap doesn't throw the battle away
 function armLeave(){leaveAt=performance.now();$('menuBtn').textContent='Leave raid?';xrDirty=true;haptic();
   setTimeout(()=>{if(!leaveArmed()){$('menuBtn').textContent='Menu';xrDirty=true;}},3100);}
 function goMenu(){leaveAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=true;state='menu';result=null;clearBattle();buildLayout('full');cards=[];refreshCards();
-  show('end',false);show('banner',false);show('menu',true);$('radio').hidden=true;prompt('',0);orb.target.set(1.5,0,1.5);xrDirty=true;}
+  show('end',false);show('banner',false);show('menu',true);$('radio').hidden=true;$('enemyHq').hidden=true;prompt('',0);orb.target.set(1.5,0,1.5);orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);xrDirty=true;}
 
 /* ---------- step ---------- */
 let burnAcc=0;
@@ -945,11 +1041,12 @@ function drawBanner(){const {ctx:x,c,t}=xrBanner.userData,r=result,won=r&&r.star
   x.strokeStyle=won?'#ffd27a':'#e0503c';x.lineWidth=8;x.stroke();x.textAlign='center';x.fillStyle=won?'#ffd27a':'#ff7a5c';x.font='700 120px sans-serif';x.fillText(r.title.toUpperCase(),512,132);
   const shown=Math.min(r.stars,Math.max(0,Math.floor((battleT-r.t0-.6)/.45)+1));x.font='700 92px sans-serif';
   for(let i=0;i<3;i++){x.fillStyle=i<shown?'#ffd27a':'rgba(255,255,255,.22)';x.fillText('★',392+i*120,246);}
-  x.fillStyle='#f1ede2';x.font='500 32px sans-serif';x.fillText(r.pct+'% destroyed',512,296);x.textAlign='left';t.needsUpdate=true;}
+  x.fillStyle='#f1ede2';x.font='500 32px sans-serif';const pr=r.promoShown?' · PROMOTED: '+rankName(r.promo,cur).toUpperCase():'';x.fillText(`${r.pct}% destroyed · +${fmtN(r.xp)} XP${pr}`,512,296);x.textAlign='left';t.needsUpdate=true;}
 function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
   {const {ctx:x,c,t}=xrHud.userData;x.clearRect(0,0,c.width,c.height);x.fillStyle='rgba(10,14,12,.78)';rrect(x,0,0,c.width,c.height,22);x.fill();
     const s=stats();x.fillStyle='#ffd27a';x.font='700 64px sans-serif';x.fillText(state==='menu'?'TABLETOP COMMAND':fmtClock(timeLeft),28,74);
-    x.font='600 40px sans-serif';x.fillText('★'.repeat(s.stars)+'☆'.repeat(3-s.stars)+'  '+s.pct+'%',state==='menu'?520:230,70);
+    x.font='600 40px sans-serif';if(state==='menu'){const rk=rankFor(serviceXp,PLAYER_HQ);x.font='600 34px sans-serif';x.fillText(rankName(rk.r,cur)+' · HQ '+PLAYER_HQ,500,70);}
+    else{x.fillText('★'.repeat(s.stars)+'☆'.repeat(3-s.stars)+'  '+s.pct+'%',230,70);x.fillStyle='#ff9a7a';x.font='600 32px sans-serif';x.fillText('Enemy HQ '+enemyHq(),560,68);}
     x.fillStyle='#f1ede2';x.font='500 30px sans-serif';x.fillText(`Gold ${fmtN(loot.g)}   Fuel ${fmtN(loot.f)}   Munitions ${fmtN(loot.m)}`,28,122);
     x.fillStyle='#a9d9e4';x.font='500 26px sans-serif';x.fillText(xrRadio?'RADIO › '+xrRadio.slice(0,58):'',28,168);
     x.fillStyle='#ffffff';x.font='600 26px sans-serif';
@@ -1021,7 +1118,7 @@ $('xrBtn').onclick=enterXR;
 
 /* ---------- menu + buttons ---------- */
 function setFaction(f){cur=f;M.camo.map=camoTex(FACTIONS[f].camo);M.camo.needsUpdate=true;$('rch').textContent=`CH 2 · ${CALL[f]} net`;
-  document.querySelectorAll('[data-f]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.f===f)));refreshCards();}
+  document.querySelectorAll('[data-f]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.f===f)));refreshCards();renderBadge();}
 document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>setFaction(b.dataset.f));
 // switching maps regenerates the terrain texture and recolors water, rocks and plants
 function setMap(id){if(MAPT===MAPS[id])return;MAPT=MAPS[id];const t=terrain();M.terrain.map.dispose();M.terrain.bumpMap.dispose();M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
@@ -1053,7 +1150,7 @@ rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-
   if(state==='menu')orb.theta+=dt*.05;
   else if(state==='ended'&&result){orb.theta+=dt*.12;orb.target.lerp(result.focus,Math.min(1,dt*1.5));orb.r=mix(orb.r,Math.max(orb.minR,orb.r*.97),Math.min(1,dt));} // slow victory lap around the HQ
   orb.apply();rr.render(stage,cam);});
-window.__tcDebug={M,scene,cam,goMenu,turnBoard,PIV,xrFrame,ctrls,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={M,scene,cam,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 
 }
