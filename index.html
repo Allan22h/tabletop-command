@@ -685,6 +685,8 @@ function setBar(b,r){b.h.visible=r>0&&r<.999;b.fg.scale.x=b.w*Math.max(0,r);b.fg
 /* ---------- buildings ---------- */
 const DEF={mg:{range:4.2,dmg:22,rof:.9,burst:3,ground:true,air:true},mortar:{range:7,minR:2,dmg:110,rof:4,splash:1,ground:true},
   atgm:{range:5,dmg:240,rof:3.5,ground:true},sam:{range:6.5,dmg:300,rof:3,air:true}};
+// a thin rod between two points (for legs, braces and bipods)
+function strut(parent,a,b,r,mat){const d=b.clone().sub(a),m=mesh(cyl(r,r,d.length(),5),mat,0,0,0,parent);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());return m;}
 function sandRing(g,r,y=.07){const ring=new T.Mesh(new T.TorusGeometry(r,.08,6,18),M.sandbag);ring.rotation.x=Math.PI/2;ring.position.y=y;g.add(ring);}
 const BUILD={
   hq(g){mesh(box(1.7,.62,2.2),M.concrete,0,.31,0,g);mesh(box(1.2,.42,1.4),M.concrete,.15,.83,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.64,0,g);
@@ -700,7 +702,24 @@ const BUILD={
   motor(g){mesh(box(1.1,.38,.8),M.enemy,0,.19,0,g);mesh(box(1.2,.04,.9),M.dark,0,.4,0,g);mesh(box(.02,.3,.6),M.dark,-.56,.16,0,g);},
   mg(g){[[-.12,-.12],[.12,-.12],[-.12,.12],[.12,.12]].forEach(l=>mesh(box(.04,.9,.04),M.woodDark,l[0],.45,l[1],g));
     mesh(box(.4,.22,.4),M.woodDark,0,1.0,0,g);mesh(box(.48,.04,.48),M.dark,0,1.16,0,g);mesh(box(.3,.03,.3),M.sandbag,0,.9,0,g);},
-  mortarPit(g,b){sandRing(g,.32,.06);const t=mesh(cyl(.03,.035,.4,8),M.dark,0,.18,0,g);t.rotation.z=-.7;},
+  // dug-in mortar position: two layers of sandbags with a gap at the back (away from the attackers), crew, ammo, and a mortar that turns and recoils
+  mortarPit(g,b){mesh(cyl(.34,.36,.02,20),M.trench,0,.005,0,g);
+    for(let L=0;L<2;L++)for(let i=0;i<16;i++){const a=(i+L*.5)/16*Math.PI*2;if(Math.abs(wrapA(a))<.42)continue;
+      const s=mesh(box(.13,.065,.075),M.sandbag,Math.cos(a)*(.4-L*.015),.035+L*.06,Math.sin(a)*(.4-L*.015),g);s.rotation.y=-a+Math.PI/2+rand(-.08,.08);}
+    const h=new T.Group();g.add(h);b.head=h;
+    mesh(cyl(.085,.095,.018,12),M.dark,0,.012,0,h);mesh(cyl(.03,.03,.02,8),M.metal,0,.028,0,h);
+    const e=.95,L0=.42,dir=V(Math.cos(e),Math.sin(e),0),base=V(0,.035,0);
+    const tube=new T.Group();h.add(tube);const tm=mesh(cyl(.021,.026,L0,10),M.dark,0,0,0,tube);tm.position.copy(dir).multiplyScalar(L0/2).add(base);tm.rotation.z=e-Math.PI/2;
+    const mz=mesh(cyl(.028,.028,.025,10),M.metal,0,0,0,tube);mz.position.copy(dir).multiplyScalar(L0-.01).add(base);mz.rotation.z=e-Math.PI/2;
+    const A=dir.clone().multiplyScalar(L0*.62).add(base);mesh(box(.025,.03,.05),M.metal,A.x,A.y,0,h);
+    for(const sz of[-1,1])strut(h,A,V(A.x+.07,.01,sz*.1),.006,M.dark);strut(h,V(A.x+.05,.06,-.075),V(A.x+.05,.06,.075),.005,M.metal);
+    mesh(box(.04,.035,.03),M.dark,A.x-.03,A.y+.03,-.045,h);mesh(cyl(.007,.007,.03,6),M.glass,A.x-.03,A.y+.06,-.045,h);
+    b.tube=tube;b.kick=0;b.muzzle=new T.Object3D();b.muzzle.position.copy(dir).multiplyScalar(L0+.02).add(base);tube.add(b.muzzle);b.recoilDir=dir.clone();
+    soldier(-.14,.12,-.05,.5,M.soldier,h);const ld=soldier(.02,-.16,0,-.9,M.soldier,h);mesh(cyl(.012,.012,.07,6),M.metal,.04,.2,.03,ld);
+    for(const [x,z,r] of[[-.24,-.12,.3],[-.27,.02,-.2]]){const c=mesh(box(.12,.06,.07),M.woodDark,x,.03,z,g);c.rotation.y=r;}
+    mesh(box(.11,.05,.065),M.woodDark,-.255,.085,-.05,g).rotation.y=.1;
+    for(let i=0;i<4;i++){const x=-.1+i*.03,z=.24;mesh(cyl(.011,.011,.06,6),M.white,x,.035,z,g);mesh(new T.ConeGeometry(.011,.02,6),M.white,x,.075,z,g);}
+    mesh(cyl(.006,.006,.3,5),M.white,-.62,.15,.05,g);mesh(cyl(.007,.007,.05,5),M.red,-.62,.28,.05,g);},
   atgm(g,b){sandRing(g,.34,.06);const h=new T.Group();h.position.y=.22;g.add(h);mesh(cyl(.035,.035,.45,8),M.dark,.05,0,0,h).rotation.z=-Math.PI/2;mesh(box(.1,.1,.08),M.dark,-.15,0,0,h);
     for(const a of[0,2.1,4.2]){const l=mesh(cyl(.008,.008,.25,4),M.dark,Math.cos(a)*.08,-.1,Math.sin(a)*.08,g);l.position.y=.12;}b.head=h;},
   sam(g,b){sandRing(g,.5,.07);mesh(cyl(.22,.28,.26),M.enemy,0,.13,0,g);const h=new T.Group();h.position.y=.32;g.add(h);mesh(box(.28,.2,.26),M.enemy,0,0,0,h);
@@ -853,12 +872,13 @@ function updateDefenses(dt){for(const b of blds){if(!b.alive)continue;
     if(b.garrison&&!b.spawned&&nearestUnit(atts,b,5.5)){b.spawned=true;
       if(b.garrison==='tanks'){spawnUnit('gtank',b.x-.9,b.z-.5,'def');spawnUnit('gtank',b.x-.9,b.z+.5,'def');radio('Enemy armor rolling out of the compound!',true);}
       else for(let i=0;i<4;i++)spawnUnit('gsoldier',b.x-.6+rand(-.2,.2),b.z+rand(-.5,.5),'def');}
+    if(b.tube&&b.kick>0){b.kick=Math.max(0,b.kick-dt*4);b.tube.position.copy(b.recoilDir).multiplyScalar(-.05*b.kick);}
     if(!b.def)continue;const d=b.def;b.cd-=dt;
     const t=nearestUnit(atts,b,d.range+.2,u=>(u.air?d.air:d.ground)&&Math.hypot(u.g.position.x-b.x,u.g.position.z-b.z)>=(d.minR||0));
     if(t&&b.head){const want=Math.atan2(-(t.g.position.z-b.z),t.g.position.x-b.x);b.head.rotation.y=lerpAngle(b.head.rotation.y,want,dt*4);}
     if(!t||b.cd>0)continue;b.cd=d.rof;const tp=t.g.position.clone().add(V(0,.15,0));
     if(d.type==='mg'){const from=V(b.x,G+1.05,b.z);for(let i=0;i<d.burst;i++)after(i*.09,()=>fire(from,jit(tp,.3),{kind:'tracer',dur:.4,onHit:p=>{if(aliveT(t))dmgUnit(t,d.dmg);sparks(p);}}));}
-    else if(d.type==='mortar'){const from=V(b.x+.15,G+.36,b.z);muzzle(from,true);fire(from,jit(tp,.4),{kind:'missile',dur:2.1,arc:4,onHit:p=>{splashDmg('def',p,d.splash,d.dmg);explode(p,.85);}});}
+    else if(d.type==='mortar'){const from=b.muzzle?scene.worldToLocal(b.muzzle.getWorldPosition(V())):V(b.x+.15,G+.36,b.z);b.kick=1;muzzle(from,true);fire(from,jit(tp,.4),{kind:'missile',dur:2.1,arc:4,onHit:p=>{splashDmg('def',p,d.splash,d.dmg);explode(p,.85);}});}
     else if(d.type==='atgm'){const from=V(b.x,G+.25,b.z);emit(ADD,from,{life:.15,s0:.12,s1:.4,c:0xffd090});fire(from,tp,{kind:'missile',dur:1,arc:.5,trail:true,onHit:p=>{if(aliveT(t))dmgUnit(t,d.dmg);explode(p,.6);}});}
     else if(d.type==='sam'){const from=V(b.x,G+.45,b.z);muzzle(from,true);fire(from,tp,{kind:'missile',dur:1.1,arc:.8,trail:true,onHit:p=>{if(aliveT(t))dmgUnit(t,d.dmg);explode(p,.6,false);}});}}}
 
