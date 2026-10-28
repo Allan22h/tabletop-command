@@ -97,6 +97,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #rkName small{font:600 13px var(--f-mono);color:var(--gold);letter-spacing:.04em;margin-left:4px}
 .card.locked{opacity:.5}.card.locked .cc{font-size:15px;color:var(--muted)}
 .lvup{font:700 15px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}.lvup.new{color:var(--ok)}
+.tbtn{background:transparent;border:1px solid var(--edge);border-radius:8px;padding:5px 9px;font-size:12px;color:var(--ink)}.tbtn:hover{border-color:var(--gold)}
 .testsw{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}.testsw input{accent-color:var(--gold);width:16px;height:16px}
 /* end-of-raid banner: the title slams in, stars pop one by one, then the score sheet */
 .banner{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:12px;text-align:center;cursor:pointer;overflow:hidden;
@@ -166,6 +167,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
           <button type="button" data-f="eu" aria-pressed="false">Europe / Middle East</button>
         </div></div>
       <label class="testsw"><input type="checkbox" id="unlockAll"> Prototype testing: unlock all equipment</label>
+      <div class="testsw"><span>Test profile:</span><button type="button" class="tbtn" id="mkGeneral">Make me General</button><button type="button" class="tbtn" id="mkReset">Reset to Recruit</button></div>
       <button type="button" class="primary" id="goTut">Start tutorial raid</button>
       <button type="button" class="secondary" id="goFull">Skip to the full raid</button>
       <p>Phone: tap a card, then tap the map. Drag to rotate, pinch to zoom. Quest: open this page in the Quest browser and press "Enter mixed reality" (top right) to put the board on your table. Squeeze the grip to move it, twist your wrist while squeezing or flick the thumbstick to turn it, squeeze with both hands to turn and resize it.</p>
@@ -1181,7 +1183,8 @@ function promoBanner(r){const b=$('banner'),n=rankName(r,cur);const lv=levelName
   b.innerHTML=`<div class="flash"></div><div class="pins">${insignia(r,cur,150)}</div><div class="pl">Promoted</div><div class="pn">${n}</div><div class="bp">${lv} · level ${result.L} of 200 · reward: ${RANKS[r][6]}</div>`;
   radio(`${n}, congratulations on your promotion. Command out.`,true);result.promoT=battleT;xrDirty=true;}
 /* ---------- ranks in the prototype ---------- */
-const PLAYER_HQ=3; // the prototype has no base to build yet, so the player's HQ is fixed
+let PLAYER_HQ=3; // the prototype has no base to build yet, so the HQ is fixed at 3 unless the General test profile is on
+try{PLAYER_HQ=+localStorage.getItem('tc.hq')||3;}catch(_){}
 const enemyHq=()=>mode==='tutorial'?1:4;
 let serviceXp=0;try{serviceXp=+localStorage.getItem('tc.serviceXp')||0;}catch(_){}
 function saveXp(){try{localStorage.setItem('tc.serviceXp',String(serviceXp));}catch(_){}}
@@ -1384,6 +1387,10 @@ document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent=
 function begin(m){if(!AC){try{audioInit();}catch(_){}}if(AC){AC.resume();soundOn=true;}syncSnd();startBattle(m);}
 $('goTut').onclick=()=>begin('tutorial');$('goFull').onclick=()=>begin('full');
 $('endNext').onclick=()=>begin(mode==='tutorial'?'full':'full');$('endMenu').onclick=goMenu;
+// test profiles: General Lv 22 (level 200) on an HQ 15 base, or back to a fresh Recruit. Also reachable with ?rank=general in the address
+function setProfile(general){serviceXp=general?XP_MAX:0;PLAYER_HQ=general?15:3;saveXp();try{localStorage.setItem('tc.hq',String(PLAYER_HQ));}catch(_){}renderBadge();refreshCards();xrDirty=true;}
+$('mkGeneral').onclick=()=>setProfile(true);$('mkReset').onclick=()=>setProfile(false);
+try{const q=new URLSearchParams(location.search).get('rank');if(q==='general')setProfile(true);else if(q==='recruit')setProfile(false);}catch(_){}
 $('unlockAll').checked=unlockAll;$('unlockAll').onchange=e=>{unlockAll=e.target.checked;try{localStorage.setItem('tc.unlockAll',unlockAll?'1':'0');}catch(_){}};
 $('banner').onclick=finishCelebrate;
 $('menuBtn').onclick=()=>{if(state!=='battle')return;leaveArmed()?goMenu():armLeave();};
