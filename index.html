@@ -652,11 +652,11 @@ function levelFor(xp,hq){let byXp=1;while(byXp<200&&levelXp(byXp+1)<=xp)byXp++;l
   const L=Math.min(byXp,RSTART[rMax+1]-1),r=rankOfLevel(L);return {L,r,sub:L-RSTART[r]+1,subMax:RSTART[r+1]-RSTART[r],byXp,pending:byXp>L};}
 const levelName=(L,f)=>{const r=rankOfLevel(L);return `${rankName(r,f)} Lv ${L-RSTART[r]+1}`;};
 // equipment unlocks by commander level, spread over levels 1-70: infantry and drones first, counters before the threats
-// they answer, and tanks and attack helicopters last because they dominate low-level bases. Past 70 only extra sorties and abilities.
+// they answer, and tanks and air strikes near the end because they dominate low-level bases. Past 70 only extra sorties and abilities.
 const UNLOCKS=[[1,'rifle','Rifle squad'],[4,'drone','Kamikaze drone'],[8,'truck','Light vehicle'],[12,null,'Sniper team'],[16,'mortar','Mortar team'],
-  [22,'jlav','Anti-armor vehicle'],[28,null,'Electronic-warfare jammer'],[34,'strike','Air strike'],[40,null,'Infantry fighting vehicle'],
-  [46,null,'Self-propelled artillery'],[52,null,'Special forces team'],[58,'tank','Main battle tank'],[64,null,'Naval gunfire (destroyer)'],
-  [70,'heli','Attack helicopter'],[85,null,'Second air-strike sortie'],[100,null,'Cruise-missile strike'],[125,null,'Heavy airlift reinforcements'],[150,null,'Theater command ability']];
+  [22,'jlav','Anti-armor vehicle'],[28,null,'Electronic-warfare jammer'],[34,'heli','Attack helicopter'],[40,null,'Infantry fighting vehicle'],
+  [46,null,'Self-propelled artillery'],[52,null,'Special forces team'],[58,'tank','Main battle tank'],[64,'strike','Air strike'],
+  [70,null,'Naval gunfire (destroyer)'],[85,null,'Second air-strike sortie'],[100,null,'Cruise-missile strike'],[125,null,'Heavy airlift reinforcements'],[150,null,'Theater command ability']];
 const unlockLv=k=>{const u=UNLOCKS.find(u=>u[1]===k);return u?u[0]:1;};
 
 /* ---------- faction vehicles ----------
