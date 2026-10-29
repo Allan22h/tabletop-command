@@ -1019,10 +1019,12 @@ function buildMine(){resetItems();ents=[];const h=baseHq();BASE.blds.forEach(o=>
 
 /* ---------- loot: fill levels, popups and hit effects ---------- */
 const pops=[],debris=[];
-function popText(p,txt,col){const c=document.createElement('canvas');c.width=256;c.height=80;const x=c.getContext('2d');x.font='800 54px sans-serif';x.textAlign='center';
-  x.lineWidth=9;x.strokeStyle='rgba(0,0,0,.75)';x.strokeText(txt,128,58);x.fillStyle=col;x.fillText(txt,128,58);
+// floating loot number with its resource icon
+function popText(p,txt,col,k){const c=document.createElement('canvas');c.width=320;c.height=80;const x=c.getContext('2d'),im=k&&RES_IMG[k];x.font='800 54px sans-serif';x.textAlign='center';
+  const cx=im&&im.complete?190:160;if(im&&im.complete)x.drawImage(im,cx-x.measureText(txt).width/2-74,4,72,72);
+  x.lineWidth=9;x.strokeStyle='rgba(0,0,0,.75)';x.strokeText(txt,cx,58);x.fillStyle=col;x.fillText(txt,cx,58);
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;const s=new T.Sprite(new T.SpriteMaterial({map:t,transparent:true,depthTest:false}));
-  s.scale.set(1.3,.4,1);s.position.copy(p);s.renderOrder=12;battle.add(s);pops.push({s,t:0});}
+  s.scale.set(1.6,.4,1);s.position.copy(p);s.renderOrder=12;battle.add(s);pops.push({s,t:0});}
 function updPops(dt){for(let i=pops.length-1;i>=0;i--){const o=pops[i];o.t+=dt;o.s.position.y+=dt*.8;o.s.material.opacity=1-Math.max(0,o.t-.7)/.6;
     if(o.t>1.3){battle.remove(o.s);o.s.material.map.dispose();o.s.material.dispose();pops.splice(i,1);}}
   for(let i=debris.length-1;i>=0;i--){const d=debris[i];d.t+=dt;if(d.v){d.v.y-=9*dt;d.m.position.addScaledVector(d.v,dt);d.m.rotation.x+=dt*6;
@@ -1035,13 +1037,13 @@ function spillBar(b,n){for(let i=0;i<n;i++){const m=mesh(box(.12,.045,.065),gold
   const a=rand(0,6.28),sp=rand(.8,1.8);debris.push({m,v:V(Math.cos(a)*sp,rand(2,3.5),Math.sin(a)*sp),t:0});}}
 function lootFx(b,got){b.pop=b.pop||{g:0,f:0,m:0,i:0};for(const k in got)b.pop[k]+=got[k];
   if(battleT-(b.popT||0)>.45){let best=null;for(const k in b.pop)if(b.pop[k]>=1&&(!best||b.pop[k]>b.pop[best]))best=k;
-    if(best){popText(V(b.x,b.hq?G+3:b.p.y+.9,b.z),'+'+fmtN(b.pop[best]),RESC[best]);b.pop={g:0,f:0,m:0,i:0};b.popT=battleT;}}
+    if(best){popText(V(b.x,b.hq?G+3:b.p.y+.9,b.z),'+'+fmtN(b.pop[best]),RESC[best],best);b.pop={g:0,f:0,m:0,i:0};b.popT=battleT;}}
   const p=V(b.x+rand(-b.r,b.r)*.5,G+.45,b.z+rand(-b.r,b.r)*.5);
   if(b.kind==='vault'){for(let i=0;i<4;i++)emit(ADD,p,{life:.5,s0:.06,s1:.01,vx:rand(-1,1),vy:rand(1,2),vz:rand(-1,1),g:-4,c:0xffd27a});if(Math.random()<.25)spillBar(b,1);}
   else if(b.kind==='fuel'){emit(SMK,p,{life:rand(2,3),s0:.2,s1:.9,vy:.5,op:.7,c:0x161412});if(Math.random()<.5)emit(ADD,p,{life:.4,s0:.25,s1:.08,vy:.6,c:0xff7a20});}
   else if(b.kind==='ammo'&&Math.random()<.35){emit(ADD,p,{life:.15,s0:.25,s1:.05,c:0xfff0b0});for(let i=0;i<5;i++)emit(ADD,p,{life:.35,s0:.04,s1:.01,vx:rand(-2,2),vy:rand(1,3),vz:rand(-2,2),g:-5,c:0xffc060});}
   updateFill(b);}
-function destroyFx(b,rest){let best=null;for(const k in rest)if(rest[k]>=1&&(!best||rest[k]>rest[best]))best=k;if(best)popText(V(b.x,b.hq?G+3.1:b.p.y+1.1,b.z),'+'+fmtN(rest[best]),RESC[best]);
+function destroyFx(b,rest){let best=null;for(const k in rest)if(rest[k]>=1&&(!best||rest[k]>rest[best]))best=k;if(best)popText(V(b.x,b.hq?G+3.1:b.p.y+1.1,b.z),'+'+fmtN(rest[best]),RESC[best],best);
   if(b.kind==='vault')spillBar(b,10);
   else if(b.kind==='fuel'){explode(V(b.x,G+.5,b.z),1.7);b.burn=18;for(let i=0;i<12;i++)after(i*.25,()=>emit(SMK,V(b.x+rand(-.4,.4),G+.5,b.z+rand(-.4,.4)),{life:rand(4,6),s0:.5,s1:2.2,vy:rand(.6,1),vx:.15,op:.8,c:0x0e0d0c}));}
   else if(b.kind==='ammo')for(let i=0;i<8;i++)after(.2+i*rand(.2,.35),()=>{const q=V(b.x+rand(-.5,.5),G+.2,b.z+rand(-.5,.5));explode(q,rand(.4,.7));sparks(q);});}
@@ -1210,7 +1212,7 @@ function panelReports(){const sl=shieldLeft();let h=`<span class="muted">${sl>0?
   BASE.log.forEach((l,ix)=>{const ago=(Date.now()-l.t)/1000;h+=`<div class="bsel"><b>${l.by} (HQ ${l.hq}) · ${l.pct}% destroyed · ${'★'.repeat(l.stars)}${'☆'.repeat(3-l.stars)}</b><span class="muted">${fmtT(ago)} ago · lost ${costTxt(l.lost)||'nothing'}${l.sh?' · shield '+l.sh+'h':''}</span>${l.plan?`<div class="row"><button type="button" class="tbtn" data-replay="${ix}">Watch replay</button></div>`:''}</div>`;});
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="attack">Simulate an enemy attack</button><button type="button" class="tbtn" data-act="noshield">Remove shield</button></div>`;
   return h;}
-function initBase(){const el=$('basePanel');
+function initBase(){const el=$('basePanel');makeResIcons();
   // sounds inside a seeded battle are held and played after the step, so they never draw from the battle's random numbers
   const _boom=boom;boom=v=>{if(simRng&&Math.random===simRng){sfxQ.push([_boom,v]);return;}_boom(v);};
   const _rs=radioSfx;radioSfx=v=>{if(simRng&&Math.random===simRng){sfxQ.push([_rs,v]);return 2.6;}return _rs(v);};
@@ -1262,6 +1264,40 @@ function xrBaseSelect(c){if(state!=='base')return false;ctrlRay(c);
   if(xrMove){if(xrMove.ok&&xrMove.x!=null){xrMove.e.o.x=xrMove.x;xrMove.e.o.z=xrMove.z;saveBase();endXrMove();refreshBase(true);haptic();}else{prompt('No room there.',1.5);}return true;}
   if(xrMoveBtn&&xrMoveBtn.visible&&ray.intersectObject(xrMoveBtn,false)[0]){xrMove={e:sel,g:ghostOf(sel)};haptic();return true;}
   return false;}
+
+/* ---------- resource icons: gold bars, oil drum, ammo box and classified folder, rendered once from 3D models ---------- */
+const RES_ICON={},RES_IMG={};
+function makeResIcons(){let r;try{r=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});}catch(_){return;}
+  r.setSize(128,128);r.outputEncoding=T.sRGBEncoding;r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=.95;r.setClearColor(0,0);
+  const mt=(c,o)=>new T.MeshStandardMaterial(Object.assign({color:c},o||{})),put=(g,geo,m,x,y,z)=>{const me=new T.Mesh(geo,m);me.position.set(x,y,z);g.add(me);return me;};
+  const tex=(draw,w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;};
+  const gold=()=>{const g=new T.Group(),m=mt(0xe9a91f,{metalness:.55,roughness:.28,emissive:0x1a0e00}),s=new T.Shape();s.moveTo(-.5,0);s.lineTo(.5,0);s.lineTo(.4,.26);s.lineTo(-.4,.26);s.closePath();
+    const geo=new T.ExtrudeGeometry(s,{depth:.42,bevelEnabled:true,bevelThickness:.02,bevelSize:.02,bevelSegments:2});geo.translate(0,0,-.21);
+    [[-.52,0,-.04],[.52,0,-.04],[0,.27,.06]].forEach(([x,y,ry])=>{const b=new T.Mesh(geo,m);b.position.set(x,y,0);b.rotation.y=ry;g.add(b);});return g;};
+  const oil=()=>{const g=new T.Group(),b=mt(0x1f4f86,{metalness:.35,roughness:.35});put(g,new T.CylinderGeometry(.48,.48,1.3,32),b,0,.65,0);
+    for(const y of[.05,.43,.87,1.25])put(g,new T.TorusGeometry(.485,.022,8,32),b,0,y,0).rotation.x=Math.PI/2;
+    put(g,new T.CylinderGeometry(.47,.47,.02,32),mt(0x2a5f98,{metalness:.35,roughness:.35}),0,1.31,0);put(g,new T.CylinderGeometry(.07,.07,.05,16),mt(0x9aa3aa,{metalness:.9,roughness:.3}),.22,1.33,.12);
+    const sp=put(g,new T.CircleGeometry(.12,20),mt(0x050505,{roughness:.05,metalness:.3}),-.18,1.322,-.05);sp.rotation.x=-Math.PI/2;return g;};
+  const ammo=()=>{const g=new T.Group(),ol=mt(0x5f6c3a,{roughness:.65,metalness:.1}),dk=mt(0x434d29,{roughness:.8}),bx=(w,h,d)=>new T.BoxGeometry(w,h,d);
+    put(g,bx(1.2,.06,.6),ol,0,.03,0);for(const z of[-.3,.3])put(g,bx(1.2,.5,.04),ol,0,.25,z);for(const x of[-.6,.6])put(g,bx(.04,.5,.62),ol,x,.25,0);
+    const lid=put(g,bx(1.2,.04,.62),ol,0,.55,-.55);lid.rotation.x=-1.25;put(g,bx(.3,.06,.04),dk,0,.18,.33);
+    const lb=new T.Mesh(new T.PlaneGeometry(.7,.16),new T.MeshStandardMaterial({map:tex((x,w,h)=>{x.fillStyle='#5f6c3a';x.fillRect(0,0,w,h);x.fillStyle='#e8e2c8';x.font='bold 54px sans-serif';x.textAlign='center';x.fillText('7.62 MM · 200 RDS',w/2,h/2+20);},512,116),roughness:.8}));lb.position.set(0,.3,.322);g.add(lb);
+    const br=mt(0xd9a440,{metalness:.5,roughness:.3,emissive:0x1a1000}),tp=mt(0xb8683a,{metalness:.45,roughness:.35,emissive:0x140800}),cg=new T.CylinderGeometry(.05,.05,.42,12),kg=new T.ConeGeometry(.05,.13,12);
+    for(let rr=0;rr<3;rr++)for(let c=0;c<8;c++){const x=-.48+c*.137,z=-.16+rr*.16;put(g,cg,br,x,.46,z);put(g,kg,tp,x,.735,z);}return g;};
+  const intel=()=>{const g=new T.Group(),mn=mt(0xc9a556,{roughness:.85}),bx=(w,h,d)=>new T.BoxGeometry(w,h,d);put(g,bx(1.25,.03,.92),mn,0,.015,0);
+    for(let k=0;k<3;k++){const p=put(g,bx(1.12,.008,.82),mt(0xf2efe6,{roughness:.9}),.02+k*.012,.04+k*.008,-.01-k*.01);p.rotation.y=(k-1)*.03;}
+    const cover=new T.Mesh(bx(1.25,.025,.92),new T.MeshStandardMaterial({roughness:.85,map:tex((x,w,h)=>{x.fillStyle='#ddbd74';x.fillRect(0,0,w,h);x.save();x.translate(w/2,h/2);x.rotate(-.18);
+      x.strokeStyle='#c0261c';x.lineWidth=12;x.strokeRect(-200,-58,400,116);x.fillStyle='#c0261c';x.font='bold 78px sans-serif';x.textAlign='center';x.fillText('CLASSIFIED',0,28);x.restore();},512,380)}));
+    const hinge=new T.Group();hinge.position.set(-.62,.03,0);g.add(hinge);cover.position.set(.62,.07,0);hinge.add(cover);hinge.rotation.z=.12;g.rotation.y=.25;return g;};
+  const shot=(model,pos,look)=>{const s=new T.Scene();s.add(new T.HemisphereLight(0xfff4e0,0x30362a,.75));const d=new T.DirectionalLight(0xffffff,1.9);d.position.set(2,4,3);s.add(d);
+    const d2=new T.DirectionalLight(0x9fc4ff,.6);d2.position.set(-3,1,-2);s.add(d2);const seen=new Set();model.traverse(o=>{const m=o.material;if(!m||seen.has(m))return;seen.add(m);m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();});
+    s.add(model);const cam=new T.PerspectiveCamera(30,1,.1,50);cam.position.set(...pos);cam.lookAt(...look);r.render(s,cam);
+    model.traverse(o=>{if(o.geometry)o.geometry.dispose();});return r.domElement.toDataURL();};
+  RES_ICON.g=shot(gold(),[.5,1.3,4.1],[0,.24,0]);RES_ICON.f=shot(oil(),[2.1,2.3,3.4],[0,.62,0]);RES_ICON.m=shot(ammo(),[1.2,2.6,2.6],[0,.35,0]);RES_ICON.i=shot(intel(),[.4,2.8,2.0],[0,.05,0]);
+  r.dispose();try{r.forceContextLoss();}catch(_){}
+  // every resource dot in the page (top bar, base panel, costs, loot screen) shows its icon
+  const st=document.createElement('style');st.textContent=RES.map(k=>`.dot.${k}{background:url(${RES_ICON[k]}) center/contain no-repeat;border-radius:0;width:22px;height:22px;vertical-align:middle}`).join('\n');document.head.appendChild(st);
+  RES.forEach(k=>{const im=new Image();im.onload=()=>{xrDirty=true;};im.src=RES_ICON[k];RES_IMG[k]=im;});}
 
 /* ================= raid game ================= */
 warm=false;
@@ -2000,7 +2036,7 @@ function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
     const s=stats();x.fillStyle='#ffd27a';x.font='700 64px sans-serif';x.fillText(state==='menu'?'TABLETOP COMMAND':fmtClock(timeLeft),28,74);
     x.font='600 40px sans-serif';if(state==='menu'){const lv=levelFor(serviceXp,PLAYER_HQ);x.font='600 30px sans-serif';x.fillText(levelName(lv.L,cur)+' · HQ '+PLAYER_HQ,470,70);}
     else{x.fillText('★'.repeat(s.stars)+'☆'.repeat(3-s.stars)+'  '+s.pct+'%',230,70);x.fillStyle='#ff9a7a';x.font='600 32px sans-serif';x.fillText('Enemy HQ '+enemyHq(),560,68);}
-    x.fillStyle='#f1ede2';x.font='500 30px sans-serif';x.fillText(`Gold ${fmtN(loot.g)}   Fuel ${fmtN(loot.f)}   Munitions ${fmtN(loot.m)}`,28,122);
+    x.fillStyle='#f1ede2';x.font='500 30px sans-serif';{const src=state==='base'?BASE.res:loot;let px=28;RES.forEach(k=>{const im=RES_IMG[k];if(im&&im.complete){x.drawImage(im,px,90,40,40);px+=44;}x.fillText(fmtN(src[k]||0),px,122);px+=x.measureText(fmtN(src[k]||0)).width+26;});}
     x.fillStyle='#a9d9e4';x.font='500 26px sans-serif';x.fillText(xrRadio?'RADIO › '+xrRadio.slice(0,58):'',28,168);
     x.fillStyle='#ffffff';x.font='600 26px sans-serif';
     const pr=state==='ended'?`${$('endTitle').textContent}! ${$('endPct').textContent}. Pinch a button to continue.`:state==='menu'?'Pinch a button to start. Squeeze to move, twist to turn.':xrPrompt;x.fillText((pr||'').slice(0,64),28,210);t.needsUpdate=true;}
