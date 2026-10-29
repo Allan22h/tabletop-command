@@ -1533,18 +1533,19 @@ function hqTent(root,L){const g=new T.Group();root.add(g);if(L===1)g.scale.setSc
   for(const z of[-.95,.75])for(let k=0;k<2;k++)mesh(box(.1,.06,.09),M.sandbag,-.98,.035+k*.062,z,g);}
 const BUILD={
   // HQ 1 and 2: command tents, small then full size. From HQ 3 the concrete bunker, and every level adds to it:
-  // 3 one floor with slit windows, sandbags and a blast door; 4 a small second floor; 5 a command vehicle; 6 the satellite dish;
-  // 7 a camouflage net; 8 the second floor grows to full size, with a second mast; 9 armor plating; 10 a radar dome; 11 a lookout tower; 12 gold trim;
+  // 3 one floor with slit windows, sandbags and a blast door; 4 a small second floor and a sandbag wall all round; 5 a command vehicle and a .50 cal;
+  // 6 the satellite dish and sandbags on the lower roof; 7 a camouflage net and camouflage paint; 8 the second floor grows to full size, with a second mast and sandbags;
+  // 9 armor plating and a second .50 cal; 10 a radar dome and razor wire; 11 a lookout tower and hedgehogs; 12 gold trim;
   // 13 an anti-air gun on the roof; 14 floodlights on the corners; 15 a tall flagpole
   hq(g,b){const L=b.lv||1,rt=L>=4?1.05:.62,
       // roof height under a spot: the top floor where it covers the spot (small from HQ 4, full from HQ 8), else the lower roof
-      rf=(x,z)=>L>=8?rt:L>=4&&x>-.05&&x<.65&&Math.abs(z)<.5?rt:.62;if(L<=2)return hqTent(g,L);mesh(box(1.74,.06,2.24),M.dark,0,.03,0,g);mesh(box(1.7,.56,2.2),M.concrete,0,.31,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.6,0,g);
+      rf=(x,z)=>L>=8?rt:L>=4&&x>-.05&&x<.65&&Math.abs(z)<.5?rt:.62,cm=L>=7?camoWall:M.concrete;if(L<=2)return hqTent(g,L);mesh(box(1.74,.06,2.24),M.dark,0,.03,0,g);mesh(box(1.7,.56,2.2),cm,0,.31,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.6,0,g);
     for(let i=0;i<5;i++){mesh(box(.02,.05,.24),M.glass,-.86,.42,-.84+i*.42,g);}for(const z of[-1.11,1.11])for(let i=0;i<4;i++)mesh(box(.26,.05,.02),M.glass,-.55+i*.4,.42,z,g);
     for(let i=0;i<22;i++){const z=-1.05+i*.1;if(Math.abs(z)<.28)continue;for(let k=0;k<2;k++)mesh(box(.08,.06,.1),M.sandbag,-.9,.04+k*.06,z+(k?.05:0),g);}
     mesh(box(.04,.34,.3),M.metal,-.87,.17,0,g);mesh(box(.02,.04,.04),M.dark,-.9,.18,.1,g);
     for(const z of[-.28,.28])for(let k=0;k<3;k++)mesh(box(.32,.06,.09),M.sandbag,-1.05,.035+k*.062,z,g);
-    if(L>=8){mesh(box(1.2,.4,1.5),M.concrete,.18,.82,0,g);mesh(box(1.25,.04,1.55),M.dark,.18,1.03,0,g);for(let i=0;i<3;i++)mesh(box(.02,.05,.3),M.glass,-.43,.86,-.5+i*.5,g);}
-    else if(L>=4){mesh(box(.7,.4,1.0),M.concrete,.3,.82,0,g);mesh(box(.74,.04,1.04),M.dark,.3,1.03,0,g);for(const z of[-.25,.25])mesh(box(.02,.05,.3),M.glass,-.06,.86,z,g);}
+    if(L>=8){mesh(box(1.2,.4,1.5),cm,.18,.82,0,g);mesh(box(1.25,.04,1.55),M.dark,.18,1.03,0,g);for(let i=0;i<3;i++)mesh(box(.02,.05,.3),M.glass,-.43,.86,-.5+i*.5,g);}
+    else if(L>=4){mesh(box(.7,.4,1.0),cm,.3,.82,0,g);mesh(box(.74,.04,1.04),M.dark,.3,1.03,0,g);for(const z of[-.25,.25])mesh(box(.02,.05,.3),M.glass,-.06,.86,z,g);}
     if(L>=6){const mt=new T.Group();mt.position.set(.45,rf(.45,-.45),-.45);g.add(mt);mesh(cyl(.05,.07,.12,10),M.metal,0,.06,0,mt);
       const dish=mesh(new T.SphereGeometry(.3,20,6,0,Math.PI*2,0,.62),dishWhite,0,.5,0,mt);dish.rotation.z=Math.PI-.9;dish.scale.y=.8;mesh(cyl(.02,.02,.3,6),M.metal,0,.24,0,mt);mesh(cyl(.008,.008,.24,5),M.dark,-.1,.36,0,mt).rotation.z=-.5;}
     for(const [x,z,h] of (L>=8?[[.65,.55,1.3],[-.25,.6,.9]]:[[.65,.55,1.0]])){const y=rf(x,z);mesh(cyl(.012,.018,h,6),M.metal,x,y+h/2,z,g);for(let k=1;k<=3;k++)mesh(box(.12-k*.02,.008,.008),M.metal,x,y+h*k/4,z,g);mesh(new T.SphereGeometry(.018,8,6),M.red,x,y+h,z,g);}
@@ -1554,14 +1555,23 @@ const BUILD={
     else for(const z of[.25,.45])mesh(box(.16,.1,.14),M.metal,-.25,rf(-.25,z)+.05,z,g);
     mesh(box(.22,.14,.18),M.enemy,.55,.68,-.95,g);
     if(L>=9){for(const z of[-1.115,1.115])for(let i=0;i<3;i++)mesh(box(.42,.36,.025),ironDark,-.42+i*.48,.3,z,g);for(let i=0;i<4;i++)mesh(box(.025,.2,.38),ironDark,.86,.3,-.75+i*.5,g);}
-    if(L>=11){mesh(box(.36,.36,.36),M.concrete,.2,rt+.18,.1,g);mesh(box(.4,.04,.4),L>=12?goldTrim:M.dark,.2,rt+.38,.1,g);mesh(box(.02,.06,.24),M.glass,.01,rt+.26,.1,g);}
+    if(L>=11){mesh(box(.36,.36,.36),cm,.2,rt+.18,.1,g);mesh(box(.4,.04,.4),L>=12?goldTrim:M.dark,.2,rt+.38,.1,g);mesh(box(.02,.06,.24),M.glass,.01,rt+.26,.1,g);}
     if(L>=12){for(const [x,z,w,d] of[[.18,.775,1.25,.02],[.18,-.775,1.25,.02],[-.425,0,.02,1.55],[.785,0,.02,1.55]])mesh(box(w,.025,d),goldTrim,x,rt+.005,z,g);}
     if(L>=13){const aa=new T.Group();aa.position.set(-.62,.62,-.72);g.add(aa);mesh(cyl(.09,.11,.06,12),M.metal,0,.03,0,aa);mesh(box(.14,.08,.12),M.enemy,0,.1,0,aa);
       for(const z of[-.03,.03]){const br=mesh(cyl(.008,.008,.32,6),M.dark,-.13,.2,z,aa);br.rotation.z=-1.0;}}
     if(L>=14)for(const [x,z] of[[-.8,-1.05],[-.8,1.05],[.8,-1.05],[.8,1.05]]){const X=x*1.22,Z=z*1.18;mesh(cyl(.012,.016,.85,5),M.metal,X,.43,Z,g);const fl=new T.Group();fl.position.set(X,.86,Z);fl.rotation.y=Math.atan2(X,Z);g.add(fl);
       mesh(box(.12,.08,.06),M.dark,0,0,0,fl);mesh(box(.1,.06,.006),screenMat,0,0,.032,fl);}
     if(L>=15){mesh(cyl(.012,.016,1.6,6),M.metal,.72,rt+.8,0,g);mesh(new T.SphereGeometry(.025,8,6),goldTrim,.72,rt+1.61,0,g);mesh(box(.01,.24,.4),M.red,.72,rt+1.45,-.2,g);}
-    if(L>=5){const cv=new T.Group();cv.position.set(.35,0,1.42);g.add(cv);mesh(box(.6,.2,.26),M.enemy,0,.16,0,cv);mesh(box(.2,.16,.26),M.enemy,.38,.14,0,cv);mesh(box(.02,.08,.22),M.glass,.48,.17,0,cv);
+    // sandbags climb the building: a ground wall all round (4), a parapet on the lower roof (6), then on the top floor (8)
+    if(L>=4){bagLine(g,-.9,1.22,.96,1.22,0,3);bagLine(g,-.9,-1.22,.96,-1.22,0,3);bagLine(g,.96,-1.12,.96,1.12,0,3);}
+    if(L>=6)bagRect(g,-.81,.81,-1.06,1.06,.625,2);
+    if(L>=8)bagRect(g,-.37,.73,-.7,.7,rt,2);
+    // .50 cal nests on the lower roof: one covering the corner (5), a second over the door (9)
+    if(L>=5)cal50(g,-.6,.625,.78,-.6);if(L>=9)cal50(g,-.6,.625,-.08,0);
+    // coils of razor wire outside the sandbags (10), steel hedgehogs on the approach (11)
+    if(L>=10)for(const [ax,az,bx,bz] of[[-1.0,1.36,1.12,1.36],[-1.0,-1.36,1.12,-1.36],[1.12,-1.2,1.12,1.2]])wireLine(g,ax,az,bx,bz);
+    if(L>=11)for(const [x,z] of[[-1.38,.95],[-1.45,.5]])hedgehog(g,x,z);
+    if(L>=5){const cv=new T.Group();cv.position.set(-1.3,0,-.78);cv.rotation.y=Math.PI/2;g.add(cv);mesh(box(.6,.2,.26),M.enemy,0,.16,0,cv);mesh(box(.2,.16,.26),M.enemy,.38,.14,0,cv);mesh(box(.02,.08,.22),M.glass,.48,.17,0,cv);
       for(const x of[-.2,.08,.36])for(const z2 of[-.14,.14]){const w=mesh(cyl(.06,.06,.04,10),M.dark,x,.06,z2,cv);w.rotation.x=Math.PI/2;}
       mesh(cyl(.006,.006,.5,4),M.dark,-.22,.5,-.08,cv);mesh(cyl(.006,.006,.35,4),M.dark,-.1,.42,.08,cv);}},
   // drone hangar: an arched shelter open toward the attackers, a quadcopter on its launch pad, a control mast
@@ -1740,6 +1750,22 @@ const netMat=(()=>{const c=document.createElement('canvas');c.width=c.height=128
   for(let i=0;i<300;i++){x.fillStyle=['rgba(86,92,58,.95)','rgba(120,112,74,.95)','rgba(60,66,44,.95)','rgba(100,96,62,.95)'][i%4];x.beginPath();x.ellipse(rand(0,128),rand(0,128),rand(3,9),rand(2,6),rand(0,3),0,7);x.fill();}
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,1.6);
   return new T.MeshStandardMaterial({map:t,transparent:true,alphaTest:.35,side:T.DoubleSide,roughness:1});})();
+// HQ fortifications: rows of sandbags, a .50 cal in its nest, razor wire, hedgehogs, and a camouflage paint scheme for the walls
+function bagLine(g,ax,az,bx,bz,y,layers){const dx=bx-ax,dz=bz-az,len=Math.hypot(dx,dz),n=Math.max(1,Math.round(len/.105)),a=-Math.atan2(dz,dx);
+  for(let L=0;L<layers;L++)for(let i=0;i<n;i++){const t=(i+.5+(L%2)*.5)/n;if(t>1)continue;const s=mesh(box(.1,.055,.075),M.sandbag,ax+dx*t,y+.03+L*.055,az+dz*t,g);s.rotation.y=a+rand(-.07,.07);}}
+function bagRect(g,x0,x1,z0,z1,y,layers){bagLine(g,x0,z0,x1,z0,y,layers);bagLine(g,x0,z1,x1,z1,y,layers);bagLine(g,x0,z0+.08,x0,z1-.08,y,layers);bagLine(g,x1,z0+.08,x1,z1-.08,y,layers);}
+// heavy machine gun on a tripod behind a ring of bags; rot turns the muzzle (local -x) to face out
+function cal50(g,x,y,z,rot){const n=new T.Group();n.position.set(x,y,z);n.rotation.y=rot;g.add(n);bagRing(n,.15,2,.7);
+  const gun=new T.Group();gun.position.y=.13;n.add(gun);for(const a of[0,2.1,-2.1])strut(n,V(Math.cos(a+Math.PI)*.07,0,Math.sin(a+Math.PI)*.07),V(0,.12,0),.006,M.dark);
+  mesh(box(.11,.05,.04),M.dark,0,0,0,gun);const br=mesh(cyl(.009,.011,.24,6),M.dark,-.17,.005,0,gun);br.rotation.z=Math.PI/2;mesh(cyl(.014,.014,.05,6),M.dark,-.3,.005,0,gun).rotation.z=Math.PI/2;
+  for(const z of[-.014,.014])mesh(box(.03,.012,.008),M.dark,.07,.0,z,gun);mesh(box(.05,.04,.065),ammoCan,0,-.02,-.06,gun);}
+function wireLine(g,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,len=Math.hypot(dx,dz),n=Math.round(len/.07),a=-Math.atan2(dz,dx);
+  for(const [s,o] of[[.05,0],[.04,.07]])for(let i=0;i<n;i++){const t=(i+.5)/n,r=mesh(new T.TorusGeometry(s,.008,3,10),ironMat,ax+dx*t,s+o,az+dz*t,g);r.rotation.set(0,a+Math.PI/2+.25,0);}}
+function hedgehog(g,x,z){const h=new T.Group();h.position.set(x,.09,z);h.rotation.y=rand(0,3);g.add(h);
+  for(const [rx,rz] of[[0,.955],[.955,0],[-.6,-.6]]){const b=mesh(box(.32,.03,.03),ironDark,0,0,0,h);b.rotation.set(rx,0,rz);}}
+const camoWall=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');x.fillStyle='#8a8466';x.fillRect(0,0,128,128);
+  for(let i=0;i<46;i++){x.fillStyle=['#5b6140','#3f4330','#9c8a62'][i%3];x.beginPath();const cx=rand(0,128),cy=rand(0,128);for(let k=0;k<7;k++){const a=k/7*Math.PI*2,r=rand(6,16);x.lineTo(cx+Math.cos(a)*r*1.5,cy+Math.sin(a)*r);}x.fill();}
+  const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.wrapS=t.wrapT=T.RepeatWrapping;return new T.MeshStandardMaterial({map:t,roughness:.95});})();
 const ironMat=new T.MeshStandardMaterial({color:0x4a5057,metalness:.75,roughness:.42}),ironDark=new T.MeshStandardMaterial({color:0x2c3035,metalness:.7,roughness:.5});
 const crateRim=new T.MeshStandardMaterial({color:0x3b4526,roughness:.9}),rocketWhite=new T.MeshStandardMaterial({color:0xe9e6dc,roughness:.45}),rocketTip=new T.MeshStandardMaterial({color:0x8b9096,metalness:.5,roughness:.4}),
   brassMat2=new T.MeshStandardMaterial({color:0xc9a04a,metalness:.85,roughness:.32}),ammoCan=new T.MeshStandardMaterial({color:0x4b5530,metalness:.4,roughness:.6});
