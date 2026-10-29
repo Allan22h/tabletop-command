@@ -969,10 +969,10 @@ const shieldLeft=()=>Math.max(0,(BASE.shield||0)-Date.now())/1000;
 let raidHq=4,raidArmy=null;
 
 /* ---------- where things go ---------- */
-// does something of kind k fit at x,z: inside the walls for buildings, on dry, open base ground for items, clear of everything else
+// does something of kind k fit at x,z: inside the walls for buildings, anywhere on dry, open ground of the board for items, clear of everything else
 function fits(k,x,z,list,h,skip){const d=BK[k],r=d.r,c=cmpFor(h);
   if(d.zone==='in'){if(x<c.x0+.2||x>c.x1-.2||Math.abs(z)>c.z-.2||x-r<c.x0-.1||x+r>c.x1+.1||Math.abs(z)+r>c.z+.1)return false;}
-  else{if(x<-3.4||x>c.x1-.2||Math.abs(z)>c.z+2.6)return false;const hh=H(x,z);if(hh<-.05||hh>.7)return false;}
+  else{const e=mapExt(h);if(x<riverX(z)+.5||x>11.4+e||z<-7.4-e||z>11.4+e)return false;const hh=H(x,z);if(hh<-.05||hh>.7)return false;}
   return list.every(q=>q===skip||q.x==null||Math.hypot(q.x-x,q.z-z)>=(k==='barrier'&&q.k==='barrier'?.32:r+BK[q.k].r+.04));}
 // the default spot for the s-th one of a kind; items line up in front of the west wall, barriers ring the HQ
 function anchorOf(k,s,h){const c=cmpFor(h),sg=s%2?1:-1,n=Math.floor(s/2);
