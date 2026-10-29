@@ -956,9 +956,9 @@ const BUILD={
     const rocketCrate=(x,z,ry)=>{const oc=new T.Group();oc.position.set(x,0,z);oc.rotation.y=ry;g.add(oc);
       mesh(box(.5,.015,.2),crateMat,0,.008,0,oc);for(const z2 of[-.095,.095])mesh(box(.5,.1,.012),crateMat,0,.05,z2,oc);for(const x2 of[-.245,.245])mesh(box(.012,.1,.2),crateMat,x2,.05,0,oc);
       const lid=mesh(box(.5,.012,.2),crateMat,0,.08,-.16,oc);lid.rotation.x=1.1;
-      for(let i=0;i<3;i++){const z2=-.058+i*.058,r=mesh(cyl(.021,.021,.34,10),rocketOlive,-.03,.06,z2,oc);r.rotation.z=Math.PI/2;
-        mesh(cyl(.028,.028,.04,10),M.dark,.16,.06,z2,oc).rotation.z=Math.PI/2;const w=mesh(new T.ConeGeometry(.028,.085,10),rocketOlive,.222,.06,z2,oc);w.rotation.z=-Math.PI/2;
-        for(let f=0;f<4;f++){const fn=mesh(box(.05,.005,.028),M.red,-.19,.06,z2,oc);fn.rotation.x=f*Math.PI/4;}}};
+      for(let i=0;i<3;i++){const z2=-.058+i*.058,r=mesh(cyl(.021,.021,.34,10),rocketWhite,-.03,.06,z2,oc);r.rotation.z=Math.PI/2;
+        mesh(cyl(.028,.028,.04,10),rocketTip,.16,.06,z2,oc).rotation.z=Math.PI/2;const w=mesh(new T.ConeGeometry(.028,.085,10),rocketTip,.222,.06,z2,oc);w.rotation.z=-Math.PI/2;
+        for(let f=0;f<4;f++){const fn=mesh(box(.06,.005,.036),M.red,-.19,.06,z2,oc);fn.rotation.x=f*Math.PI/4;}}};
     rocketCrate(-.15,-.33,.2);rocketCrate(.05,-.02,0);rocketCrate(.02,.3,-.12);
     // open crate of artillery rounds standing upright
     const sc=new T.Group();sc.position.set(-.38,0,.32);g.add(sc);mesh(box(.2,.015,.15),crateMat,0,.008,0,sc);
@@ -1035,7 +1035,7 @@ const netMat=(()=>{const c=document.createElement('canvas');c.width=c.height=128
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,1.6);
   return new T.MeshStandardMaterial({map:t,transparent:true,alphaTest:.35,side:T.DoubleSide,roughness:1});})();
 const ironMat=new T.MeshStandardMaterial({color:0x4a5057,metalness:.75,roughness:.42}),ironDark=new T.MeshStandardMaterial({color:0x2c3035,metalness:.7,roughness:.5});
-const crateRim=new T.MeshStandardMaterial({color:0x3b4526,roughness:.9}),rocketOlive=new T.MeshStandardMaterial({color:0x5c6640,roughness:.6}),
+const crateRim=new T.MeshStandardMaterial({color:0x3b4526,roughness:.9}),rocketWhite=new T.MeshStandardMaterial({color:0xe9e6dc,roughness:.45}),rocketTip=new T.MeshStandardMaterial({color:0x8b9096,metalness:.5,roughness:.4}),
   brassMat2=new T.MeshStandardMaterial({color:0xc9a04a,metalness:.85,roughness:.32}),ammoCan=new T.MeshStandardMaterial({color:0x4b5530,metalness:.4,roughness:.6});
 // stenciled OIL label wrapped around the front of each fuel tank
 const oilLabel=(()=>{const c=document.createElement('canvas');c.width=256;c.height=96;const x=c.getContext('2d');x.fillStyle='#f1ead8';x.font='900 72px sans-serif';x.textAlign='center';x.textBaseline='middle';
