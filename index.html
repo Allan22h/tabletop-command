@@ -589,7 +589,14 @@ const rocketProto=(()=>{const g=new T.Group(),bg=cyl(.017,.017,.15,8),ng=new T.C
   const fin=new T.Shape();fin.moveTo(0,0);fin.lineTo(.026,-.012);fin.lineTo(.026,-.04);fin.lineTo(0,-.05);fin.closePath();
   const fg=new T.ExtrudeGeometry(fin,{depth:.004,bevelEnabled:false});fg.translate(.015,0,-.002);fg.rotateX(Math.PI/2);
   for(let i=0;i<4;i++){const f=new T.Mesh(fg,finMat);f.rotation.z=i*Math.PI/2;f.position.z=-.03;g.add(f);}return g;})();
-function fire(from,to,o){let m;if(o.kind==='tracer'){m=bulletProto.clone();const wd=o.wide?3.4:2;m.scale.set(wd,wd,2.6);}else{m=rocketProto.clone();m.scale.setScalar(o.kind==='bomb'?1.55:.85);}
+// mortar bomb: a stubby teardrop with a thin tail boom and a ring of fins, olive drab, nose along +z
+const mortarMat=new T.MeshStandardMaterial({color:0x4a5236,roughness:.55,metalness:.2});mortarMat.color.convertSRGBToLinear();
+const mortarProto=(()=>{const g=new T.Group(),bd=new T.Mesh(new T.SphereGeometry(.03,12,8),mortarMat);bd.scale.set(1,1,1.8);g.add(bd);
+  const fz=new T.Mesh(new T.ConeGeometry(.012,.022,8),M.dark);fz.rotation.x=Math.PI/2;fz.position.z=.058;g.add(fz);
+  const tb=new T.Mesh(cyl(.009,.009,.06,6),mortarMat);tb.rotation.x=Math.PI/2;tb.position.z=-.07;g.add(tb);
+  for(let i=0;i<2;i++){const f=new T.Mesh(box(.004,.046,.032),mortarMat);f.rotation.z=i*Math.PI/2;f.position.z=-.09;g.add(f);} // two crossed plates make the four tail fins
+  return g;})();
+function fire(from,to,o){let m;if(o.kind==='tracer'){m=bulletProto.clone();const wd=o.wide?3.4:2;m.scale.set(wd,wd,2.6);}else if(o.kind==='mortar'){m=mortarProto.clone();m.scale.setScalar(1.3);}else{m=rocketProto.clone();m.scale.setScalar(o.kind==='bomb'?1.55:.85);}
   m.position.copy(from);scene.add(m);m.lookAt(scene.localToWorld(to.clone()));projs.push({m,from:from.clone(),to:to.clone(),t:0,dur:o.dur,arc:o.arc||0,trail:o.trail,kind:o.kind,onHit:o.onHit,acc:0});}
 const _v=new T.Vector3();
 function updProjs(dt){for(let i=projs.length-1;i>=0;i--){const p=projs[i];p.t+=dt/p.dur;const k=Math.min(1,p.t);
@@ -917,10 +924,24 @@ const DEF={mg:{range:4.2,dmg:22,rof:.9,burst:3,ground:true,air:true},mortar:{ran
 function strut(parent,a,b,r,mat){const d=b.clone().sub(a),m=mesh(cyl(r,r,d.length(),5),mat,0,0,0,parent);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());return m;}
 function sandRing(g,r,y=.07){const ring=new T.Mesh(new T.TorusGeometry(r,.08,6,18),M.sandbag);ring.rotation.x=Math.PI/2;ring.position.y=y;g.add(ring);}
 const BUILD={
-  hq(g){mesh(box(1.7,.62,2.2),M.concrete,0,.31,0,g);mesh(box(1.2,.42,1.4),M.concrete,.15,.83,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.64,0,g);
-    mesh(box(.5,.25,.4),M.metal,-.35,1.16,.4,g);mesh(cyl(.015,.02,1.6,6),M.metal,.5,1.85,.45,g);
-    const dish=mesh(new T.SphereGeometry(.18,16,8,0,Math.PI*2,0,Math.PI/2.6),M.white,-.4,1.38,-.3,g);dish.rotation.z=1.1;
-    for(let i=0;i<4;i++)mesh(box(.02,.12,.32),M.glass,-.86,.38,-.75+i*.5,g);mesh(box(.3,.22,.6),M.sandbag,-1.05,.11,0,g);},
+  // command bunker: two concrete floors behind sandbags, slit windows lit from inside, a blast door in a sandbag entrance,
+  // a satellite dish, antenna masts and a camouflage net on the roof, and a command vehicle parked alongside
+  hq(g){mesh(box(1.74,.06,2.24),M.dark,0,.03,0,g);mesh(box(1.7,.56,2.2),M.concrete,0,.31,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.6,0,g);
+    mesh(box(1.2,.4,1.5),M.concrete,.18,.82,0,g);mesh(box(1.25,.04,1.55),M.dark,.18,1.03,0,g);
+    for(let i=0;i<5;i++){mesh(box(.02,.05,.24),litGlass,-.86,.42,-.84+i*.42,g);}for(let i=0;i<3;i++)mesh(box(.02,.05,.3),litGlass,-.43,.86,-.5+i*.5,g);
+    for(const z of[-1.11,1.11])for(let i=0;i<4;i++)mesh(box(.26,.05,.02),litGlass,-.55+i*.4,.42,z,g);
+    for(let i=0;i<22;i++){const z=-1.05+i*.1;if(Math.abs(z)<.28)continue;for(let L=0;L<2;L++)mesh(box(.08,.06,.1),M.sandbag,-.9,.04+L*.06,z+(L?.05:0),g);}
+    mesh(box(.04,.34,.3),M.metal,-.87,.17,0,g);mesh(box(.02,.04,.04),M.dark,-.9,.18,.1,g);
+    for(const z of[-.28,.28])for(let L=0;L<3;L++)mesh(box(.32,.06,.09),M.sandbag,-1.05,.035+L*.062,z,g);
+    const mt=new T.Group();mt.position.set(.45,1.05,-.45);g.add(mt);mesh(cyl(.05,.07,.12,10),M.metal,0,.06,0,mt);
+    const dish=mesh(new T.SphereGeometry(.3,20,6,0,Math.PI*2,0,.62),dishWhite,0,.5,0,mt);dish.rotation.z=Math.PI-.9;dish.scale.y=.8;mesh(cyl(.02,.02,.3,6),M.metal,0,.24,0,mt);mesh(cyl(.008,.008,.24,5),M.dark,-.1,.36,0,mt).rotation.z=-.5;
+    for(const [x,z,h] of[[.65,.55,1.3],[-.25,.6,.9]]){mesh(cyl(.012,.018,h,6),M.metal,x,1.05+h/2,z,g);for(let k=1;k<=3;k++)mesh(box(.12-k*.02,.008,.008),M.metal,x,1.05+h*k/4,z,g);mesh(new T.SphereGeometry(.018,8,6),M.red,x,1.05+h,z,g);}
+    const net=new T.Mesh(new T.PlaneGeometry(.7,.7,6,6),netMat);const np=net.geometry.attributes.position;for(let k=0;k<np.count;k++)np.setZ(k,Math.sin(np.getX(k)*9)*.02-Math.abs(np.getY(k))*.05);
+    net.geometry.computeVertexNormals();net.rotation.x=-Math.PI/2;net.position.set(-.1,1.24,-.35);g.add(net);for(const [x,z] of[[-.4,-.65],[.2,-.65],[-.4,-.05],[.2,-.05]])mesh(cyl(.008,.008,.2,4),M.woodDark,x,1.14,z,g);
+    for(const z of[.25,.45])mesh(box(.16,.1,.14),M.metal,-.25,1.1,z,g);mesh(box(.22,.14,.18),M.enemy,.55,.68,-.95,g);
+    const cv=new T.Group();cv.position.set(.35,0,1.42);g.add(cv);mesh(box(.6,.2,.26),M.enemy,0,.16,0,cv);mesh(box(.2,.16,.26),M.enemy,.38,.14,0,cv);mesh(box(.02,.08,.22),M.glass,.48,.17,0,cv);
+    for(const x of[-.2,.08,.36])for(const z2 of[-.14,.14]){const w=mesh(cyl(.06,.06,.04,10),M.dark,x,.06,z2,cv);w.rotation.x=Math.PI/2;}
+    mesh(cyl(.006,.006,.5,4),M.dark,-.22,.5,-.08,cv);mesh(cyl(.006,.006,.35,4),M.dark,-.1,.42,.08,cv);},
   outpost(g){mesh(box(.9,.42,.9),M.concrete,0,.21,0,g);mesh(box(.95,.05,.95),M.dark,0,.44,0,g);mesh(box(.02,.08,.5),M.glass,-.46,.3,0,g);
     mesh(cyl(.012,.016,1,6),M.metal,.25,.95,.25,g);sandRing(g,.7);},
   // iron vault: a riveted steel safe with a round door, spoked wheel and heavy hinges, gold bars stacked on its roof
@@ -940,7 +961,7 @@ const BUILD={
     b.fill=[];[[-.25,.2],[.3,.15],[0,-.3]].forEach(([x,z])=>{mesh(cyl(.24,.24,.46,22),tankMat,x,.23,z,g);mesh(new T.SphereGeometry(.24,22,8,0,7,0,Math.PI/2),tankMat,x,.46,z,g).scale.y=.35;
       for(const y of[.05,.42])mesh(cyl(.245,.245,.015,22),M.dark,x,y,z,g);
       const band=mesh(cyl(.25,.25,.06,22),bandMat,x,.33,z,g);b.fill.push(band);mesh(box(.02,.36,.02),M.metal,x-.245,.25,z,g).position.z=z+.07;
-      const lg=new T.PlaneGeometry(.3,.12,10,4);lg.rotateX(-Math.PI/2);lg.rotateY(-Math.PI/2);const lp=lg.attributes.position;
+      const lg=new T.PlaneGeometry(.42,.2,12,6);lg.rotateX(-Math.PI/2);lg.rotateY(-Math.PI/2);const lp=lg.attributes.position;
       for(let k=0;k<lp.count;k++){const px=lp.getX(k),pz=lp.getZ(k);lp.setY(k,.46+Math.sqrt(Math.max(0,.0576-px*px-pz*pz))*.35+.004);}
       const lb=new T.Mesh(lg,oilLabel);lb.position.set(x,0,z);g.add(lb);});
     const pipe=(a,c)=>strut(g,V(a[0],.08,a[1]),V(c[0],.08,c[1]),.022,M.metal);pipe([-.25,.2],[.3,.15]);pipe([.3,.15],[0,-.3]);pipe([0,-.3],[-.48,-.3]);
@@ -971,7 +992,24 @@ const BUILD={
     for(let k=0;k<3;k++){mesh(box(.05,.06,.11),ammoCan,-.06+k*.06,.045,0,ac);mesh(box(.012,.012,.06),M.dark,-.06+k*.06,.08,0,ac);}
     // spare rockets and a shell rack on the ground
     for(let i=0;i<4;i++){const x=-.52,z=-.14+i*.07;mesh(cyl(.02,.02,.1,8),brassMat2,x,.05,z,g);mesh(new T.ConeGeometry(.02,.05,8),M.dark,x,.125,z,g);}mesh(box(.05,.02,.3),M.woodDark,-.52,.01,-.035,g);},
-  barracks(g){[[-.3,0],[.3,0]].forEach(p=>{mesh(box(.5,.3,1.1),M.enemy,p[0],.15,p[1],g);const r=mesh(cyl(.26,.26,1.1,12),M.enemy,p[0],.3,p[1],g);r.rotation.x=Math.PI/2;});},
+  // barracks: two arched huts with their doors toward the attackers, one flap rolled up to show bunks inside,
+  // sandbags at the doors, a flagpole, a fire pit with benches and two off-duty soldiers, a rifle rack and a washing line
+  barracks(g,b){mesh(box(1.15,.03,1.05),M.trench,0,.015,0,g);
+    [-.27,.27].forEach((z,hi)=>{const hut=new T.Mesh(new T.CylinderGeometry(.24,.24,.9,16,1,false,0,Math.PI),M.enemy);hut.rotation.z=Math.PI/2;hut.position.set(.05,.03,z);g.add(hut);
+      for(let k=0;k<4;k++)mesh(new T.TorusGeometry(.243,.008,4,16,Math.PI),M.dark,-.3+k*.23,.03,z,g).rotation.y=Math.PI/2;
+      mesh(box(.012,.17,.12),hi?M.dark:barracksDark,-.405,.115,z,g); // doorway
+      if(hi){mesh(box(.3,.16,.18),barracksDark,-.25,.11,z,g);for(const dz of[-.06,.06]){mesh(box(.22,.012,.05),M.woodDark,-.22,.09,z+dz,g);mesh(box(.22,.012,.05),M.woodDark,-.22,.16,z+dz,g);}
+        mesh(cyl(.02,.02,.14,8),M.enemy,-.41,.22,z,g).rotation.x=Math.PI/2;} // flap rolled up above the open door, bunks inside
+      else mesh(box(.014,.17,.12),M.enemy,-.41,.115,z,g); // flap down
+      for(const dz of[-.11,.11])for(let L=0;L<2;L++)mesh(box(.08,.05,.07),M.sandbag,-.47,.03+L*.05,z+dz,g);});
+    mesh(cyl(.008,.008,.75,5),M.metal,-.52,.38,-.5,g);const fl=new T.Mesh(new T.PlaneGeometry(.12,.07),flagMat);fl.position.set(-.46,.7,-.5);g.add(fl);
+    const fp=new T.Group();fp.position.set(-.62,0,.05);g.add(fp);for(let k=0;k<7;k++){const a=k/7*Math.PI*2;mesh(new T.SphereGeometry(.022,6,4),M.rock||M.concrete,Math.cos(a)*.06,.015,Math.sin(a)*.06,fp);}
+    mesh(cyl(.04,.05,.02,8),barracksDark,0,.012,0,fp);b.fire=fp;
+    for(const dz of[-.16,.16])mesh(box(.05,.03,.18),M.woodDark,0,.03,dz,fp);soldier(0,-.16,.0,Math.PI/2,M.soldier,fp).userData.legs.forEach(l=>l.rotation.z=1.4);
+    soldier(0,.16,0,-Math.PI/2,M.soldier,fp).userData.legs.forEach(l=>l.rotation.z=1.4);
+    for(let k=0;k<4;k++){mesh(box(.012,.14,.012),M.dark,.52,.08,-.08+k*.045,g);}mesh(box(.03,.012,.2),M.woodDark,.52,.13,-.01,g);mesh(box(.03,.012,.2),M.woodDark,.52,.04,-.01,g);
+    for(const z of[-.45,.45])mesh(cyl(.006,.006,.3,4),M.woodDark,.5,.15,z,g);mesh(box(.004,.004,.9),M.dark,.5,.29,0,g);
+    laundry.forEach((lm,k)=>{const cl=new T.Mesh(new T.PlaneGeometry(.08,.09),laundry[k]);cl.position.set(.5,.24,-.3+k*.2);cl.rotation.y=Math.PI/2;g.add(cl);});},
   // motor pool: a camouflage net sagging over poles, with two trucks and fuel drums parked underneath
   motor(g){const net=new T.Mesh(new T.PlaneGeometry(1.4,1.1,8,8),netMat);const pos=net.geometry.attributes.position;
     for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i),edge=Math.max(Math.abs(x)/.7,Math.abs(y)/.55);pos.setZ(i,-(1-edge*edge)*.07+Math.sin(x*7)*.015+Math.cos(y*9)*.015-(edge>.97?.08:0));}
@@ -1038,8 +1076,12 @@ const ironMat=new T.MeshStandardMaterial({color:0x4a5057,metalness:.75,roughness
 const crateRim=new T.MeshStandardMaterial({color:0x3b4526,roughness:.9}),rocketWhite=new T.MeshStandardMaterial({color:0xe9e6dc,roughness:.45}),rocketTip=new T.MeshStandardMaterial({color:0x8b9096,metalness:.5,roughness:.4}),
   brassMat2=new T.MeshStandardMaterial({color:0xc9a04a,metalness:.85,roughness:.32}),ammoCan=new T.MeshStandardMaterial({color:0x4b5530,metalness:.4,roughness:.6});
 // stenciled OIL label wrapped around the front of each fuel tank
-const oilLabel=(()=>{const c=document.createElement('canvas');c.width=256;c.height=96;const x=c.getContext('2d');x.fillStyle='#f1ead8';x.font='900 72px sans-serif';x.textAlign='center';x.textBaseline='middle';
-  x.fillText('OIL',128,52);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return new T.MeshStandardMaterial({map:t,transparent:true,roughness:.7,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2});})();
+const oilLabel=(()=>{const c=document.createElement('canvas');c.width=256;c.height=96;const x=c.getContext('2d');x.fillStyle='#f1ead8';x.font='900 92px sans-serif';x.textAlign='center';x.textBaseline='middle';
+  x.fillText('OIL',128,52,248);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return new T.MeshStandardMaterial({map:t,transparent:true,roughness:.7,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2});})();
+// HQ and barracks details
+const litGlass=new T.MeshStandardMaterial({color:0x2a2a20,emissive:0xd9b25a,emissiveIntensity:.55,roughness:.3}),dishWhite=new T.MeshStandardMaterial({color:0xe6e6e0,roughness:.5,side:T.DoubleSide});
+const barracksDark=new T.MeshStandardMaterial({color:0x1c1a16,roughness:1}),flagMat=new T.MeshStandardMaterial({color:0xb03024,side:T.DoubleSide,roughness:.8});
+const laundry=[0xd8d0b8,0x55603a,0x8a8070,0x3c4a5a].map(c=>new T.MeshStandardMaterial({color:c,side:T.DoubleSide,roughness:1}));
 // loot buildings: materials, and a painted floor square in the resource's color so each one reads at a glance
 const goldBar=new T.MeshStandardMaterial({color:0xf0c040,metalness:.9,roughness:.25,emissive:0x5a3a00}),oilMat=new T.MeshBasicMaterial({color:0x16110c,transparent:true,opacity:.55,depthWrite:false});
 const tankMat=new T.MeshStandardMaterial({color:0x4f5638,metalness:.35,roughness:.6}),bandMat=new T.MeshStandardMaterial({color:0x1d1712,roughness:.5});
@@ -1141,7 +1183,7 @@ function hitFx(side,t,amt,splash,size){return p=>{if(aliveT(t))damage(t,amt);if(
 function shoot(e,t,from){const st=e.st,tp=tpos(t).clone();if(!t.st&&!t.wall)tp.y=t.p.y;
   if(e.kind==='tank'||e.kind==='gtank'){muzzle(from,true);e.kick=.05;fire(from,jit(tp,.12),{kind:'tracer',wide:true,dur:.3,onHit:hitFx(e.side,t,st.dmg,st.splash,.7)});}
   else if(e.kind==='jlav'){emit(ADD,from,{life:.12,s0:.1,s1:.3,c:0xffd090});fire(from,tp,{kind:'missile',dur:.9,arc:.7,trail:true,onHit:hitFx(e.side,t,st.dmg,0,.6)});}
-  else if(e.kind==='mortar'){muzzle(from,true);fire(from,jit(tp,.3),{kind:'missile',dur:2,arc:3.5,onHit:hitFx(e.side,null,st.dmg,st.splash,.9)});}
+  else if(e.kind==='mortar'){muzzle(from,true);fire(from,jit(tp,.3),{kind:'mortar',dur:2,arc:3.5,onHit:hitFx(e.side,null,st.dmg,st.splash,.9)});}
   else if(e.kind==='heli'){for(const s of[.42,-.42]){const st2=toLocal(e.g,.15,-.13,s);emit(ADD,st2,{life:.1,s0:.1,s1:.35,c:0xffd090});fire(st2,jit(tp,.2),{kind:'missile',dur:.8,trail:true,onHit:hitFx(e.side,t,st.dmg/2,0,.7)});}}
   else{emit(ADD,from,{life:.06,s0:.04,s1:.16,c:0xfff0c0});for(let i=0;i<3;i++)after(i*.08,()=>fire(from,jit(tp,.25),{kind:'tracer',dur:.4,onHit:i===0?hitFx(e.side,t,st.dmg,0,0):sparks}));}}
 function muzzleOf(e){if(e.turret)return toLocal(e.turret,e.tipX,e.kind==='tank'||e.kind==='gtank'?.01:.06,0);if(e.kind==='mortar')return e.g.position.clone().add(V(.18,.28,0));return e.g.position.clone().add(V(0,e.air?-.1:.18,0));}
@@ -1201,13 +1243,14 @@ function updateDefenses(dt){for(const b of blds){if(!b.alive)continue;
       if(b.garrison==='tanks'){spawnUnit('gtank',b.x-.9,b.z-.5,'def');spawnUnit('gtank',b.x-.9,b.z+.5,'def');radio('Enemy armor rolling out of the compound!',true);}
       else for(let i=0;i<4;i++)spawnUnit('gsoldier',b.x-.6+rand(-.2,.2),b.z+rand(-.5,.5),'def');}
     if(b.tube&&b.kick>0){b.kick=Math.max(0,b.kick-dt*4);b.tube.position.copy(b.recoilDir).multiplyScalar(-.05*b.kick);}
+    if(b.fire&&Math.random()<dt*14)emit(ADD,V(b.x-.62+rand(-.02,.02),G+.04,b.z+.05+rand(-.02,.02)),{life:rand(.3,.5),s0:.07,s1:.02,vy:.35,c:Math.random()<.5?0xffa040:0xffd070}); // campfire
     if(!b.def)continue;const d=b.def;b.cd-=dt;
     const t=nearestUnit(atts,b,d.range+.2,u=>(u.air?d.air:d.ground)&&Math.hypot(u.g.position.x-b.x,u.g.position.z-b.z)>=(d.minR||0));
     if(b.radar)b.radar.rotation.y+=dt*2.2;
     if(t&&b.head){const want=Math.atan2(-(t.g.position.z-b.z),t.g.position.x-b.x);b.head.rotation.y=lerpAngle(b.head.rotation.y,want,dt*4);}
     if(!t||b.cd>0)continue;b.cd=d.rof;const tp=t.g.position.clone().add(V(0,.15,0));
     if(d.type==='mg'){const from=V(b.x,G+1.05,b.z);for(let i=0;i<d.burst;i++)after(i*.09,()=>fire(from,jit(tp,.3),{kind:'tracer',dur:.4,onHit:p=>{if(aliveT(t))dmgUnit(t,d.dmg);sparks(p);}}));}
-    else if(d.type==='mortar'){const from=b.muzzle?scene.worldToLocal(b.muzzle.getWorldPosition(V())):V(b.x+.15,G+.36,b.z);b.kick=1;muzzle(from,true);fire(from,jit(tp,.4),{kind:'missile',dur:2.1,arc:4,onHit:p=>{splashDmg('def',p,d.splash,d.dmg);explode(p,.85);}});}
+    else if(d.type==='mortar'){const from=b.muzzle?scene.worldToLocal(b.muzzle.getWorldPosition(V())):V(b.x+.15,G+.36,b.z);b.kick=1;muzzle(from,true);fire(from,jit(tp,.4),{kind:'mortar',dur:2.1,arc:4,onHit:p=>{splashDmg('def',p,d.splash,d.dmg);explode(p,.85);}});}
     else if(d.type==='atgm'){const from=V(b.x,G+.25,b.z);emit(ADD,from,{life:.15,s0:.12,s1:.4,c:0xffd090});fire(from,tp,{kind:'missile',dur:1,arc:.5,trail:true,onHit:p=>{if(aliveT(t))dmgUnit(t,d.dmg);explode(p,.6);}});}
     else if(d.type==='sam'){const from=V(b.x,G+.45,b.z);muzzle(from,true);fire(from,tp,{kind:'missile',dur:1.1,arc:.8,trail:true,onHit:p=>{if(aliveT(t))dmgUnit(t,d.dmg);explode(p,.6,false);}});}}}
 
