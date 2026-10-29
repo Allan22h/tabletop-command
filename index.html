@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Tabletop Command Raid</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -610,7 +610,7 @@ function orbit(el,cam,o){const ptr=new Map();let pinch=0;
   const dist=()=>{const a=[...ptr.values()];return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);};
   el.addEventListener('pointerdown',e=>{try{el.setPointerCapture(e.pointerId);}catch(_){}ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptr.size===2)pinch=dist();o.user=true;});
   el.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
-    if(ptr.size===1){o.theta+=dx*.006;o.phi=clamp(o.phi-dy*.004,o.minPhi,o.maxPhi);}else if(ptr.size===2){const d=dist();if(pinch)o.r=clamp(o.r*pinch/d,o.minR,o.maxR);pinch=d;const a=[...ptr.values()],mx=(a[0].x+a[1].x)/2,my=(a[0].y+a[1].y)/2;
+    if(ptr.size===1){o.theta+=dx*.006;o.phi=clamp(o.phi-dy*.004,o.minPhi,o.maxPhi);}else if(ptr.size===2&&!o.touchPan){const d=dist();if(pinch)o.r=clamp(o.r*pinch/d,o.minR,o.maxR);pinch=d;const a=[...ptr.values()],mx=(a[0].x+a[1].x)/2,my=(a[0].y+a[1].y)/2;
       if(o.mid){const k=o.r*.0017,ddx=mx-o.mid.x,ddy=my-o.mid.y,c=Math.cos(o.theta),s=Math.sin(o.theta);o.target.x=clamp(o.target.x-(s*ddx+c*ddy)*k,-12,12);o.target.z=clamp(o.target.z+(c*ddx-s*ddy)*k,-8,12);}o.mid={x:mx,y:my};}});
   const up=e=>{ptr.delete(e.pointerId);pinch=0;o.mid=null;};el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
   if(o.wheel)el.addEventListener('wheel',e=>{e.preventDefault();o.r=clamp(o.r*(1+e.deltaY*.0012),o.minR,o.maxR);},{passive:false});
@@ -928,8 +928,8 @@ const BUILD={
   // a satellite dish, antenna masts and a camouflage net on the roof, and a command vehicle parked alongside
   hq(g){mesh(box(1.74,.06,2.24),M.dark,0,.03,0,g);mesh(box(1.7,.56,2.2),M.concrete,0,.31,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.6,0,g);
     mesh(box(1.2,.4,1.5),M.concrete,.18,.82,0,g);mesh(box(1.25,.04,1.55),M.dark,.18,1.03,0,g);
-    for(let i=0;i<5;i++){mesh(box(.02,.05,.24),litGlass,-.86,.42,-.84+i*.42,g);}for(let i=0;i<3;i++)mesh(box(.02,.05,.3),litGlass,-.43,.86,-.5+i*.5,g);
-    for(const z of[-1.11,1.11])for(let i=0;i<4;i++)mesh(box(.26,.05,.02),litGlass,-.55+i*.4,.42,z,g);
+    for(let i=0;i<5;i++){mesh(box(.02,.05,.24),M.glass,-.86,.42,-.84+i*.42,g);}for(let i=0;i<3;i++)mesh(box(.02,.05,.3),M.glass,-.43,.86,-.5+i*.5,g);
+    for(const z of[-1.11,1.11])for(let i=0;i<4;i++)mesh(box(.26,.05,.02),M.glass,-.55+i*.4,.42,z,g);
     for(let i=0;i<22;i++){const z=-1.05+i*.1;if(Math.abs(z)<.28)continue;for(let L=0;L<2;L++)mesh(box(.08,.06,.1),M.sandbag,-.9,.04+L*.06,z+(L?.05:0),g);}
     mesh(box(.04,.34,.3),M.metal,-.87,.17,0,g);mesh(box(.02,.04,.04),M.dark,-.9,.18,.1,g);
     for(const z of[-.28,.28])for(let L=0;L<3;L++)mesh(box(.32,.06,.09),M.sandbag,-1.05,.035+L*.062,z,g);
@@ -1470,6 +1470,14 @@ const BG=0x8e897f;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170
 const ray=new T.Raycaster();
 function groundHit(origin,dir){ray.set(origin,dir);const h=ray.intersectObject(ground,false)[0];return h?scene.worldToLocal(h.point.clone()):null;}
 let down=null;
+// two fingers on a phone: drag to pan across the map, pinch to zoom. Uses touch events, which every mobile browser delivers
+// even where it would otherwise take two-finger gestures for itself; the orbit's own two-pointer handling steps aside
+let tpan=null;const tmid=t=>({x:(t[0].clientX+t[1].clientX)/2,y:(t[0].clientY+t[1].clientY)/2,d:Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY)});
+canvasEl.addEventListener('touchstart',e=>{if(e.touches.length===2){tpan=tmid(e.touches);orb.touchPan=true;e.preventDefault();}},{passive:false});
+canvasEl.addEventListener('touchmove',e=>{if(e.touches.length!==2||!tpan)return;e.preventDefault();const m=tmid(e.touches),k=orb.r*.0017,dx=m.x-tpan.x,dy=m.y-tpan.y,c=Math.cos(orb.theta),sn=Math.sin(orb.theta);
+  orb.target.x=clamp(orb.target.x-(sn*dx+c*dy)*k,-12,12);orb.target.z=clamp(orb.target.z+(c*dx-sn*dy)*k,-8,12);if(tpan.d>0&&m.d>0)orb.r=clamp(orb.r*tpan.d/m.d,orb.minR,orb.maxR);tpan=m;},{passive:false});
+canvasEl.addEventListener('touchend',e=>{tpan=e.touches.length===2?tmid(e.touches):null;});
+document.addEventListener('gesturestart',e=>e.preventDefault()); // iPhone: stop the page itself from zooming
 canvasEl.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now(),n:(down&&down.n||0)+1};});
 canvasEl.addEventListener('pointerup',e=>{if(!down)return;if(down.n>1){down=null;return;}const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y),dt=performance.now()-down.t;down=null;
   if(moved>10||dt>600||xrMode)return;const r=canvasEl.getBoundingClientRect();
