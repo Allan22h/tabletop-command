@@ -940,7 +940,9 @@ const BUILD={
     b.fill=[];[[-.25,.2],[.3,.15],[0,-.3]].forEach(([x,z])=>{mesh(cyl(.24,.24,.46,22),tankMat,x,.23,z,g);mesh(new T.SphereGeometry(.24,22,8,0,7,0,Math.PI/2),tankMat,x,.46,z,g).scale.y=.35;
       for(const y of[.05,.42])mesh(cyl(.245,.245,.015,22),M.dark,x,y,z,g);
       const band=mesh(cyl(.25,.25,.06,22),bandMat,x,.33,z,g);b.fill.push(band);mesh(box(.02,.36,.02),M.metal,x-.245,.25,z,g).position.z=z+.07;
-      const lb=new T.Mesh(new T.CylinderGeometry(.243,.243,.11,24,1,true,-Math.PI/2-.55,1.1),oilLabel);lb.position.set(x,.2,z);g.add(lb);});
+      const lg=new T.PlaneGeometry(.3,.12,10,4);lg.rotateX(-Math.PI/2);lg.rotateY(-Math.PI/2);const lp=lg.attributes.position;
+      for(let k=0;k<lp.count;k++){const px=lp.getX(k),pz=lp.getZ(k);lp.setY(k,.46+Math.sqrt(Math.max(0,.0576-px*px-pz*pz))*.35+.004);}
+      const lb=new T.Mesh(lg,oilLabel);lb.position.set(x,0,z);g.add(lb);});
     const pipe=(a,c)=>strut(g,V(a[0],.08,a[1]),V(c[0],.08,c[1]),.022,M.metal);pipe([-.25,.2],[.3,.15]);pipe([.3,.15],[0,-.3]);pipe([0,-.3],[-.48,-.3]);
     mesh(box(.12,.12,.1),M.enemy,-.5,.06,-.3,g);mesh(cyl(.03,.03,.1,8),M.red,-.5,.15,-.3,g);
     const tk=new T.Group();tk.position.set(-.55,0,.25);tk.rotation.y=.2;g.add(tk);mesh(box(.14,.14,.17),M.enemy,.22,.11,0,tk);mesh(box(.02,.06,.15),M.glass,.29,.14,0,tk);
@@ -949,21 +951,22 @@ const BUILD={
   ammo(g,b){mark(g,.62,.55,0x55603a);const crates=new T.Group();g.add(crates);b.fill=crates;
     const crate=(x,y,z,w,h,d,ry,par)=>{const c=mesh(box(w,h,d),crateMat,x,y,z,par||crates);c.rotation.y=ry||0;
       for(const s2 of[-1,1])mesh(box(.012,h+.004,d+.004),crateRim,x+Math.cos(ry||0)*s2*(w/2-.02),y,z-Math.sin(ry||0)*s2*(w/2-.02),par||crates).rotation.y=ry||0;return c;};
-    for(const [x,z,n] of[[.32,-.3,3],[.32,-.08,2],[.38,.22,3],[.12,.33,2]]){mesh(box(.2,.025,.2),M.woodDark,x,.012,z,g);for(let L=0;L<n;L++)for(let k=0;k<2;k++)crate(x,.06+L*.075,z-.045+k*.09,.19,.07,.085,0);}
-    // open rocket crate: long box, lid propped against its side, three rockets inside
-    const oc=new T.Group();oc.position.set(-.18,0,-.28);oc.rotation.y=.25;g.add(oc);
-    mesh(box(.42,.015,.16),crateMat,0,.008,0,oc);for(const z of[-.075,.075])mesh(box(.42,.09,.012),crateMat,0,.045,z,oc);for(const x of[-.205,.205])mesh(box(.012,.09,.16),crateMat,x,.045,0,oc);
-    const lid=mesh(box(.42,.012,.16),crateMat,0,.07,-.13,oc);lid.rotation.x=1.1;
-    for(let i=0;i<3;i++){const z=-.045+i*.045,r=mesh(cyl(.016,.016,.3,10),rocketOlive,-.02,.05,z,oc);r.rotation.z=Math.PI/2;
-      const w=mesh(new T.ConeGeometry(.022,.07,10),rocketOlive,.16,.05,z,oc);w.rotation.z=-Math.PI/2;mesh(cyl(.022,.022,.03,10),M.dark,.115,.05,z,oc).rotation.z=Math.PI/2;
-      for(let f=0;f<4;f++){const fn=mesh(box(.04,.004,.02),M.red,-.16,.05,z,oc);fn.rotation.x=f*Math.PI/4;}}
+    for(const [x,z,n] of[[.4,-.35,3],[.47,-.02,2]]){mesh(box(.2,.025,.2),M.woodDark,x,.012,z,g);for(let L=0;L<n;L++)for(let k=0;k<2;k++)crate(x,.06+L*.075,z-.045+k*.09,.19,.07,.085,0);}
+    // open rocket crates: long boxes with the lid propped against one side, three rockets with warheads and red fins inside
+    const rocketCrate=(x,z,ry)=>{const oc=new T.Group();oc.position.set(x,0,z);oc.rotation.y=ry;g.add(oc);
+      mesh(box(.5,.015,.2),crateMat,0,.008,0,oc);for(const z2 of[-.095,.095])mesh(box(.5,.1,.012),crateMat,0,.05,z2,oc);for(const x2 of[-.245,.245])mesh(box(.012,.1,.2),crateMat,x2,.05,0,oc);
+      const lid=mesh(box(.5,.012,.2),crateMat,0,.08,-.16,oc);lid.rotation.x=1.1;
+      for(let i=0;i<3;i++){const z2=-.058+i*.058,r=mesh(cyl(.021,.021,.34,10),rocketOlive,-.03,.06,z2,oc);r.rotation.z=Math.PI/2;
+        mesh(cyl(.028,.028,.04,10),M.dark,.16,.06,z2,oc).rotation.z=Math.PI/2;const w=mesh(new T.ConeGeometry(.028,.085,10),rocketOlive,.222,.06,z2,oc);w.rotation.z=-Math.PI/2;
+        for(let f=0;f<4;f++){const fn=mesh(box(.05,.005,.028),M.red,-.19,.06,z2,oc);fn.rotation.x=f*Math.PI/4;}}};
+    rocketCrate(-.15,-.33,.2);rocketCrate(.05,-.02,0);rocketCrate(.02,.3,-.12);
     // open crate of artillery rounds standing upright
-    const sc=new T.Group();sc.position.set(-.3,0,.05);g.add(sc);mesh(box(.2,.015,.15),crateMat,0,.008,0,sc);
+    const sc=new T.Group();sc.position.set(-.38,0,.32);g.add(sc);mesh(box(.2,.015,.15),crateMat,0,.008,0,sc);
     for(const z of[-.07,.07])mesh(box(.2,.07,.012),crateMat,0,.035,z,sc);for(const x of[-.095,.095])mesh(box(.012,.07,.15),crateMat,x,.035,0,sc);
     const sl=mesh(box(.2,.012,.15),crateMat,-.12,.04,.11,sc);sl.rotation.set(.3,.5,.9);
     for(let r=0;r<3;r++)for(let c=0;c<4;c++){const x=-.06+r*.06,z=-.045+c*.03;mesh(cyl(.012,.012,.07,8),brassMat2,x,.05,z,sc);mesh(new T.ConeGeometry(.012,.03,8),M.dark,x,.1,z,sc);}
     // crate of ammo cans
-    const ac=new T.Group();ac.position.set(-.08,0,.28);ac.rotation.y=-.3;g.add(ac);mesh(box(.2,.015,.15),crateMat,0,.008,0,ac);
+    const ac=new T.Group();ac.position.set(.44,0,.32);ac.rotation.y=-.3;g.add(ac);mesh(box(.2,.015,.15),crateMat,0,.008,0,ac);
     for(const z of[-.07,.07])mesh(box(.2,.06,.012),crateMat,0,.03,z,ac);for(const x of[-.095,.095])mesh(box(.012,.06,.15),crateMat,x,.03,0,ac);
     for(let k=0;k<3;k++){mesh(box(.05,.06,.11),ammoCan,-.06+k*.06,.045,0,ac);mesh(box(.012,.012,.06),M.dark,-.06+k*.06,.08,0,ac);}
     // spare rockets and a shell rack on the ground
