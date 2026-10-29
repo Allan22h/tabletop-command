@@ -589,7 +589,7 @@ const rocketProto=(()=>{const g=new T.Group(),bg=cyl(.017,.017,.15,8),ng=new T.C
   const fin=new T.Shape();fin.moveTo(0,0);fin.lineTo(.026,-.012);fin.lineTo(.026,-.04);fin.lineTo(0,-.05);fin.closePath();
   const fg=new T.ExtrudeGeometry(fin,{depth:.004,bevelEnabled:false});fg.translate(.015,0,-.002);fg.rotateX(Math.PI/2);
   for(let i=0;i<4;i++){const f=new T.Mesh(fg,finMat);f.rotation.z=i*Math.PI/2;f.position.z=-.03;g.add(f);}return g;})();
-function fire(from,to,o){let m;if(o.kind==='tracer'){m=bulletProto.clone();m.scale.set(1.6,1.6,2.2);}else{m=rocketProto.clone();m.scale.setScalar(o.kind==='bomb'?1.55:.85);}
+function fire(from,to,o){let m;if(o.kind==='tracer'){m=bulletProto.clone();const wd=o.wide?3.4:2;m.scale.set(wd,wd,2.6);}else{m=rocketProto.clone();m.scale.setScalar(o.kind==='bomb'?1.55:.85);}
   m.position.copy(from);scene.add(m);m.lookAt(scene.localToWorld(to.clone()));projs.push({m,from:from.clone(),to:to.clone(),t:0,dur:o.dur,arc:o.arc||0,trail:o.trail,kind:o.kind,onHit:o.onHit,acc:0});}
 const _v=new T.Vector3();
 function updProjs(dt){for(let i=projs.length-1;i>=0;i--){const p=projs[i];p.t+=dt/p.dur;const k=Math.min(1,p.t);
@@ -1139,7 +1139,7 @@ function hitFx(side,t,amt,splash,size){return p=>{if(aliveT(t))damage(t,amt);if(
 
 /* firing for any unit or defense */
 function shoot(e,t,from){const st=e.st,tp=tpos(t).clone();if(!t.st&&!t.wall)tp.y=t.p.y;
-  if(e.kind==='tank'||e.kind==='gtank'){muzzle(from,true);e.kick=.05;fire(from,jit(tp,.12),{kind:'tracer',dur:.3,onHit:hitFx(e.side,t,st.dmg,st.splash,.7)});}
+  if(e.kind==='tank'||e.kind==='gtank'){muzzle(from,true);e.kick=.05;fire(from,jit(tp,.12),{kind:'tracer',wide:true,dur:.3,onHit:hitFx(e.side,t,st.dmg,st.splash,.7)});}
   else if(e.kind==='jlav'){emit(ADD,from,{life:.12,s0:.1,s1:.3,c:0xffd090});fire(from,tp,{kind:'missile',dur:.9,arc:.7,trail:true,onHit:hitFx(e.side,t,st.dmg,0,.6)});}
   else if(e.kind==='mortar'){muzzle(from,true);fire(from,jit(tp,.3),{kind:'missile',dur:2,arc:3.5,onHit:hitFx(e.side,null,st.dmg,st.splash,.9)});}
   else if(e.kind==='heli'){for(const s of[.42,-.42]){const st2=toLocal(e.g,.15,-.13,s);emit(ADD,st2,{life:.1,s0:.1,s1:.35,c:0xffd090});fire(st2,jit(tp,.2),{kind:'missile',dur:.8,trail:true,onHit:hitFx(e.side,t,st.dmg/2,0,.7)});}}
@@ -1552,7 +1552,7 @@ function xrFrame(dt){
     const p=scene.worldToLocal(h.point.clone());const ok=cards[armed].k==='strike'||!!snapDeploy(p.x,p.z);const s=cards[armed].k==='strike'?[p.x,p.z]:(snapDeploy(p.x,p.z)||[p.x,p.z]);
     reticle.position.set(s[0],groundY(s[0],s[1])+.05,s[1]);reticle.material.color.setHex(ok?0x6fd36a:0xe0503c);reticle.visible=true;break;}}
 function xrSelect(c){ctrlRay(c);const ui=ray.intersectObjects([...xrCards,...xrBtns].filter(m=>m.visible),false)[0];
-  if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='menu'){goMenu();haptic();}
+  if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='menu'){haptic();goMenu();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});}
     else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();startBattle(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
 function setShadow(k){Object.assign(sun.shadow.camera,{left:-16*k,right:16*k,top:15*k,bottom:-15*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
