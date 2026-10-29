@@ -254,7 +254,6 @@ function terrain(){
     const k=(n2-.5)*46+(n3-.5)*22;r+=k;gg+=k;bb+=k*.8;
     let dr=1e9;for(let i=0;i<ROAD.length-1;i++)dr=Math.min(dr,segDist(x,z,ROAD[i][0],ROAD[i][1],ROAD[i+1][0],ROAD[i+1][1]));
     if(dr<.6){const m=1-smooth(.38,.6,dr);const rut=(Math.abs(dr-.17)<.045)?-22:0;r=mix(r,140+rut+k*.3,m);gg=mix(gg,113+rut+k*.3,m);bb=mix(bb,82+rut,m);}
-    if(x>2.6&&x<10.2&&z>-3.7&&z<3.7){const gv=(n3-.5)*34+(n2-.5)*20;r=mix(r,168+gv,.88);gg=mix(gg,160+gv,.88);bb=mix(bb,142+gv,.88);}
     // green, damp banks and a muddy bed
     const bank=1-smooth(.55,1.4,rd);r=mix(r,92+k*.5,bank*.75);gg=mix(gg,104+k*.5,bank*.75);bb=mix(bb,62,bank*.75);
     const bed=1-smooth(.35,.7,rd);r=mix(r,84,bed);gg=mix(gg,74,bed);bb=mix(bb,58,bed);
@@ -266,7 +265,7 @@ function terrain(){
     const snow=smooth(1.45,1.75,h+(n3-.5)*.25);r=mix(r,234,snow);gg=mix(gg,236,snow);bb=mix(bb,238,snow);
     const md=mudAt(x,z);if(md>0){const w=(n3-.5)*14;r=mix(r,78+w,md);gg=mix(gg,62+w,md);bb=mix(bb,44+w,md);}
     if(MAPT.snow){ // snow everywhere except open water; thinner on the road and in the trodden compound
-      let sw=MAPT.snow*clamp(.82+(n2-.5)*.7,0,1)*(1-sea)*(1-bed*.85);sw*=1-(1-smooth(.15,.6,dr))*.7;sw*=1-rock*.55;if(x>2.6&&x<10.2&&z>-3.7&&z<3.7)sw*=.7;
+      let sw=MAPT.snow*clamp(.82+(n2-.5)*.7,0,1)*(1-sea)*(1-bed*.85);sw*=1-(1-smooth(.15,.6,dr))*.7;sw*=1-rock*.55;
       const w=(n3-.5)*14+(n1-.5)*30;r=mix(r,212+w,sw);gg=mix(gg,219+w,sw);bb=mix(bb,230+w,sw);}
     const i=(py*W+px)*4;d[i]=r*MAPT.k[0];d[i+1]=gg*MAPT.k[1];d[i+2]=bb*MAPT.k[2];d[i+3]=255;
     const hb=(n1*.45+n2*.35+n3*.2)*255;bd[i]=bd[i+1]=bd[i+2]=hb;bd[i+3]=255;
@@ -440,8 +439,12 @@ let flashIdx=0;
  trees.forEach(p=>{const y=groundY(p[0],p[1]),sc=rand(.75,1.2);mesh(trunk,M.woodDark,p[0],y+.2*sc,p[1]).scale.setScalar(sc);mesh(crown,M.shrub,p[0],y+.62*sc,p[1]).scale.setScalar(sc);mesh(crown2,M.shrub,p[0],y+.98*sc,p[1]).scale.setScalar(sc);});}
 // bridge where the road crosses the river
 {const g=new T.Group();g.position.set(BRIDGE.x,G,BRIDGE.z);g.rotation.y=Math.atan2(.6,6);scene.add(g);
- mesh(box(BRIDGE.len,.06,BRIDGE.w),M.concrete,0,.07,0,g);
- for(const s of[1,-1]){mesh(box(BRIDGE.len,.07,.04),M.metal,0,.135,s*(BRIDGE.w/2-.02),g);for(let i=-2;i<=2;i++)mesh(box(.03,.07,.03),M.metal,i*.5,.13,s*(BRIDGE.w/2-.02),g);}
+ const steel=new T.MeshStandardMaterial({color:0x56606a,metalness:.7,roughness:.42}),L=BRIDGE.len,W=BRIDGE.w,HT=.2,N=6,y0=.1;
+ mesh(box(L,.035,W),steel,0,.08,0,g);for(let i=0;i<=12;i++)mesh(box(.014,.008,W-.06),M.dark,-L/2+.08+i*(L-.16)/12,.1,0,g); // deck plate and ribs
+ for(const s of[1,-1]){const z=s*(W/2-.015),X=i=>-L/2+i*L/N;
+   mesh(box(L,.06,.03),steel,0,.055,z,g);mesh(box(L-2*L/N+.02,.028,.032),steel,0,y0+HT,z,g); // girder and top chord
+   for(let i=1;i<N;i++)mesh(box(.022,HT,.022),steel,X(i),y0+HT/2,z,g);
+   for(let i=0;i<N;i++){const up=i<N/2,len=Math.hypot(L/N,HT),d=mesh(box(len,.02,.02),steel,(X(i)+X(i+1))/2,y0+HT/2,z,g);d.rotation.z=(up?1:-1)*Math.atan2(HT,L/N);}}
  for(const x of[-.55,.55])mesh(box(.14,.3,.5),M.concrete,x,-.11,0,g);
  for(const x of[-1.15,1.15])mesh(box(.12,.14,BRIDGE.w+.04),M.concrete,x,.03,0,g);}
 // oil field: pumpjack, storage tank and capture marker
@@ -924,7 +927,15 @@ const BUILD={
   fuel(g){[[-.25,.2],[.3,.15],[0,-.3]].forEach(p=>{mesh(cyl(.26,.26,.45,20),M.white,p[0],.225,p[1],g);mesh(new T.SphereGeometry(.26,20,8,0,7,0,Math.PI/2),M.white,p[0],.45,p[1],g);});},
   ammo(g){[[-.45,0,0],[.45,0,1],[0,.3,2],[0,-.35,3]].forEach((p,i)=>mesh(box(.85,.3,.3),M.container[i],i===2?0:p[0],.15+(i===2?.3:0),i===2?0:p[1],g));},
   barracks(g){[[-.3,0],[.3,0]].forEach(p=>{mesh(box(.5,.3,1.1),M.enemy,p[0],.15,p[1],g);const r=mesh(cyl(.26,.26,1.1,12),M.enemy,p[0],.3,p[1],g);r.rotation.x=Math.PI/2;});},
-  motor(g){mesh(box(1.1,.38,.8),M.enemy,0,.19,0,g);mesh(box(1.2,.04,.9),M.dark,0,.4,0,g);mesh(box(.02,.3,.6),M.dark,-.56,.16,0,g);},
+  // motor pool: a camouflage net sagging over poles, with two trucks and fuel drums parked underneath
+  motor(g){const net=new T.Mesh(new T.PlaneGeometry(1.4,1.1,8,8),netMat);const pos=net.geometry.attributes.position;
+    for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i),edge=Math.max(Math.abs(x)/.7,Math.abs(y)/.55);pos.setZ(i,-(1-edge*edge)*.07+Math.sin(x*7)*.015+Math.cos(y*9)*.015-(edge>.97?.08:0));}
+    net.geometry.computeVertexNormals();net.rotation.x=-Math.PI/2;net.position.y=.46;g.add(net);
+    for(const [x,z] of[[-.62,-.48],[.62,-.48],[-.62,.48],[.62,.48],[0,-.5],[0,.5]])mesh(cyl(.012,.014,.46,5),M.woodDark,x,.23,z,g);
+    for(const [x,z] of[[-.62,-.48],[.62,.48]])strut(g,V(x,.42,z),V(x*1.25,0,z*1.35),.004,M.dark); // guy lines
+    for(const z of[-.22,.22]){const t=new T.Group();t.position.set(-.05,0,z);g.add(t);mesh(box(.5,.13,.2),M.enemy,0,.12,0,t);mesh(box(.16,.13,.2),M.enemy,.3,.15,0,t);
+      mesh(box(.02,.06,.17),M.glass,.385,.17,0,t);for(const x of[-.15,.08,.28])for(const s2 of[-1,1]){const w=mesh(cyl(.045,.045,.03,10),M.dark,x,.045,s2*.1,t);w.rotation.x=Math.PI/2;}}
+    for(let i=0;i<3;i++)mesh(cyl(.035,.035,.1,10),i===1?M.dark:M.enemy,.5,.05,-.12+i*.08,g);},
   // guard tower: splayed log legs with cross bracing, a plank deck behind a sandbag parapet, a tin roof on posts, a ladder, and a gunner on a machine gun that turns
   mg(g,b){const P=.86;for(const [sx,sz] of[[-1,-1],[1,-1],[-1,1],[1,1]]){strut(g,V(sx*.19,0,sz*.19),V(sx*.13,P,sz*.13),.022,M.woodDark);}
     for(const [a,c] of[[[-1,-1],[1,-1]],[[-1,1],[1,1]],[[-1,-1],[-1,1]],[[1,-1],[1,1]]]){strut(g,V(a[0]*.18,.08,a[1]*.18),V(c[0]*.145,P-.12,c[1]*.145),.008,M.woodDark);strut(g,V(c[0]*.18,.08,c[1]*.18),V(a[0]*.145,P-.12,a[1]*.145),.008,M.woodDark);}
@@ -973,6 +984,11 @@ const BUILD={
     mesh(cyl(.012,.014,.5,6),M.metal,-.34,.27,-.22,g);const rd=new T.Group();rd.position.set(-.34,.52,-.22);g.add(rd);b.radar=rd;
     const dish=mesh(new T.SphereGeometry(.17,16,8,-.75,1.5,1.1,.95),M.metal,-.12,0,0,rd);dish.material=dishMat;dish.rotation.z=-.25;mesh(box(.03,.03,.03),M.dark,.02,0,0,rd);strut(rd,V(.02,0,0),V(.07,.02,0),.006,M.dark);
     mesh(box(.16,.12,.12),M.enemy,.3,.09,-.24,g);mesh(box(.04,.02,.06),M.dark,.3,.16,-.24,g);for(let i=0;i<3;i++)mesh(cyl(.06,.06,.012,10),M.dark,.3,.06+i*.025,-.17,g).rotation.x=Math.PI/2;}};
+// camouflage netting: irregular olive and khaki leaves with gaps you can see through
+const netMat=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  for(let i=0;i<300;i++){x.fillStyle=['rgba(86,92,58,.95)','rgba(120,112,74,.95)','rgba(60,66,44,.95)','rgba(100,96,62,.95)'][i%4];x.beginPath();x.ellipse(rand(0,128),rand(0,128),rand(3,9),rand(2,6),rand(0,3),0,7);x.fill();}
+  const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,1.6);
+  return new T.MeshStandardMaterial({map:t,transparent:true,alphaTest:.35,side:T.DoubleSide,roughness:1});})();
 const dishMat=M.metal.clone();dishMat.side=T.DoubleSide; // radar dish is an open shell, seen from both sides
 // sandbag horseshoe: layers of single bags around a pit, open at the back (the +x side faces away from attackers, toward the base)
 function bagRing(g,r,layers,gap){const n=Math.round(r*44);for(let L=0;L<layers;L++)for(let i=0;i<n;i++){const a=(i+L*.5)/n*Math.PI*2;if(Math.abs(wrapA(a))<gap)continue;
