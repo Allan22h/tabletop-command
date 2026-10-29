@@ -233,9 +233,9 @@ function canvas(w,h){const c=document.createElement('canvas');c.width=w;c.height
 function tex(c,srgb=true){const t=new T.CanvasTexture(c);if(srgb)t.encoding=T.sRGBEncoding;t.anisotropy=8;return t;}
 const ROAD=[[-12,1.6],[-6,1.0],[-2,0.2],[2.6,0],[7,0]];
 const G=0.3;
-const riverX=z=>-7.2+Math.sin(z*.45)*1.1+Math.sin(z*1.3+1)*.25;
+let MAPE=0;const riverX=z=>-7.2-MAPE+Math.sin(z*.45)*1.1+Math.sin(z*1.3+1)*.25;
 const BRIDGE={x:riverX(1.05),z:1.05,len:2.8,w:.8};
-const coastZ=x=>mix(9.4+Math.sin(x*.9)*.3,5.35+Math.sin(x*.6)*.35+Math.sin(x*1.7)*.1,smooth(-4,-1.2,x));
+const coastZ=x=>MAPE+mix(9.4+Math.sin(x*.9)*.3,5.35+Math.sin(x*.6)*.35+Math.sin(x*1.7)*.1,smooth(-4,-1.2,x));
 const seaAt=(x,z)=>smooth(-.15,.45,z-coastZ(x));
 const MAPS={delta:{name:'Operation Iron Delta',k:[.52,.58,.5],mud:true,water:0x46676a,sea:0x3a5d61,rock:0x4f4a42,shrub:0x2f3a20,boulder:0x3a3630},
   dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358},
@@ -246,20 +246,20 @@ function mudAt(x,z){if(!MAPT.mud)return 0;let m=0;for(const [cx,cz,rx,rz] of MUD
 // height above the board: rolling ground, northern mountains, a south-west hill, a carved river; the base and defense line stay flat
 function H(x,z){
   let h=(fbm(x*.5,z*.5,3)-.5)*.14;
-  const m=smooth(-4.4,-7.2,z+Math.sin(x*.7)*.6);
-  h+=m*(.3+Math.pow(fbm(x*.33+20,z*.33,4),1.4)*2.4);
-  const d=Math.hypot(x+3.6,z-6.1);h+=Math.pow(Math.max(0,1-d/2.7),2)*1.05;
-  const flat=smooth(-1.2,-.4,x)*(1-smooth(6.3,6.9,Math.abs(z)))*(1-smooth(11.1,11.6,x));
-  h*=(1-flat)*smooth(0,.6,12-Math.abs(x))*smooth(0,.6,Math.min(z+8,12-z));
+  const zm=z+MAPE,m=smooth(-4.4,-7.2,zm+Math.sin(x*.7)*.6);
+  h+=m*(.3+Math.pow(fbm(x*.33+20,zm*.33,4),1.4)*2.4);
+  const d=Math.hypot(x+3.6,z-6.1-MAPE);h+=Math.pow(Math.max(0,1-d/2.7),2)*1.05;
+  const flat=smooth(-1.2,-.4,x)*(1-smooth(6.3+MAPE,6.9+MAPE,Math.abs(z)))*(1-smooth(11.1+MAPE,11.6+MAPE,x));
+  h*=(1-flat)*smooth(0,.6,12+MAPE-Math.abs(x))*smooth(0,.6,Math.min(z+8+MAPE,12+MAPE-z));
   const rd=Math.abs(x-riverX(z));h=mix(h,-.17,1-smooth(.32,.85,rd));
   h=mix(h,-.2,seaAt(x,z));
   return h;}
 function groundY(x,z){if(Math.abs(x-BRIDGE.x)<BRIDGE.len/2&&Math.abs(z-BRIDGE.z)<BRIDGE.w/2)return G+.1;return G+Math.max(H(x,z),-.07);}
 function terrain(){
-  const W=768,H2=640,c=canvas(W,H2),b=canvas(W,H2),cx=c.getContext('2d'),bx=b.getContext('2d');
+  const W=Math.round(32*(24+2*MAPE)),H2=Math.round(32*(20+2*MAPE)),c=canvas(W,H2),b=canvas(W,H2),cx=c.getContext('2d'),bx=b.getContext('2d');
   const im=cx.createImageData(W,H2),bm=bx.createImageData(W,H2),d=im.data,bd=bm.data;
   for(let py=0;py<H2;py++)for(let px=0;px<W;px++){
-    const x=px/W*24-12,z=py/H2*20-8;
+    const x=px/W*(24+2*MAPE)-12-MAPE,z=py/H2*(20+2*MAPE)-8-MAPE;
     const n1=fbm(x*.32+3,z*.32+7,4),n2=fbm(x*2.1+50,z*2.1+50,3),n3=noise(x*11,z*11);
     const h=H(x,z),rd=Math.abs(x-riverX(z));
     const g=smooth(.45,.62,n1);
@@ -1299,6 +1299,49 @@ function makeResIcons(){let r;try{r=new T.WebGLRenderer({antialias:true,alpha:tr
   const st=document.createElement('style');st.textContent=RES.map(k=>`.dot.${k}{background:url(${RES_ICON[k]}) center/contain no-repeat;border-radius:0;width:22px;height:22px;vertical-align:middle}`).join('\n');document.head.appendChild(st);
   RES.forEach(k=>{const im=new Image();im.onload=()=>{xrDirty=true;};im.src=RES_ICON[k];RES_IMG[k]=im;});}
 
+/* ---------- the battlefield grows with the HQ ----------
+   A bigger HQ gets a bigger board: the north mountains, the south coast and the west river move outward, the east edge
+   moves out, and the open ground between them gives attackers north and south flanks. The table grows with it. */
+const mapExt=h=>h>=12?6:h>=9?4:h>=6?2:0;
+const shiftPt=(x,z,e)=>[x<-4.6?x-e:x,z<-3.8?z-e:z>4.6?z+e:z];
+let mapDecor=null,tableG=null,extraScatter=null;const terrainCache={};
+function terrainFor(e){const k=MAPT.name+'|'+e;if(!terrainCache[k])terrainCache[k]=terrain();return terrainCache[k];}
+function clearTerrainCache(){for(const k in terrainCache){if(terrainCache[k].map!==M.terrain.map){terrainCache[k].map.dispose();terrainCache[k].bump.dispose();}delete terrainCache[k];}}
+// remember where the scenery stands on the standard board, so it can move outward when the board grows
+function initMapDecor(){mapDecor=[];terrainCache[MAPT.name+'|0']={map:M.terrain.map,bump:M.terrain.bumpMap};
+  scene.children.forEach(o=>{if(o===ground||o===water||o===battle||o.isLight||o.isSprite||o.isPoints)return;const p=o.position;
+    if(o.material===seaMat){mapDecor.sea=o;return;}
+    if(o.isMesh&&(o.material===M.wood||o.material===M.woodDark)&&[-.6,-8,.04,.22].some(y=>Math.abs(p.y-y)<.001)){o.visible=false;return;} // the old fixed table
+    if(Math.abs(p.x)>14||p.z<-9||p.z>13)return;
+    if(o.isInstancedMesh){const m=new T.Matrix4(),q=V(),list=[];for(let i=0;i<o.count;i++){o.getMatrixAt(i,m);q.setFromMatrixPosition(m);list.push({m:m.clone(),x:q.x,z:q.z,dy:q.y-groundY(q.x,q.z)});}
+      o.frustumCulled=false;mapDecor.push({o,inst:list});return;}
+    if(!(o.isMesh||o.isGroup))return;const [nx,nz]=shiftPt(p.x,p.z,1);if(nx===p.x&&nz===p.z)return;mapDecor.push({o,x:p.x,z:p.z,dy:p.y-groundY(p.x,p.z)});});}
+function buildTable(e){if(tableG){scene.remove(tableG);tableG.traverse(o=>{if(o.geometry)o.geometry.dispose();});}tableG=new T.Group();scene.add(tableG);
+  mesh(box(44+2*e,1.2,30+2*e),M.wood,0,-.6,0,tableG);[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>mesh(box(1.4,14,1.4),M.woodDark,sx*(20+e),-8,sz*(13+e),tableG));
+  mesh(box(25+2*e,.08,21+2*e),M.woodDark,0,.04,2,tableG);
+  for(const z of[-8.25-e,12.25+e])mesh(box(25+2*e,.44,.5),M.woodDark,0,.22,z,tableG);for(const x of[-12.25-e,12.25+e])mesh(box(.5,.44,21+2*e),M.woodDark,x,.22,2,tableG);
+  tableG.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true;}});}
+// rocks and shrubs on the new ground the bigger board opens up
+function buildExtraScatter(e){if(extraScatter){extraScatter.forEach(m=>{scene.remove(m);m.geometry.dispose();});}extraScatter=[];if(!e)return;
+  const rnd=mulberry(7919*e+17),rocks=[],shrubs=[],band=(x,z)=>(x>-4.6-e&&x<-4.6)||(z>-3.8-e&&z<-3.8)||(z>4.6&&z<4.6+e)||x>12;
+  const area=2*e*(20+2*e)+e*(24+2*e)*2+e*(20+2*e);for(let i=0;i<area*.2;i++){const x=-12-e+rnd()*(24+2*e),z=-8-e+rnd()*(20+2*e);if(!band(x,z))continue;
+    if(x>-3.6&&x<11.4&&Math.abs(z)<5.6+2.6)continue;const h=H(x,z);if(h<-.03||Math.abs(x-riverX(z))<.8)continue;
+    if(fbm(x*.32+3,z*.32+7,4)>.52&&h<.9)shrubs.push([x,groundY(x,z)+.06,z,rnd()*6,0,0,.7+rnd()*.8]);else rocks.push([x,groundY(x,z)+.02,z,rnd()*6,rnd(),0,.5+rnd()*.7]);}
+  const sg=new T.IcosahedronGeometry(.16,0);sg.scale(1,.7,1);const rg=new T.DodecahedronGeometry(.1,0);rg.scale(1.3,.6,1);
+  if(shrubs.length)extraScatter.push(instanced(sg,M.shrub,shrubs));if(rocks.length)extraScatter.push(instanced(rg,M.rock,rocks));extraScatter.forEach(m=>m.frustumCulled=false);}
+function setMapSize(e){if(!mapDecor)initMapDecor();if(e===MAPE&&tableG)return;MAPE=e;BRIDGE.x=riverX(1.05);ROAD[0][0]=-12-e;CARRIER.z=9.7+e;
+  const W=24+2*e,D=20+2*e,dens=e?8:10,gg=new T.PlaneGeometry(W,D,Math.round(W*dens),Math.round(D*dens));gg.rotateX(-Math.PI/2);gg.translate(0,0,2);
+  {const p=gg.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,H(p.getX(i),p.getZ(i)));gg.computeVertexNormals();}ground.geometry.dispose();ground.geometry=gg;
+  const t=terrainFor(e);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
+  {const segs=Math.round(140*D/20),pos=[],uv=[],idx=[];for(let i=0;i<=segs;i++){const z=-8-e+D*i/segs,x=riverX(z),w=.64;pos.push(x-w,0,z,x+w,0,z);uv.push(0,i/segs*12*D/20,1,i/segs*12*D/20);if(i<segs){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
+    const wg=new T.BufferGeometry();wg.setAttribute('position',new T.Float32BufferAttribute(pos,3));wg.setAttribute('uv',new T.Float32BufferAttribute(uv,2));wg.setIndex(idx);wg.computeVertexNormals();water.geometry.dispose();water.geometry=wg;}
+  if(mapDecor.sea){mapDecor.sea.scale.x=W/24;mapDecor.sea.position.z=8.2+e;}
+  mapDecor.forEach(d=>{if(d.inst){const m=new T.Matrix4();d.inst.forEach((it,i)=>{const [nx,nz]=shiftPt(it.x,it.z,e);m.copy(it.m);m.setPosition(nx,groundY(nx,nz)+it.dy,nz);d.o.setMatrixAt(i,m);});d.o.instanceMatrix.needsUpdate=true;return;}
+    const [nx,nz]=shiftPt(d.x,d.z,e);d.o.position.set(nx,groundY(nx,nz)+d.dy,nz);});
+  buildTable(e);buildExtraScatter(e);
+  Object.assign(sun.shadow.camera,{left:-16-e,right:16+e,top:15+e,bottom:-15-e});sun.shadow.camera.updateProjectionMatrix();
+  orb.maxR=48+e*3;}
+
 /* ================= raid game ================= */
 warm=false;
 let cur='nato';
@@ -1596,7 +1639,7 @@ let noDeploy={x0:0,x1:0,z0:0,z1:0};
 const zoneMat=new T.MeshBasicMaterial({color:0xe0503c,transparent:true,opacity:.18,depthWrite:false});
 const zone=new T.Mesh(new T.PlaneGeometry(1,1),zoneMat);zone.rotation.x=-Math.PI/2;zone.visible=false;scene.add(zone);
 const zoneEdge=new T.LineSegments(new T.EdgesGeometry(new T.PlaneGeometry(1,1)),new T.LineBasicMaterial({color:0xe0503c}));zoneEdge.rotation.x=-Math.PI/2;zoneEdge.visible=false;scene.add(zoneEdge);
-function buildLayout(m){wallHq=m==='mine'?baseHq():m==='defend'?defendSim.L.myHq:m==='full'?raidHq:1;CMP=cmpFor(m==='tutorial'?5:wallHq);resetItems();
+function buildLayout(m){wallHq=m==='mine'?baseHq():m==='defend'?defendSim.L.myHq:m==='full'?raidHq:1;setMapSize(mapExt(wallHq));CMP=cmpFor(m==='tutorial'?5:wallHq);resetItems();
   if(m==='tutorial'){
     addB('outpost',2.2,.4,{r:.75,hp:2400,h:.5,hq:true,loot:{g:2000,f:2000,m:1000}});
     addB('mg',1.1,1.8,{r:.3,hp:700,h:1.1,def:'mg'});
@@ -1612,7 +1655,7 @@ function buildLayout(m){wallHq=m==='mine'?baseHq():m==='defend'?defendSim.L.myHq
   [zone,zoneEdge].forEach(o=>{o.scale.set(w,d,1);o.position.set(cx,G+.03,cz);});
 }
 const inCompound=(x,z)=>(mode==='full'||mode==='defend')&&x>CMP.x0&&x<CMP.x1&&z>-CMP.z&&z<CMP.z;
-function validDeploy(x,z){if(x<-11.6||x>11.6||z<-7.6||z>11.6)return false;
+function validDeploy(x,z){if(x<-11.6-MAPE||x>11.6+MAPE||z<-7.6-MAPE||z>11.6+MAPE)return false;
   if(x>noDeploy.x0&&x<noDeploy.x1&&z>noDeploy.z0&&z<noDeploy.z1)return false;
   const onBridge=Math.abs(x-BRIDGE.x)<BRIDGE.len/2&&Math.abs(z-BRIDGE.z)<BRIDGE.w/2;const h=H(x,z);return onBridge||(h>-.05&&h<.7);}
 // precision aid: a tap in a forbidden spot snaps to the nearest valid point
@@ -1797,7 +1840,7 @@ function wrapA(a){return Math.atan2(Math.sin(a),Math.cos(a));}
 
 /* ---------- cards, deploy, stars ---------- */
 function deploy(ci,x,z){const c=cards[ci];if(!c||c.n<=0)return false;
-  if(c.k==='strike'){if(x<-11.8||x>11.8||z<-7.8||z>11.8)return false;callStrike(x,z);}
+  if(c.k==='strike'){if(x<-11.8-MAPE||x>11.8+MAPE||z<-7.8-MAPE||z>11.8+MAPE)return false;callStrike(x,z);}
   else{const s=snapDeploy(x,z);if(!s){prompt('Nothing valid near there. Tap open ground outside the red zone.',2.5);return false;}[x,z]=s;
     const per=c.per||1;for(let i=0;i<per;i++){const a=i/per*6.28+.4;const off=per>1?.45:0;spawnUnit(c.k,x+Math.cos(a)*off,z+Math.sin(a)*off,'att');}
     emit(SMK,V(x,groundY(x,z)+.1,z),{life:1.2,s0:.3,s1:1.4,op:.5,c:0xb49c74});
@@ -2106,7 +2149,7 @@ function xrSelect(c){if(xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersect
   if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='menu'){haptic();goMenu();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});}
     else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();startBattle(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
-function setShadow(k){Object.assign(sun.shadow.camera,{left:-16*k,right:16*k,top:15*k,bottom:-15*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
+function setShadow(k){Object.assign(sun.shadow.camera,{left:-(16+MAPE)*k,right:(16+MAPE)*k,top:(15+MAPE)*k,bottom:-(15+MAPE)*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
 async function enterXR(){try{const s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['local-floor'],optionalFeatures:['hand-tracking']});
     rr.xr.setReferenceSpaceType('local-floor');await rr.xr.setSession(s);xrMode=true;stage.background=null;stage.fog=null;
     scene.scale.setScalar(XS);scene.rotation.y=Math.PI/2;scene.position.set(-2*XS,.74-G*XS,-.35-12*XS);setShadow(XS);xrUI.visible=true;xrDirty=true;uiYaw=null;turnLeft=0;
@@ -2132,7 +2175,7 @@ const snowfall=(()=>{const n=900,p=new Float32Array(n*3);for(let i=0;i<n;i++){p[
 function updSnow(dt){if(!snowfall.visible)return;snowfall.material.size=.08*scene.scale.x;const p=snowfall.geometry.attributes.position.array,t=performance.now()/1000;
   for(let i=0;i<p.length;i+=3){p[i+1]-=dt*(.55+(i%7)*.05);p[i]+=Math.sin(t*.8+i)*dt*.12;if(p[i+1]<0)p[i+1]+=9;}snowfall.geometry.attributes.position.needsUpdate=true;}
 // switching maps regenerates the terrain texture and recolors water, rocks and plants
-function setMap(id){if(MAPT===MAPS[id])return;MAPT=MAPS[id];const t=terrain();M.terrain.map.dispose();M.terrain.bumpMap.dispose();M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
+function setMap(id){if(MAPT===MAPS[id])return;const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
   water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
   [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());puddles.visible=MAPT.mud;snowfall.visible=!!MAPT.snow;
   $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
