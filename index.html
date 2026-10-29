@@ -952,11 +952,15 @@ function defaultBase(){const b={res:{g:6000,f:6000,m:4000,i:0},army:{rifle:6},qu
 function maxedBase(h){const b={res:{g:500000,f:500000,m:500000,i:50000},army:{rifle:10,truck:5,jlav:5,tank:6,mortar:3,heli:3,drone:8,strike:2},queue:[],tech:{},research:null,shield:0,log:[],seen:Date.now(),prodT:Date.now(),blds:[]};
   [...BUILD_ORDER,...ITEM_ORDER].forEach(k=>{for(let s=0;s<LIMIT[k](h);s++)b.blds.push({k,s,lv:h});});autoPlace(b.blds,h);return b;}
 function loadBase(){let b=null;try{b=JSON.parse(localStorage.getItem('tc.base'));}catch(_){}
-  if(!(b&&b.blds&&b.res))return defaultBase();
+  if(!(b&&Array.isArray(b.blds)&&b.res))return defaultBase();
+  b.blds=b.blds.filter(o=>o&&BK[o.k]);if(!b.blds.some(o=>o.k==='hq'))return defaultBase();
   // older saves: add what is new since they were written
   b.res.i=b.res.i||0;b.army=b.army||{rifle:6};b.queue=b.queue||[];b.tech=b.tech||{};b.log=b.log||[];b.shield=b.shield||0;b.seen=b.seen||Date.now();b.prodT=b.prodT||Date.now();
-  autoPlace(b.blds,(b.blds.find(o=>o.k==='hq')||{lv:1}).lv);return b;}
-let BASE=loadBase();
+  b.queue=b.queue.filter(q=>q&&TR[q.k]);for(const k in b.army)if(!TR[k])delete b.army[k];
+  try{autoPlace(b.blds,b.blds.find(o=>o.k==='hq').lv);}catch(e){console.warn('save reset',e);return defaultBase();}
+  return b;}
+// loaded at the end of this file, once every helper it uses exists
+let BASE=null;
 function saveBase(){try{localStorage.setItem('tc.base',JSON.stringify(BASE));}catch(_){}}
 const baseHq=()=>BASE.blds.find(b=>b.k==='hq').lv;
 const capOf=r=>{let c=(r==='i'?500:5000)*baseHq();BASE.blds.forEach(b=>{if(BK[b.k].store===r&&!b.fresh)c+=capFor(r,b.lv);});return c;};
@@ -1341,6 +1345,7 @@ function setMapSize(e){if(!mapDecor)initMapDecor();if(e===MAPE&&tableG)return;MA
   buildTable(e);buildExtraScatter(e);
   Object.assign(sun.shadow.camera,{left:-16-e,right:16+e,top:15+e,bottom:-15-e});sun.shadow.camera.updateProjectionMatrix();
   orb.maxR=48+e*3;}
+BASE=loadBase();
 
 /* ================= raid game ================= */
 warm=false;
