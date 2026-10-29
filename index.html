@@ -439,8 +439,8 @@ let flashIdx=0;
  trees.forEach(p=>{const y=groundY(p[0],p[1]),sc=rand(.75,1.2);mesh(trunk,M.woodDark,p[0],y+.2*sc,p[1]).scale.setScalar(sc);mesh(crown,M.shrub,p[0],y+.62*sc,p[1]).scale.setScalar(sc);mesh(crown2,M.shrub,p[0],y+.98*sc,p[1]).scale.setScalar(sc);});}
 // bridge where the road crosses the river
 {const g=new T.Group();g.position.set(BRIDGE.x,G,BRIDGE.z);g.rotation.y=Math.atan2(.6,6);scene.add(g);
- const steel=new T.MeshStandardMaterial({color:0x5a4a3e,metalness:.5,roughness:.78}),rust=new T.MeshStandardMaterial({color:0x5a3322,metalness:.3,roughness:.9}),stone=new T.MeshStandardMaterial({color:0x4d4a44,roughness:.95}),L=BRIDGE.len,W=BRIDGE.w,HT=.26,N=8,y0=.1;
- const plate=new T.MeshStandardMaterial({color:0x4a4038,metalness:.6,roughness:.7});mesh(box(L,.035,W),plate,0,.08,0,g);const patch=new T.MeshStandardMaterial({color:0x4e2c1c,roughness:1,transparent:true,opacity:.75,depthWrite:false});for(let k=0;k<9;k++){const pr=mesh(new T.CircleGeometry(rand(.06,.14),7),patch,rand(-L/2+.25,L/2-.25),.0995,rand(-W/2+.15,W/2-.15),g);pr.rotation.set(-Math.PI/2,0,rand(0,3));pr.scale.set(rand(1,2.2),1,1);}for(let i=0;i<=16;i++)mesh(box(.016,.008,W-.06),steel,-L/2+.08+i*(L-.16)/16,.1,0,g); // deck plate and ribs
+ const steel=new T.MeshStandardMaterial({color:0x4a5057,metalness:.75,roughness:.42}),rust=new T.MeshStandardMaterial({color:0x2c3035,metalness:.7,roughness:.5}),stone=new T.MeshStandardMaterial({color:0x4d4a44,roughness:.95}),L=BRIDGE.len,W=BRIDGE.w,HT=.26,N=8,y0=.1;
+ const plate=new T.MeshStandardMaterial({color:0x3a3f45,metalness:.7,roughness:.5});mesh(box(L,.035,W),plate,0,.08,0,g);for(let i=0;i<=16;i++)mesh(box(.016,.008,W-.06),steel,-L/2+.08+i*(L-.16)/16,.1,0,g); // deck plate and ribs
  for(const s of[1,-1]){const z=s*(W/2-.015),X=i=>-L/2+i*L/N;
    mesh(box(L,.07,.035),steel,0,.05,z,g);mesh(box(L-2*L/N+.02,.028,.032),steel,0,y0+HT,z,g); // girder and top chord
    for(let i=1;i<N;i++)mesh(box(.022,HT,.022),steel,X(i),y0+HT/2,z,g);
