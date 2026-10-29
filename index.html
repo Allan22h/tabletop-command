@@ -1451,11 +1451,38 @@ const DEF={mg:{range:4.2,dmg:22,rof:.9,burst:3,ground:true,air:true},mortar:{ran
 // a thin rod between two points (for legs, braces and bipods)
 function strut(parent,a,b,r,mat){const d=b.clone().sub(a),m=mesh(cyl(r,r,d.length(),5),mat,0,0,0,parent);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());return m;}
 function sandRing(g,r,y=.07){const ring=new T.Mesh(new T.TorusGeometry(r,.08,6,18),M.sandbag);ring.rotation.x=Math.PI/2;ring.position.y=y;g.add(ring);}
+function hqTent(g){const W=.68,D=.95,wh=.36,a=.5,rise=W*Math.tan(a);
+  mesh(box(1.6,.03,2.1),M.woodDark,0,.015,0,g); // plank floor
+  // canvas walls: closed at the back and ends, open on the west side between two short panels
+  mesh(box(.03,wh,2*D),M.enemy,W,.03+wh/2,0,g);for(const z of[-D,D])mesh(box(2*W,wh,.03),M.enemy,0,.03+wh/2,z,g);
+  for(const z of[-.68,.68])mesh(box(.03,wh,.54),M.enemy,-W,.03+wh/2,z,g);
+  // pitched roof and its gable ends
+  const sl=W/Math.cos(a)+.06;for(const sg of[-1,1]){const r=mesh(box(sl,.025,2*D+.1),M.enemy,sg*W/2,.03+wh+rise/2,0,g);r.rotation.z=-sg*a;}
+  const tri=new T.Shape();tri.moveTo(-W,0);tri.lineTo(W,0);tri.lineTo(0,rise);tri.closePath();const tg=new T.ShapeGeometry(tri);
+  for(const z of[-D,D]){const m=new T.Mesh(tg,M.enemy);m.position.set(0,.03+wh,z);if(z<0)m.rotation.y=Math.PI;g.add(m);}
+  mesh(cyl(.035,.035,.84,10),M.enemy,-W-.02,.03+wh+.02,0,g).rotation.x=Math.PI/2; // side flap rolled up
+  for(const z of[-.42,.42])mesh(cyl(.012,.012,wh+.04,5),M.woodDark,-W-.01,.03+(wh+.04)/2,z,g); // door poles
+  // inside: a long table of computers facing the opening, a map table, and outside a field desk with a laptop and a radio
+  mesh(box(.2,.02,.8),M.woodDark,-.42,.15,0,g);for(const z of[-.36,.36])mesh(box(.18,.13,.02),M.dark,-.42,.08,z,g);
+  for(const z of[-.27,-.09,.09,.27]){mesh(box(.02,.1,.15),M.dark,-.45,.22,z,g);mesh(box(.004,.085,.13),screenMat,-.462,.22,z,g);mesh(box(.06,.01,.09),M.dark,-.37,.165,z,g);}
+  mesh(box(.12,.2,.1),M.dark,.5,.13,.7,g);mesh(box(.004,.03,.06),screenMat,.437,.18,.7,g); // server rack
+  mesh(box(.3,.02,.38),M.woodDark,.25,.16,-.1,g);mesh(box(.28,.003,.34),mapMat,.25,.172,-.1,g);for(const [x,z] of[[.13,-.26],[.37,-.26],[.13,.06],[.37,.06]])mesh(box(.02,.15,.02),M.dark,x,.08,z,g);
+  const fd=new T.Group();fd.position.set(-1.02,0,.15);g.add(fd);mesh(box(.24,.02,.4),M.woodDark,0,.17,0,fd);for(const [x,z] of[[-.1,-.18],[.1,-.18],[-.1,.18],[.1,.18]])mesh(box(.015,.16,.015),M.dark,x,.08,z,fd);
+  mesh(box(.12,.008,.15),M.dark,0,.185,-.08,fd);const lid=mesh(box(.008,.1,.15),M.dark,.06,.235,-.08,fd);lid.rotation.z=-.25;mesh(box(.002,.085,.13),screenMat,.053,.235,-.08,fd).rotation.z=-.25;
+  mesh(box(.1,.08,.12),M.enemy,0,.22,.12,fd);mesh(cyl(.004,.004,.14,4),M.dark,.03,.31,.15,fd); // field radio and its whip
+  const fd2=new T.Group();fd2.position.set(-1.02,0,-.38);g.add(fd2);mesh(box(.24,.02,.42),M.woodDark,0,.17,0,fd2);for(const [x,z] of[[-.1,-.19],[.1,-.19],[-.1,.19],[.1,.19]])mesh(box(.015,.16,.015),M.dark,x,.08,z,fd2);
+  for(const z of[-.1,.1]){mesh(box(.03,.13,.17),M.dark,.04,.26,z,fd2);mesh(box(.004,.11,.15),screenMat,.023,.26,z,fd2);mesh(box(.05,.01,.1),M.dark,-.05,.185,z,fd2);} // two monitors and keyboards outside
+  // radio mast with guy wires, a red light on top, a generator and cable drum
+  const mx=.95,mz=-.75,mh=1.55;mesh(cyl(.016,.022,mh,6),M.metal,mx,mh/2,mz,g);for(let k=1;k<=4;k++)mesh(box(.14-k*.02,.008,.008),M.metal,mx,mh*k/5,mz,g);
+  mesh(new T.SphereGeometry(.022,8,6),M.red,mx,mh,mz,g);for(const [dx,dz] of[[.45,-.25],[-.15,-.45],[.3,.4]])strut(g,V(mx,mh*.75,mz),V(mx+dx,.01,mz+dz),.003,M.dark);
+  mesh(box(.22,.16,.14),M.enemy,.95,.09,.55,g);mesh(box(.23,.03,.15),M.dark,.95,.18,.55,g);const drum=mesh(cyl(.06,.06,.06,12),M.dark,.95,.07,.3,g);drum.rotation.x=Math.PI/2;
+  for(const z of[-.95,.75])for(let k=0;k<2;k++)mesh(box(.1,.06,.09),M.sandbag,-.98,.035+k*.062,z,g);}
 const BUILD={
+  // HQ 1: a command tent, its side rolled up over a table of computers, a radio mast beside it; the bunker comes at HQ 2
   // command bunker, growing with its level: one concrete floor with slit windows, sandbags and a blast door at HQ 1;
   // a second floor at 3, a command vehicle at 4, the satellite dish at 5, a camouflage net and a second mast at 7,
   // armor plating at 9, a radar dome at 11 and a lookout tower with gold trim at 13
-  hq(g,b){const L=b.lv||1,rt=L>=3?1.05:.62;mesh(box(1.74,.06,2.24),M.dark,0,.03,0,g);mesh(box(1.7,.56,2.2),M.concrete,0,.31,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.6,0,g);
+  hq(g,b){const L=b.lv||1,rt=L>=3?1.05:.62;if(L===1)return hqTent(g);mesh(box(1.74,.06,2.24),M.dark,0,.03,0,g);mesh(box(1.7,.56,2.2),M.concrete,0,.31,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.6,0,g);
     for(let i=0;i<5;i++){mesh(box(.02,.05,.24),M.glass,-.86,.42,-.84+i*.42,g);}for(const z of[-1.11,1.11])for(let i=0;i<4;i++)mesh(box(.26,.05,.02),M.glass,-.55+i*.4,.42,z,g);
     for(let i=0;i<22;i++){const z=-1.05+i*.1;if(Math.abs(z)<.28)continue;for(let k=0;k<2;k++)mesh(box(.08,.06,.1),M.sandbag,-.9,.04+k*.06,z+(k?.05:0),g);}
     mesh(box(.04,.34,.3),M.metal,-.87,.17,0,g);mesh(box(.02,.04,.04),M.dark,-.9,.18,.1,g);
@@ -1660,7 +1687,7 @@ const oilLabel=(()=>{const c=document.createElement('canvas');c.width=256;c.heig
 // HQ and barracks details
 const searchMat=new T.MeshStandardMaterial({color:0xfff6d0,emissive:0xfff0b0,emissiveIntensity:1.2});
 const goldTrim=new T.MeshStandardMaterial({color:0xd4af37,metalness:.8,roughness:.3}),siteTape=new T.MeshStandardMaterial({color:0xe8b830,roughness:.6});
-const litGlass=new T.MeshStandardMaterial({color:0x2a2a20,emissive:0xd9b25a,emissiveIntensity:.55,roughness:.3}),dishWhite=new T.MeshStandardMaterial({color:0xe6e6e0,roughness:.5,side:T.DoubleSide});
+const litGlass=new T.MeshStandardMaterial({color:0x2a2a20,emissive:0xd9b25a,emissiveIntensity:.55,roughness:.3}),screenMat=new T.MeshStandardMaterial({color:0x0c2a30,emissive:0x5fe4f0,emissiveIntensity:1.4,roughness:.3}),mapMat=new T.MeshStandardMaterial({color:0xcfc39a,emissive:0x2a2414,roughness:.9}),dishWhite=new T.MeshStandardMaterial({color:0xe6e6e0,roughness:.5,side:T.DoubleSide});
 const barracksDark=new T.MeshStandardMaterial({color:0x1c1a16,roughness:1}),flagMat=new T.MeshStandardMaterial({color:0xb03024,side:T.DoubleSide,roughness:.8});
 const laundry=[0xd8d0b8,0x55603a,0x8a8070,0x3c4a5a].map(c=>new T.MeshStandardMaterial({color:c,side:T.DoubleSide,roughness:1}));
 // loot buildings: materials, and a painted floor square in the resource's color so each one reads at a glance
