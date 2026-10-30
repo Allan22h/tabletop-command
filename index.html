@@ -2010,19 +2010,35 @@ const BUILD={
       mesh(box(.02,.06,.17),M.glass,.385,.17,0,t);for(const x of[-.15,.08,.28])for(const s2 of[-1,1]){const w=mesh(cyl(.045,.045,.03,10),M.dark,x,.045,s2*.1,t);w.rotation.x=Math.PI/2;}}
     for(let i=0;i<3;i++)mesh(cyl(.035,.035,.1,10),i===1?M.dark:M.enemy,.5,.05,-.12+i*.08,g);},
   // guard tower: splayed log legs with cross bracing, a plank deck behind a sandbag parapet, a tin roof on posts, a ladder, and a gunner on a machine gun that turns
-  // guard tower, armed by level: one machine gun (1-3); twin guns and an armored roof (4-6); an automatic grenade launcher (7-9);
-  // a light anti-tank missile pod (10-12); a concrete tower with a rotary cannon and a searchlight (13-15)
+  // guard tower, armed by level: one machine gun (1-3); twin guns (4-6); an automatic grenade launcher (7-9);
+  // a light anti-tank missile pod (10-12); a concrete tower with a rotary cannon (13-15). The platform and roof change every level (below)
   mg(g,b){const P=.86,L=b.lv||1,tier=L>=13?5:L>=10?4:L>=7?3:L>=4?2:1;
     if(tier>=5){mesh(box(.3,P,.3),M.concrete,0,P/2,0,g);for(const y of[.25,.55])mesh(box(.32,.02,.32),M.dark,0,y,0,g);}
-    else{for(const [sx,sz] of[[-1,-1],[1,-1],[-1,1],[1,1]]){strut(g,V(sx*.19,0,sz*.19),V(sx*.13,P,sz*.13),.022,M.woodDark);}
+    else{const legM=L>=12?camoWall:M.woodDark;for(const [sx,sz] of[[-1,-1],[1,-1],[-1,1],[1,1]]){strut(g,V(sx*.19,0,sz*.19),V(sx*.13,P,sz*.13),.026,legM);}
       for(const [a,c] of[[[-1,-1],[1,-1]],[[-1,1],[1,1]],[[-1,-1],[-1,1]],[[1,-1],[1,1]]]){strut(g,V(a[0]*.18,.08,a[1]*.18),V(c[0]*.145,P-.12,c[1]*.145),.008,M.woodDark);strut(g,V(c[0]*.18,.08,c[1]*.18),V(a[0]*.145,P-.12,a[1]*.145),.008,M.woodDark);}}
     mesh(box(.36,.03,.36),tier>=5?M.concrete:M.woodDark,0,P,0,g);
-    for(let i=0;i<12;i++){const s=i%3,side=Math.floor(i/3),t=-.11+s*.11,x=[t,.16,t,-.16][side],z=[-.16,t,.16,t][side];if(side===3&&s===1)continue;
-      const bag=mesh(box(.1,.055,.07),M.sandbag,x,P+.045,z,g);bag.rotation.y=side%2?Math.PI/2:0;mesh(box(.09,.05,.065),M.sandbag,x,P+.098,z,g).rotation.y=bag.rotation.y+.06;}
-    for(const [sx,sz] of[[-1,-1],[1,-1],[-1,1],[1,1]])mesh(cyl(.01,.01,.3,5),tier>=2?M.metal:M.woodDark,sx*.16,P+.15,sz*.16,g);
-    const roof=mesh(box(.46,tier>=2?.04:.018,.46),tier>=2?ironDark:M.metal,0,P+.31,0,g);roof.rotation.z=.12;
-    if(tier>=2)for(const z of[-.23,.23])mesh(box(.4,.06,.02),ironDark,0,P+.27,z,g); // armor plates on the sides
-    if(tier>=5){const sl=mesh(cyl(.035,.03,.05,10),M.metal,.18,P+.36,.18,g);sl.rotation.z=Math.PI/2;mesh(cyl(.03,.03,.005,10),searchMat,.206,P+.36,.18,g).rotation.z=Math.PI/2;}
+    // the platform grows a step every level: open with a rail (1), sandbags (2), a second layer and a camo net on posts (3), a tin roof (4),
+    // sandbags on the roof (5), steel roof and armor plates (6), the net back over the roof (7), a searchlight (8), more roof bags and a radio mast (9),
+    // sandbags round the foot (10), razor wire round the foot (11), camo paint (12), the concrete tower (13), a flag (14), a second searchlight (15)
+    const C4=[[-1,-1],[1,-1],[-1,1],[1,1]],postM=L>=6?M.metal:M.woodDark,roofM=L>=12?camoWall:L>=6?ironDark:M.metal;
+    if(L<2){for(const [sx,sz] of C4)mesh(box(.02,.12,.02),M.woodDark,sx*.17,P+.07,sz*.17,g);for(const [x,z,w,d] of[[0,-.17,.36,.015],[0,.17,.36,.015],[.17,0,.015,.36]])mesh(box(w,.015,d),M.woodDark,x,P+.12,z,g);}
+    else for(let i=0;i<12;i++){const s=i%3,side=Math.floor(i/3),t=-.11+s*.11,x=[t,.16,t,-.16][side],z=[-.16,t,.16,t][side];if(side===3&&s===1)continue;
+      const bag=mesh(box(.1,.055,.07),M.sandbag,x,P+.045,z,g);bag.rotation.y=side%2?Math.PI/2:0;if(L>=3)mesh(box(.09,.05,.065),M.sandbag,x,P+.098,z,g).rotation.y=bag.rotation.y+.06;}
+    if(L>=3)for(const [sx,sz] of C4)mesh(cyl(.01,.01,.3,5),postM,sx*.16,P+.15,sz*.16,g);
+    if(L===3){const net=new T.Mesh(new T.PlaneGeometry(.5,.5,6,6),netMat),np=net.geometry.attributes.position;for(let k=0;k<np.count;k++)np.setZ(k,-(1-Math.abs(np.getX(k))*4)*(1-Math.abs(np.getY(k))*4)*.04);
+      net.geometry.computeVertexNormals();net.rotation.x=-Math.PI/2;net.position.y=P+.3;g.add(net);}
+    const rg=new T.Group();rg.position.y=P+.31;rg.rotation.z=.12;g.add(rg); // everything on the roof follows its slope
+    if(L>=4){mesh(box(.46,L>=6?.04:.018,.46),roofM,0,0,0,rg);
+      if(L>=5)bagRect(rg,-.18,.18,-.18,.18,0,L>=9?2:1);
+      if(L>=7){const net=new T.Mesh(new T.PlaneGeometry(.62,.62,6,6),netMat),np=net.geometry.attributes.position;for(let k=0;k<np.count;k++){const r=Math.max(Math.abs(np.getX(k)),Math.abs(np.getY(k)));np.setZ(k,r>.22?-(r-.22)*1.2:Math.sin(np.getX(k)*14)*.01);}
+        net.geometry.computeVertexNormals();net.rotation.x=-Math.PI/2;net.position.y=L>=9?.13:.08;rg.add(net);}
+      const light=(x,z)=>{const sl=mesh(cyl(.035,.03,.05,10),M.metal,x,.2,z,rg);sl.rotation.z=Math.PI/2;mesh(cyl(.03,.03,.005,10),searchMat,x+.026,.2,z,rg).rotation.z=Math.PI/2;mesh(cyl(.006,.006,.18,5),M.metal,x-.02,.1,z,rg);};
+      if(L>=8)light(.17,.17);if(L>=15)light(.17,-.17);
+      if(L>=9){mesh(cyl(.005,.005,.36,5),M.dark,-.18,.2,-.18,rg);mesh(new T.SphereGeometry(.012,6,4),M.red,-.18,.38,-.18,rg);}
+      if(L>=14){mesh(cyl(.005,.005,.3,5),M.metal,-.18,.16,.18,rg);const f=mesh(box(.13,.075,.004),flagMat,-.115,.27,.18,rg);f.rotation.y=.15;}}
+    if(L>=6)for(const z of[-.23,.23])mesh(box(.4,.06,.02),L>=12?camoWall:ironDark,0,P+.27,z,g); // armor plates on the sides
+    if(L>=10){bagLine(g,.32,-.32,.32,.32,0,2);bagLine(g,-.24,.32,.32,.32,0,2);bagLine(g,-.24,-.32,.32,-.32,0,2);} // the ladder side stays open
+    if(L>=11){wireLine(g,.42,-.4,.42,.4);wireLine(g,-.3,.42,.42,.42);wireLine(g,-.3,-.42,.42,-.42);}
     for(const z of[-.05,.05])strut(g,V(-.27,0,z),V(-.19,P,z),.007,tier>=5?M.metal:M.woodDark);for(let i=0;i<6;i++){const k=(i+.6)/6.6;mesh(box(.012,.008,.1),tier>=5?M.metal:M.woodDark,-.27+.08*k,P*k,0,g);}
     const h=new T.Group();h.position.y=P+.015;g.add(h);b.head=h;
     for(const a of[0,2.1,4.2])strut(h,V(.04,.11,0),V(.04+Math.cos(a)*.06,.01,Math.sin(a)*.06),.005,M.dark);
