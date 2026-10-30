@@ -1231,7 +1231,7 @@ function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return
   h+=`<div class="row"><h3>My base</h3><span class="muted">HQ ${hq} of ${HQ_MAX} · builders ${free}/${BUILDERS} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
   if(baseTab==='base')h+=panelBase(hq,free);else if(baseTab==='army')h+=panelArmy();else if(baseTab==='research')h+=panelResearch();else h+=panelReports();
-  h+=`<div class="row"><button type="button" class="act" data-act="raid">Raid · enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)}</button><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
+  h+=`<div class="row"><button type="button" class="act" data-act="raid">Raid · enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)} · ${WX[nextWx].n}</button><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
   el.innerHTML=h;fitPeek(el);}
 // the closed sheet ends just under the tabs, however the title above them wraps
 function fitPeek(el){const t=el.querySelector('.tabs');if(t)el.style.setProperty('--peek',(t.offsetTop+t.offsetHeight+10)+'px');}
@@ -1255,7 +1255,7 @@ function panelBase(hq,free){let h='';
   const nxt=[...BUILD_ORDER,...ITEM_ORDER].filter(k=>LIMIT[k](hq+1)>LIMIT[k](hq));if(hq<HQ_MAX&&nxt.length)h+=`<span class="muted">HQ ${hq+1}: bigger base, more ${nxt.map(k=>BK[k].name.toLowerCase()).join(', ')}</span>`;
   h+=`<span class="muted">Storage · ${RES.map(r=>`${RESN[r]} ${fmtN(BASE.res[r])} / ${fmtN(capOf(r))}`).join(' · ')}</span>`;
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="rich">+100k each</button><button type="button" class="tbtn" data-act="finishall">Finish all now</button>
-    <button type="button" class="tbtn" data-act="hqdown">HQ −1</button><button type="button" class="tbtn" data-act="hqup">HQ +1</button><button type="button" class="tbtn" data-act="maxall">Max all for this HQ</button><button type="button" class="tbtn" data-act="layout">Default layout</button><button type="button" class="tbtn" data-act="reset">Reset base</button></div>`;
+    <button type="button" class="tbtn" data-act="wx">Next raid: ${WX[nextWx].n}</button><button type="button" class="tbtn" data-act="hqdown">HQ −1</button><button type="button" class="tbtn" data-act="hqup">HQ +1</button><button type="button" class="tbtn" data-act="maxall">Max all for this HQ</button><button type="button" class="tbtn" data-act="layout">Default layout</button><button type="button" class="tbtn" data-act="reset">Reset base</button></div>`;
   return h;}
 function panelArmy(){const cap=armyCap(),used=armyUsed();let h=`<span class="muted">Army space ${used} / ${cap}. Units you deploy in a raid are used up; the rest come home.</span><div class="army">`;
   ARMY_ORDER.forEach(k=>{const t=TR[k],have=BASE.army[k]||0,c=trainCost(k),bl=ownLv(t.need),lock=levelLocked({k});
@@ -1311,6 +1311,7 @@ function initBase(){const el=$('basePanel');makeResIcons();sheet(false);
     else if(a==='rich'){RES.forEach(r=>BASE.res[r]+=r==='i'?10000:100000);saveBase();refreshBase();}
     else if(a==='hqup')setHqTest(baseHq()+1);else if(a==='hqdown')setHqTest(baseHq()-1);
     else if(a==='reset'){BASE=defaultBase();saveBase();syncHq();refreshBase(true);}
+    else if(a==='wx'){nextWx=WX_ORDER[(WX_ORDER.indexOf(nextWx)+1)%WX_ORDER.length];renderBasePanel();}
     else if(a==='raid'){begin('full');}else if(a==='menu'){show('basePanel',false);goMenu();}};
   $('goBase').onclick=()=>enterBase();$('endBase').onclick=()=>enterBase();initDrag();}
 // a raid's cards are the army you trained
@@ -2050,18 +2051,18 @@ function stats(){if(!blds.length)return {pct:0,stars:0};const b=blds,dead=b.filt
   return {pct,stars:(pct>=50?1:0)+(hqDown?1:0)+(pct>=100?1:0)};}
 
 /* ---------- game flow ---------- */
-function clearBattle(){projs.forEach(p=>scene.remove(p.m));projs.length=0;timers.length=0;strikes.forEach(s=>battle.remove(s.j.g));
+function clearBattle(){if(wx!=='day')setWeather('day');projs.forEach(p=>scene.remove(p.m));projs.length=0;timers.length=0;strikes.forEach(s=>battle.remove(s.j.g));
   while(battle.children.length)battle.remove(battle.children[0]);atts=[];defs=[];blds=[];walls=[];strikes=[];wrecks.length=0;pops.length=0;debris.length=0;sel=null;
   decals.forEach(d=>d.visible=false);[ADD,SMK].forEach(P=>P.forEach(p=>p.s.visible=false));}
-function startBattle(m){clearBattle();mode=m;if(m==='full')raidHq=clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
+function startBattle(m){clearBattle();mode=m;setWeather(m==='full'?nextWx:'day');if(m==='full')nextWx=rollWx();if(m==='full')raidHq=clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
   cards=m==='tutorial'?TUT_CARDS.map(c=>Object.assign({},c)):armyCards();raidArmy=m==='full'?1:null;
   if(m==='full'&&shieldLeft()>0){BASE.shield=Math.max(0,BASE.shield-3*3600000);saveBase();}
   armed=null;battleUsed=false;loot={g:0,f:0,m:0,i:0};timeLeft=180;battleT=0;state='battle';endT=0;
   tut=m==='tutorial'?{step:0,t:0}:null;result=null;show('menu',false);show('end',false);show('banner',false);refreshCards();
-  hqFlag();$('enemyHq').textContent='Enemy HQ '+enemyHq();$('enemyHq').hidden=false;orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);
+  hqFlag();$('enemyHq').textContent='Enemy HQ '+enemyHq()+(wx!=='day'?' · '+WX[wx].n:'');$('enemyHq').hidden=false;orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);
   leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=false;$('cancelBtn').textContent='Cancel raid';$('cancelBtn').hidden=false;$('tray').hidden=false;orb.target.set(1.5,0,1.5);
   if(tut){radio('Commander, enemy outpost ahead. Deploy armor.',true);armCard(0);prompt(xrMode?'Point at the tank card and pinch, then point at open ground and pinch.':'Tap the tank card, then tap open ground outside the red zone.');}
-  else{radio(`All units, ${CALL[cur]}. Begin the assault.`,true);prompt(xrMode?'Pinch a card, then pinch the ground to deploy. Squeeze to move the board, twist it or flick the stick to turn it.':'Pick a card, then tap the map to deploy. Drag to rotate, pinch to zoom.',5);}
+  else{radio(`All units, ${CALL[cur]}. ${WX_RADIO[wx]?WX_RADIO[wx]+' ':''}Begin the assault.`,true);prompt(xrMode?'Pinch a card, then pinch the ground to deploy. Squeeze to move the board, twist it or flick the stick to turn it.':'Pick a card, then tap the map to deploy. Drag to rotate, pinch to zoom.',5);}
   xrDirty=true;}
 function tutEvent(ev,k){if(!tut)return;
   if(tut.step===0&&ev==='deploy'){tut.step=1;tut.t=0;prompt('Your tanks pick targets and attack on their own. Watch.',4);}
@@ -2353,7 +2354,7 @@ async function enterXR(){try{const s=await navigator.xr.requestSession('immersiv
     scene.scale.setScalar(XS);scene.rotation.y=Math.PI/2;scene.position.set(-2*XS,.74-G*XS,-.35-12*XS);setShadow(XS);xrUI.visible=true;xrDirty=true;uiYaw=null;turnLeft=0;
     $('app').classList.add('xr');s.addEventListener('end',exitXR);}
   catch(err){prompt('Mixed reality could not start here. Open this page in the Meta Quest browser from its own address.',5);}}
-function exitXR(){xrMode=false;M.terrain.bumpScale=TERRAIN_BUMP;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
+function exitXR(){xrMode=false;M.terrain.bumpScale=TERRAIN_BUMP;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);setWeather(wx);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
   setShadow(1);xrUI.visible=false;reticle.visible=false;$('app').classList.remove('xr');}
 if(navigator.xr&&navigator.xr.isSessionSupported){navigator.xr.isSessionSupported('immersive-ar').then(ok=>{if(ok)$('xrBtn').hidden=false;}).catch(()=>{});}
 $('xrBtn').onclick=enterXR;
@@ -2372,10 +2373,32 @@ const snowfall=(()=>{const n=900,p=new Float32Array(n*3);for(let i=0;i<n;i++){p[
   const pts=new T.Points(geo,new T.PointsMaterial({color:0xffffff,size:.08,map:new T.CanvasTexture(fc),transparent:true,opacity:.9,depthWrite:false}));pts.visible=false;pts.frustumCulled=false;scene.add(pts);return pts;})();
 function updSnow(dt){if(!snowfall.visible)return;snowfall.material.size=.08*scene.scale.x;const p=snowfall.geometry.attributes.position.array,t=performance.now()/1000;
   for(let i=0;i<p.length;i+=3){p[i+1]-=dt*(.55+(i%7)*.05);p[i]+=Math.sin(t*.8+i)*dt*.12;if(p[i+1]<0)p[i+1]+=9;}snowfall.geometry.attributes.position.needsUpdate=true;}
+/* weather and time of day: each raid rolls one (shown on the raid button beforehand). Looks only: units fight the same in all of them */
+const WX={day:{n:'Clear day',h:[0xe6edf2,.62],s:[0xfff0d8,2.1],f:.35,bg:BG,fog:[60,170],ex:1.05},
+  night:{n:'Night',h:[0x3c56a8,.34],s:[0x7e9cff,.42],f:.04,bg:0x0e1422,fog:[40,140],ex:.95},
+  rain:{n:'Rain',h:[0x9aa6ad,.5],s:[0xc8d2da,.55],f:.2,bg:0x5b6268,fog:[30,110],ex:1},
+  snow:{n:'Snow',h:[0xe8eef5,.72],s:[0xe6eefa,1.1],f:.3,bg:0xc4ccd4,fog:[30,120],ex:1.05},
+  storm:{n:'Storm',h:[0x6c7680,.3],s:[0xa8b4c0,.28],f:.1,bg:0x2c3238,fog:[22,90],ex:1.15}};
+const WX_ORDER=['day','night','rain','snow','storm'],WX_RADIO={night:'Night op, go dark.',rain:'Heavy rain over the objective.',snow:'Snow on the ground.',storm:'Storm overhead, watch the lightning.'};
+let wx='day',boltT=4;
+// about 60% of raids are clear day; the rest split between night, rain, snow and storm
+function rollWx(){const r=Math.random();return r<.6?'day':r<.75?'night':r<.86?'rain':r<.94?'snow':'storm';}
+let nextWx=rollWx();
+const rainFx=(()=>{const n=2200,p=new Float32Array(n*6);for(let i=0;i<n;i++){const x=rand(-16,16),y=rand(0,9),z=rand(-12,16);p.set([x,y,z,x-.06,y-.4,z],i*6);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(p,3));const l=new T.LineSegments(g,new T.LineBasicMaterial({color:0xb8c6d0,transparent:true,opacity:.4,depthWrite:false}));l.visible=false;l.frustumCulled=false;scene.add(l);return l;})();
+function setWeather(w){wx=w;const c=WX[w];hemi.color.setHex(c.h[0]);hemi.intensity=c.h[1];sun.color.setHex(c.s[0]);sun.intensity=c.s[1];fill.intensity=c.f;
+  if(stage.background){stage.background.setHex(c.bg);stage.fog.color.setHex(c.bg);stage.fog.near=c.fog[0];stage.fog.far=c.fog[1];}
+  rr.toneMappingExposure=c.ex;rainFx.visible=w==='rain'||w==='storm';rainFx.material.opacity=w==='storm'?.55:.38;snowfall.visible=w==='snow'||!!MAPT.snow;
+  M.terrain.emissive.setHex(w==='snow'&&!MAPT.snow?0x3c4249:0);boltT=rand(2,4);}
+function updWeather(dt){if(rainFx.visible){const a=rainFx.geometry.attributes.position.array,v=dt*(wx==='storm'?15:12),sx=wx==='storm'?-.16:-.06;
+    for(let i=0;i<a.length;i+=6){a[i+1]-=v;a[i+4]-=v;a[i]+=sx*v*.5;a[i+3]=a[i]+sx;if(a[i+4]<0){const y=rand(8,9.5);a[i+1]=y;a[i+4]=y-.4;a[i]=rand(-16,16);a[i+3]=a[i]+sx;}}rainFx.geometry.attributes.position.needsUpdate=true;}
+  if(wx!=='storm')return;const c=WX.storm;hemi.intensity+=(c.h[1]-hemi.intensity)*Math.min(1,dt*7);
+  // lightning: the sky and the board flash, then thunder follows a moment later
+  if((boltT-=dt)<0){boltT=rand(3,8);hemi.intensity=2.6;if(stage.background)stage.background.setHex(0x8a96a4);setTimeout(()=>{if(wx==='storm'&&stage.background)stage.background.setHex(c.bg);},120);setTimeout(()=>boom(.6),rand(400,1200));}}
 // switching maps regenerates the terrain texture and recolors water, rocks and plants
 function setMap(id){if(MAPT===MAPS[id])return;const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
   water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
-  [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());puddles.visible=MAPT.mud;snowfall.visible=!!MAPT.snow;
+  [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());puddles.visible=MAPT.mud;setWeather(wx);
   $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
 document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent='Loading…';setTimeout(()=>{setMap(b.dataset.map);b.textContent=b.dataset.label;},20);});
 function begin(m){if(m==='full'&&armyEmpty()){enterBase();baseTab='army';renderBasePanel();prompt('Train an army first: your raid cards are the units you train.',4);return;}if(!AC){try{audioInit();}catch(_){}}if(AC){AC.resume();soundOn=true;}syncSnd();startBattle(m);}
@@ -2400,7 +2423,7 @@ scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(linearize);});Obj
 let last=performance.now();
 rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-last)/1000);last=now;
   const ts=xrMode&&armed!=null&&state==='battle'?.3:1; // precision aid: battle slows while aiming in the headset
-  if(defendSim)defendTick(dt);else step(dt*ts);updSnow(dt);updPool(ADD,dt*ts);updPool(SMK,dt*ts);water.material.map.offset.y-=dt*.05;seaMap.offset.x+=dt*.015;flashLights.forEach(l=>l.intensity*=Math.pow(.0005,dt));
+  if(defendSim)defendTick(dt);else step(dt*ts);updSnow(dt);updWeather(dt);updPool(ADD,dt*ts);updPool(SMK,dt*ts);water.material.map.offset.y-=dt*.05;seaMap.offset.x+=dt*.015;flashLights.forEach(l=>l.intensity*=Math.pow(.0005,dt));
   hud();
   if(xrMode){xrFrame(dt);drawXR();rr.render(stage,cam);return;}
   const w=canvasEl.clientWidth,h=canvasEl.clientHeight;if(rr._w!==w||rr._h!==h){rr.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();rr._w=w;rr._h=h;
@@ -2408,7 +2431,7 @@ rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-
   if(state==='menu')orb.theta+=dt*.05;
   else if(state==='ended'&&result){orb.theta+=dt*.12;orb.target.lerp(result.focus,Math.min(1,dt*1.5));orb.r=mix(orb.r,Math.max(orb.minR,orb.r*.97),Math.min(1,dt));} // slow victory lap around the HQ
   orb.apply();rr.render(stage,cam);});
-window.__tcDebug={runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 
 }
