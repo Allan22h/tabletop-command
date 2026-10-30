@@ -1202,7 +1202,7 @@ function drawLabel(b){const o=b.own,L=b.label;if(!o||!L)return;const left=o.unti
   if(txt===L.key)return;L.key=txt;const x=L.c.getContext('2d');x.clearRect(0,0,320,96);x.font='700 40px sans-serif';const w=Math.min(310,x.measureText(txt).width+34);
   x.fillStyle=o.until?'rgba(60,40,8,.88)':'rgba(10,14,12,.8)';rrect(x,160-w/2,14,w,64,20);x.fill();x.strokeStyle=o.until?'#ffd27a':'rgba(255,255,255,.3)';x.lineWidth=3;x.stroke();
   x.fillStyle=o.until?'#ffd27a':'#efe9da';x.textAlign='center';x.fillText(txt,160,60);L.t.needsUpdate=true;}
-function enterBase(keepCam){stopDefense();endXrMove();clearBattle();mode='mine';state='base';sel=null;drag=null;rowKey='';if(!keepCam){placing=null;rowO=null;moving=false;}
+function enterBase(keepCam){if(state!=='base')drum('base');stopDefense();endXrMove();clearBattle();mode='mine';state='base';sel=null;drag=null;rowKey='';if(!keepCam){placing=null;rowO=null;moving=false;}
   if(!BASE.obsV){BASE.obsV=1;BASE.obsT=Date.now();spawnObs(6);saveBase();}
   if(!keepCam&&loginCheck())setTimeout(()=>{if(state==='base')showDaily(true);},900);buildLayout('mine');ents.forEach(e=>{if(e.b)label(e);});
   selRing=new T.Mesh(new T.RingGeometry(.9,1,40),new T.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:.85,depthWrite:false}));selRing.rotation.x=-Math.PI/2;selRing.visible=false;battle.add(selRing);
@@ -2431,7 +2431,7 @@ function stats(){if(!blds.length)return {pct:0,stars:0};const b=blds,dead=b.filt
 function clearBattle(){battle.traverse(o=>{if(o.geometry&&o.geometry.userData.baked)o.geometry.dispose();});if(wx!=='day')setWeather('day');projs.forEach(p=>scene.remove(p.m));projs.length=0;timers.length=0;strikes.forEach(s=>battle.remove(s.j.g));
   while(battle.children.length)battle.remove(battle.children[0]);atts=[];defs=[];blds=[];walls=[];strikes=[];wrecks.length=0;pops.length=0;debris.length=0;sel=null;
   decals.forEach(d=>d.visible=false);[ADD,SMK].forEach(P=>P.forEach(p=>p.s.visible=false));}
-function startBattle(m){clearBattle();mode=m;setWeather(m==='full'?nextWx:'day');if(m==='full')nextWx=rollWx();if(m==='full')raidHq=clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
+function startBattle(m){drum('raid');clearBattle();mode=m;setWeather(m==='full'?nextWx:'day');if(m==='full')nextWx=rollWx();if(m==='full')raidHq=clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
   cards=m==='tutorial'?TUT_CARDS.map(c=>Object.assign({},c)):armyCards();raidArmy=m==='full'?1:null;
   if(m==='full'&&shieldLeft()>0){BASE.shield=Math.max(0,BASE.shield-3*3600000);saveBase();}
   armed=null;battleUsed=false;loot={g:0,f:0,m:0,i:0};timeLeft=180;battleT=0;state='battle';endT=0;
@@ -2533,7 +2533,18 @@ let cancelAt=-1e9,battleUsed=false;const cancelArmed=()=>performance.now()-cance
 function armCancel(){cancelAt=performance.now();$('cancelBtn').textContent='Cancel? Tap again';xrDirty=true;haptic();
   setTimeout(()=>{if(!cancelArmed()){$('cancelBtn').textContent='Cancel raid';xrDirty=true;}},3100);}
 function cancelRaid(){cancelAt=-1e9;if(state!=='battle')return;if(!battleUsed){goMenu();return;}radio('All units, abort. Fall back.',true);endBattle(true);}
-function goMenu(){if(defendSim){stopDefense();$('enemyHq').hidden=true;$('cancelBtn').textContent='Cancel raid';}if(state==='battle'&&mode==='full')consumeArmy();leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=$('cancelBtn').hidden=true;state='menu';result=null;clearBattle();buildLayout('full');cards=[];refreshCards();
+// field snare drum, synthesized: a crack of filtered noise, a short pitched body and the rattle of the snares
+function snareHit(t,v){const n=noiseSrc(t,.25),hp=AC.createBiquadFilter(),g=AC.createGain();hp.type='highpass';hp.frequency.value=1400;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.55*v,t+.002);g.gain.exponentialRampToValueAtTime(.001,t+.11);n.connect(hp).connect(g).connect(master);
+  const r=noiseSrc(t,.3),bp=AC.createBiquadFilter(),gr=AC.createGain();bp.type='bandpass';bp.frequency.value=5200;bp.Q.value=.8;
+  gr.gain.setValueAtTime(.3*v,t);gr.gain.exponentialRampToValueAtTime(.001,t+.2);r.connect(bp).connect(gr).connect(master);
+  const o=AC.createOscillator(),go=AC.createGain();o.type='triangle';o.frequency.setValueAtTime(210,t);o.frequency.exponentialRampToValueAtTime(150,t+.06);
+  go.gain.setValueAtTime(.5*v,t);go.gain.exponentialRampToValueAtTime(.001,t+.08);o.connect(go).connect(master);o.start(t);o.stop(t+.1);}
+// cadences: [time, loudness, flam]; a flam is a soft grace note just before the stroke
+const DRUM={raid:[...Array.from({length:14},(_,k)=>[k*.04,.22+k*.03]),[.62,1,1],[.86,.9,1]], // roll building into two accents
+  menu:[[0,.75,1],[.16,.5]],base:[[0,.5],[.11,.45],[.22,.85,1]]};
+function drum(k){if(!AC||!soundOn)return;const t0=AC.currentTime+.02;DRUM[k].forEach(([dt,v,fl])=>{if(fl)snareHit(t0+dt-.028,v*.35);snareHit(t0+dt,v);});}
+function goMenu(){if(state!=='menu')drum('menu');if(defendSim){stopDefense();$('enemyHq').hidden=true;$('cancelBtn').textContent='Cancel raid';}if(state==='battle'&&mode==='full')consumeArmy();leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=$('cancelBtn').hidden=true;state='menu';result=null;clearBattle();buildLayout('full');cards=[];refreshCards();
   show('end',false);show('banner',false);show('basePanel',false);show('menu',true);$('radio').hidden=true;$('enemyHq').hidden=true;prompt('',0);orb.target.set(1.5,0,1.5);orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);xrDirty=true;}
 
 /* ---------- step ---------- */
