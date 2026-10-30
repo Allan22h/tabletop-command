@@ -1210,7 +1210,7 @@ function drawLabel(b){const o=b.own,L=b.label;if(!o||!L)return;const left=o.unti
   if(txt===L.key)return;L.key=txt;const x=L.c.getContext('2d');x.clearRect(0,0,320,96);x.font='700 40px sans-serif';const w=Math.min(310,x.measureText(txt).width+34);
   x.fillStyle=o.until?'rgba(60,40,8,.88)':'rgba(10,14,12,.8)';rrect(x,160-w/2,14,w,64,20);x.fill();x.strokeStyle=o.until?'#ffd27a':'rgba(255,255,255,.3)';x.lineWidth=3;x.stroke();
   x.fillStyle=o.until?'#ffd27a':'#efe9da';x.textAlign='center';x.fillText(txt,160,60);L.t.needsUpdate=true;}
-function enterBase(keepCam){if(state!=='base')drum('base');stopDefense();endXrMove();clearBattle();mode='mine';state='base';sel=null;drag=null;rowKey='';if(!keepCam){placing=null;rowO=null;moving=false;}
+function enterBase(keepCam){if(state!=='base')drum('base');menuMusic(false);stopDefense();endXrMove();clearBattle();mode='mine';state='base';sel=null;drag=null;rowKey='';if(!keepCam){placing=null;rowO=null;moving=false;}
   if(!BASE.obsV){BASE.obsV=1;BASE.obsT=Date.now();spawnObs(6);saveBase();}
   if(!keepCam&&loginCheck())setTimeout(()=>{if(state==='base')showDaily(true);},900);buildLayout('mine');ents.forEach(e=>{if(e.b)label(e);});
   selRing=new T.Mesh(new T.RingGeometry(.9,1,40),new T.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:.85,depthWrite:false}));selRing.rotation.x=-Math.PI/2;selRing.visible=false;battle.add(selRing);
@@ -2439,7 +2439,7 @@ function stats(){if(!blds.length)return {pct:0,stars:0};const b=blds,dead=b.filt
 function clearBattle(){battle.traverse(o=>{if(o.geometry&&o.geometry.userData.baked)o.geometry.dispose();});if(wx!=='day')setWeather('day');projs.forEach(p=>scene.remove(p.m));projs.length=0;timers.length=0;strikes.forEach(s=>battle.remove(s.j.g));
   while(battle.children.length)battle.remove(battle.children[0]);atts=[];defs=[];blds=[];walls=[];strikes=[];wrecks.length=0;pops.length=0;debris.length=0;sel=null;
   decals.forEach(d=>d.visible=false);[ADD,SMK].forEach(P=>P.forEach(p=>p.s.visible=false));}
-function startBattle(m){drum('raid');clearBattle();mode=m;setWeather(m==='full'?nextWx:'day');if(m==='full')nextWx=rollWx();if(m==='full')raidHq=clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
+function startBattle(m){drum('raid');menuMusic(false);clearBattle();mode=m;setWeather(m==='full'?nextWx:'day');if(m==='full')nextWx=rollWx();if(m==='full')raidHq=clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
   cards=m==='tutorial'?TUT_CARDS.map(c=>Object.assign({},c)):armyCards();raidArmy=m==='full'?1:null;
   if(m==='full'&&shieldLeft()>0){BASE.shield=Math.max(0,BASE.shield-3*3600000);saveBase();}
   armed=null;battleUsed=false;loot={g:0,f:0,m:0,i:0};timeLeft=180;battleT=0;state='battle';endT=0;
@@ -2552,7 +2552,42 @@ function snareHit(t,v){const n=noiseSrc(t,.25),hp=AC.createBiquadFilter(),g=AC.c
 const DRUM={raid:[...Array.from({length:14},(_,k)=>[k*.04,.22+k*.03]),[.62,1,1],[.86,.9,1]], // roll building into two accents
   menu:[[0,.75,1],[.16,.5]],base:[[0,.5],[.11,.45],[.22,.85,1]]};
 function drum(k){if(!AC||!soundOn)return;const t0=AC.currentTime+.02;DRUM[k].forEach(([dt,v,fl])=>{if(fl)snareHit(t0+dt-.028,v*.35);snareHit(t0+dt,v);});}
-function goMenu(){if(state!=='menu')drum('menu');if(TTS)TTS.cancel();if(defendSim){stopDefense();$('enemyHq').hidden=true;$('cancelBtn').textContent='Cancel raid';}if(state==='battle'&&mode==='full')consumeArmy();leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=$('cancelBtn').hidden=true;state='menu';result=null;clearBattle();buildLayout('full');cards=[];refreshCards();
+// menu music: "Night march", an original drum loop synthesized live. Muffled drums, ticking rim, brushed snare,
+// a low pulsing drone, and a radar sweep with two pings once per round. Plays on the menu while Sound is on.
+let mmBus=null,mmLoop=0;
+function mmDrum(t,v,muffle){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(muffle?80:105,t);o.frequency.exponentialRampToValueAtTime(muffle?45:52,t+.35);
+  g.gain.setValueAtTime(.9*v,t);g.gain.exponentialRampToValueAtTime(.001,t+(muffle?.35:.6));o.connect(g).connect(mmBus);o.start(t);o.stop(t+.7);
+  const n=noiseSrc(t,.08),f=filt('lowpass',muffle?500:1400),ng=AC.createGain();ng.gain.setValueAtTime(.35*v,t);ng.gain.exponentialRampToValueAtTime(.001,t+.07);n.connect(f).connect(ng).connect(mmBus);}
+function mmSnare(t,v){const n=noiseSrc(t,.16),f=filt('bandpass',3800,.8),g=AC.createGain();g.gain.setValueAtTime(.32*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.14);n.connect(f).connect(g).connect(mmBus);
+  const o=AC.createOscillator(),og=AC.createGain();o.type='triangle';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(160,t+.06);og.gain.setValueAtTime(.25*v,t);og.gain.exponentialRampToValueAtTime(.001,t+.07);o.connect(og).connect(mmBus);o.start(t);o.stop(t+.1);}
+function mmBrush(t){const n=noiseSrc(t,.22),f=filt('bandpass',5200,.6),g=AC.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.09,t+.04);g.gain.exponentialRampToValueAtTime(.001,t+.2);n.connect(f).connect(g).connect(mmBus);}
+function mmRim(t,v){const o=AC.createOscillator(),g=AC.createGain(),f=filt('bandpass',1900,4);o.type='square';o.frequency.value=1650;g.gain.setValueAtTime(.22*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.035);o.connect(f).connect(g).connect(mmBus);o.start(t);o.stop(t+.05);}
+function mmDrone(t,dur){[49,73.4].forEach((f,i)=>{const o=AC.createOscillator(),lp=filt('lowpass',260,1.5),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain(),a=.055;
+  o.type='sawtooth';o.frequency.value=f;o.detune.value=i?-7:5;l.frequency.value=.7;lg.gain.value=a*.6;l.connect(lg).connect(g.gain);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a,t+.35);g.gain.setValueAtTime(a,t+dur-.05);g.gain.linearRampToValueAtTime(0,t+dur+.35);
+  o.connect(lp).connect(g).connect(mmBus);o.start(t);o.stop(t+dur+.4);l.start(t);l.stop(t+dur+.4);});}
+function mmPing(t,v,f){const o=AC.createOscillator(),g=AC.createGain(),dl=AC.createDelay(1),fb=AC.createGain(),lp=filt('lowpass',2200),wet=AC.createGain();
+  o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.985,t+1.2);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.085*v,t+.006);g.gain.exponentialRampToValueAtTime(.001,t+1.3);
+  dl.delayTime.value=.34;fb.gain.value=.38;wet.gain.value=.55;o.connect(g).connect(mmBus);g.connect(dl).connect(lp).connect(fb).connect(dl);lp.connect(wet).connect(mmBus);o.start(t);o.stop(t+1.4);
+  setTimeout(()=>{try{fb.disconnect();}catch(e){}},(t-AC.currentTime+4)*1000);}
+function mmSweep(t,dur,v){const n=noiseSrc(t,dur),f=filt('bandpass',500,9),g=AC.createGain(),p=AC.createStereoPanner();
+  f.frequency.setValueAtTime(500,t);f.frequency.exponentialRampToValueAtTime(2400,t+dur);p.pan.setValueAtTime(-.9,t);p.pan.linearRampToValueAtTime(.9,t+dur);
+  g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.07*v,t+dur*.8);g.gain.linearRampToValueAtTime(0,t+dur);n.connect(f).connect(g).connect(p).connect(mmBus);
+  const o=AC.createOscillator(),og=AC.createGain();o.frequency.value=2050;og.gain.setValueAtTime(.06*v,t+dur);og.gain.exponentialRampToValueAtTime(.001,t+dur+.09);o.connect(og).connect(mmBus);o.start(t+dur);o.stop(t+dur+.1);}
+// four bars of 16 steps: T muffled drum (t soft), D drum, W brush, R rim (soft)
+const NIGHT=[{T:'x.......x...t...',D:'............x...',W:'....x.......x...',R:'rrrrrrrr'},{T:'x.....t.x...t...',D:'............x...',W:'....x.......x...',R:'rrrrrrrr'},
+  {T:'x.......x...t...',D:'............x...',W:'....x.......x...',R:'rrrrrrrr'},{T:'x.......x...tttt',D:'x...........x.x.',W:'....x...........',R:'rrrr'}];
+function mmBar(i,t){const S=60/84/4,p=NIGHT[i];mmDrone(t,16*S);
+  for(let k=0;k<16;k++){const tt=t+k*S,c=key=>p[key][k];
+    if(c('T')==='x')mmDrum(tt,.75,true);else if(c('T')==='t')mmDrum(tt,.4,true);
+    if(c('D')==='x')mmDrum(tt,k%4?.8:1);if(c('W')==='x')mmBrush(tt);if(k%2===0&&p.R[k>>1])mmRim(tt,.35);}
+  if(i===2){mmSweep(t,10*S,.9);mmPing(t+11*S,.9,1240);mmPing(t+13*S,.55,1180);}
+  if(i===3){const n=Math.round(4*S/.045);for(let j=0;j<n;j++)mmSnare(t+12*S+j*.045,.1+.4*j/n);}
+  return 16*S;}
+function menuMusic(on){if(on&&!mmLoop&&AC&&soundOn){mmBus=AC.createGain();mmBus.gain.setValueAtTime(0,AC.currentTime);mmBus.gain.linearRampToValueAtTime(.75,AC.currentTime+1.2);mmBus.connect(master);
+    let n=0,next=AC.currentTime+.15;const tick=()=>{while(next<AC.currentTime+.6){next+=mmBar(n%4,next);n++;}};tick();mmLoop=setInterval(tick,150);}
+  else if(!on&&mmLoop){clearInterval(mmLoop);mmLoop=0;const b=mmBus,t=AC.currentTime;b.gain.cancelScheduledValues(t);b.gain.setValueAtTime(b.gain.value,t);b.gain.linearRampToValueAtTime(0,t+.6);setTimeout(()=>b.disconnect(),2500);mmBus=null;}}
+function goMenu(){if(state!=='menu')drum('menu');menuMusic(true);if(TTS)TTS.cancel();if(defendSim){stopDefense();$('enemyHq').hidden=true;$('cancelBtn').textContent='Cancel raid';}if(state==='battle'&&mode==='full')consumeArmy();leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=$('cancelBtn').hidden=true;state='menu';result=null;clearBattle();buildLayout('full');cards=[];refreshCards();
   show('end',false);show('banner',false);show('basePanel',false);show('menu',true);$('radio').hidden=true;$('enemyHq').hidden=true;prompt('',0);orb.target.set(1.5,0,1.5);orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);xrDirty=true;}
 
 /* ---------- step ---------- */
@@ -2853,7 +2888,7 @@ $('banner').onclick=finishCelebrate;
 $('menuBtn').onclick=()=>{if(defendSim&&defendSim.watch){endReplay();return;}if(state!=='battle')return;leaveArmed()?goMenu():armLeave();};
 $('cancelBtn').onclick=()=>{if(defendSim&&defendSim.watch){defendSim.speed=defendSim.speed>=4?1:defendSim.speed*2;$('cancelBtn').textContent='Speed ×'+defendSim.speed;return;}if(state!=='battle')return;cancelArmed()?cancelRaid():armCancel();};
 function syncSnd(){$('snd').textContent=soundOn?'Sound on':'Sound off';$('snd').setAttribute('aria-pressed',String(soundOn));}
-$('snd').onclick=()=>{if(!AC)audioInit();soundOn=!soundOn;soundOn?AC.resume():AC.suspend();syncSnd();};
+$('snd').onclick=()=>{if(!AC)audioInit();soundOn=!soundOn;soundOn?AC.resume():AC.suspend();syncSnd();menuMusic(soundOn&&state==='menu');};
 initBase();setFaction('nato');buildLayout('full');
 // hex colors are written in sRGB, but the renderer outputs sRGB from linear values: convert every solid color once so it isn't washed out
 function linearize(m){if(!m||m._lin)return;m._lin=true;if(m.color)m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();}

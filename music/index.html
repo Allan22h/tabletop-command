@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Music Options</title>
+<style>
+:root{--bg:#141713;--card:#1d221c;--ink:#efe9da;--muted:#a7a493;--edge:rgba(255,255,255,.12);--gold:#ffd27a;--red:#c8372d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,sans-serif;padding:24px 16px 40px}
+main{max-width:760px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+p{color:var(--muted);margin:0 0 16px;max-width:66ch}
+.grid{display:grid;gap:12px}
+.card{background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:14px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.card h2{font-size:16px;margin:0 0 2px}.card p{margin:0;font-size:13.5px}
+button{font:700 15px system-ui;border:0;border-radius:999px;width:56px;height:56px;background:var(--red);color:#fff;cursor:pointer;box-shadow:0 0 0 3px rgba(255,210,122,.25)}
+button.on{background:var(--gold);color:#2a1e05}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.parts{font-size:12.5px;color:var(--muted);margin-top:18px}
+.parts b{color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+<h1>Tabletop Command music options</h1><p style="color:var(--gold)">Saved for later. In the game now: A3 Night march as the menu music.</p>
+<p>Everything here is written for the game and synthesized live, with no recordings, so nothing needs a license. The bugle only plays its natural notes (C, G, C, E, G, high C), which already sit on the five-note scale typical of Chinese music. The drums are a deep war drum and a snare, and a gong closes it.</p>
+<div class="grid">
+  <h2 style="font-size:15px;margin:6px 0 0;color:var(--gold)">Menu drum loops: tap to start, tap again to stop</h2>
+  <div class="card"><button type="button" data-loop="march" aria-label="Play or stop: War-drum march" aria-pressed="false">▶</button><div><h2>A · War-drum march</h2><p>96 bpm. Steady war drum with snare and rim clicks; every fourth bar builds with a roll, sometimes into a soft gong.</p></div></div>
+  <div class="card"><button type="button" data-loop="tense" aria-label="Play or stop: A2 Tense march" aria-pressed="false">▶</button><div><h2>A2 · Tense march</h2><p>92 bpm. March A, sparer, over a low two-note drone that grinds a half step apart. A radar ping with echo every other bar and a slow radar sweep before each fill.</p></div></div>
+  <div class="card"><button type="button" data-loop="night" aria-label="Play or stop: A3 Night march" aria-pressed="false">▶</button><div><h2>A3 · Night march</h2><p>84 bpm. Muffled drums with a ticking rim, a deep drone that pulses slowly, and a radar sweep and double ping once each round, like a scope at night.</p></div></div>
+  <div class="card" style="border-color:rgba(255,210,122,.4)"><button type="button" data-loop="deep" aria-label="Play or stop: A3b Deep watch" aria-pressed="false">▶</button><div><h2>A3b · Deep watch</h2><p>76 bpm. Slower and emptier than A3. A lower drone with a deep boom at the top of each round; one long sweep and a single far-off ping with a long echo.</p></div></div>
+  <div class="card" style="border-color:rgba(255,210,122,.4)"><button type="button" data-loop="patrol" aria-label="Play or stop: A3c Night patrol" aria-pressed="false">▶</button><div><h2>A3c · Night patrol</h2><p>84 bpm. A3 with a steady low-drum step under it, like boots moving, a darker minor drone, and pings that come from the left, then the right.</p></div></div>
+  <div class="card" style="border-color:rgba(255,210,122,.4)"><button type="button" data-loop="silent" aria-label="Play or stop: A3d Silent running" aria-pressed="false">▶</button><div><h2>A3d · Silent running</h2><p>80 bpm. Barely-there drums, a heartbeat and ticking rim, every other bar almost empty. Lower, sonar-style pings with long tails. The quietest one.</p></div></div>
+  <div class="card" style="border-color:rgba(255,210,122,.4)"><button type="button" data-loop="storm" aria-label="Play or stop: A3e Storm front" aria-pressed="false">▶</button><div><h2>A3e · Storm front</h2><p>84 bpm. A3 plus distant rumbles like far-off artillery or thunder, an extra sweep every other round, and a big low hit and soft gong at the end of each round.</p></div></div>
+  <div class="card"><button type="button" data-loop="closing" aria-label="Play or stop: A4 Closing in" aria-pressed="false">▶</button><div><h2>A4 · Closing in</h2><p>96 bpm. March A over a running low-drum pulse, a thin high tone that rises in each fill, and radar pings that get closer together through the round.</p></div></div>
+  <div class="card"><button type="button" data-loop="heavy" aria-label="Play or stop: Heavy drums" aria-pressed="false">▶</button><div><h2>B · Heavy drums</h2><p>72 bpm. Slow and huge: big low hits with space between, answered by rim clicks, a deep boom and a gong swell every few bars. Epic, cinematic.</p></div></div>
+  <div class="card"><button type="button" data-loop="cadence" aria-label="Play or stop: Drumline cadence" aria-pressed="false">▶</button><div><h2>C · Drumline cadence</h2><p>116 bpm. Snare-led parade cadence with flams and accents over a bass drum on the beat. Brighter and more upbeat.</p></div></div>
+  <div class="card"><button type="button" data-loop="ops" aria-label="Play or stop: Ops room" aria-pressed="false">▶</button><div><h2>D · Ops room</h2><p>88 bpm. Quiet and tense: a low drum pulse like a heartbeat, a ticking rim, brushed snare, and a swell every fourth bar. Sits under menus without getting tiring.</p></div></div>
+  <div class="card"><button type="button" data-k="victory" aria-label="Play victory fanfare">▶</button><div><h2>Victory</h2><p>About 10 seconds. A triplet call, a climbing line, then a long high note over a gong.</p></div></div>
+  <div class="card"><button type="button" data-k="raid" aria-label="Play raid call">▶</button><div><h2>Raid call</h2><p>About 4 seconds. Two short calls over a war-drum beat, for starting a raid.</p></div></div>
+  <div class="card"><button type="button" data-k="defeat" aria-label="Play defeat call">▶</button><div><h2>Defeat</h2><p>About 5 seconds. The same call played slowly and falling, with a muffled drum.</p></div></div>
+</div>
+<p class="parts"><b>Parts:</b> two bugles (sawtooth tone, a brassy filter that opens on each note, a small scoop up into the pitch, slight vibrato on long notes) · war drum (low thump that drops in pitch) · snare rolls · gong (several out-of-tune partials that swell and fade over 4 s).</p>
+</main>
+<script>
+let AC=null,out=null,noise=null;
+function init(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();
+  const comp=AC.createDynamicsCompressor();comp.threshold.value=-12;comp.ratio.value=4;out=AC.createGain();out.gain.value=.8;out.connect(comp).connect(AC.destination);
+  // short room so the bugle doesn't sound dry
+  const len=AC.sampleRate*1.6,ir=AC.createBuffer(2,len,AC.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);}
+  const rv=AC.createConvolver();rv.buffer=ir;const rg=AC.createGain();rg.gain.value=.22;out.connect(rv).connect(rg).connect(comp);
+  noise=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
+const H={C4:261.6,G4:392,C5:523.3,E5:659.3,G5:784,C6:1046.5}; // bugle harmonics in C
+function bugle(f,t,dur,v=1,pan=0){const o=AC.createOscillator(),o2=AC.createOscillator(),lp=AC.createBiquadFilter(),g=AC.createGain(),p=AC.createStereoPanner();
+  o.type='sawtooth';o2.type='square';o2.detune.value=6;lp.type='lowpass';lp.Q.value=2;
+  o.frequency.setValueAtTime(f*.97,t);o.frequency.exponentialRampToValueAtTime(f,t+.05);o2.frequency.setValueAtTime(f*.97,t);o2.frequency.exponentialRampToValueAtTime(f,t+.05);
+  if(dur>.6){const l=AC.createOscillator(),lg=AC.createGain();l.frequency.value=5.2;lg.gain.setValueAtTime(0,t);lg.gain.linearRampToValueAtTime(f*.007,t+dur*.6);l.connect(lg);lg.connect(o.frequency);lg.connect(o2.frequency);l.start(t);l.stop(t+dur+.1);}
+  lp.frequency.setValueAtTime(f*1.2,t);lp.frequency.exponentialRampToValueAtTime(f*(5+v*2),t+.04);lp.frequency.exponentialRampToValueAtTime(f*3.2,t+Math.min(dur,.35));
+  const a=.16*v;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a*1.25,t+.025);g.gain.linearRampToValueAtTime(a,t+.09);g.gain.setValueAtTime(a,t+Math.max(.09,dur-.06));g.gain.linearRampToValueAtTime(0,t+dur+.04);
+  const mix=AC.createGain();mix.gain.value=.5;o.connect(lp);o2.connect(mix).connect(lp);lp.connect(g).connect(p).connect(out);p.pan.value=pan;
+  o.start(t);o2.start(t);o.stop(t+dur+.1);o2.stop(t+dur+.1);}
+function nz(t,dur){const s=AC.createBufferSource();s.buffer=noise;s.start(t,Math.random());s.stop(t+dur);return s;}
+function warDrum(t,v=1,muffle=false){const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.setValueAtTime(muffle?80:105,t);o.frequency.exponentialRampToValueAtTime(muffle?45:52,t+.35);
+  g.gain.setValueAtTime(.9*v,t);g.gain.exponentialRampToValueAtTime(.001,t+(muffle?.35:.6));o.connect(g).connect(out);o.start(t);o.stop(t+.7);
+  const n=nz(t,.08),f=AC.createBiquadFilter(),ng=AC.createGain();f.type='lowpass';f.frequency.value=muffle?500:1400;ng.gain.setValueAtTime(.35*v,t);ng.gain.exponentialRampToValueAtTime(.001,t+.07);n.connect(f).connect(ng).connect(out);}
+function snare(t,v=1){const n=nz(t,.16),f=AC.createBiquadFilter(),g=AC.createGain();f.type='bandpass';f.frequency.value=3800;f.Q.value=.8;g.gain.setValueAtTime(.32*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.14);n.connect(f).connect(g).connect(out);
+  const o=AC.createOscillator(),og=AC.createGain();o.type='triangle';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(160,t+.06);og.gain.setValueAtTime(.25*v,t);og.gain.exponentialRampToValueAtTime(.001,t+.07);o.connect(og).connect(out);o.start(t);o.stop(t+.1);}
+function roll(t,dur,v0,v1){const n=Math.round(dur/.045);for(let i=0;i<n;i++)snare(t+i*.045,v0+(v1-v0)*i/n);}
+function gong(t,v=1){[[110,1],[163,.6],[231,.45],[297,.35],[419,.25],[587,.15]].forEach(([f,a],i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type='sine';
+    o.frequency.setValueAtTime(f*1.02,t);o.frequency.exponentialRampToValueAtTime(f*.985,t+4);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.16*a*v,t+.05+i*.04);g.gain.exponentialRampToValueAtTime(.0008,t+4.2-i*.3);
+    o.connect(g).connect(out);o.start(t);o.stop(t+4.3);});
+  const n=nz(t,1.2),f=AC.createBiquadFilter(),g=AC.createGain();f.type='bandpass';f.frequency.value=2400;f.Q.value=.5;g.gain.setValueAtTime(.18*v,t);g.gain.exponentialRampToValueAtTime(.001,t+1.1);n.connect(f).connect(g).connect(out);}
+// tunes: [note, beats] for the lead bugle; second bugle answers with a lower harmonic on the long notes
+const LOW={C5:'G4',E5:'C5',G5:'E5',C6:'G5',G4:'C4'};
+function playLine(t0,beat,line,harm=true){let t=t0;line.forEach(([n,b,acc])=>{const d=b*beat*(b<.5?.82:.92);if(n){bugle(H[n],t,d,acc?1.15:1,-.15);if(harm&&b>=1&&LOW[n])bugle(H[LOW[n]],t,d,.7,.2);}t+=b*beat;});return t;}
+const TUNES={
+  victory(t){const B=.5;
+    roll(t,B,.2,.7);
+    let e=playLine(t,B,[['G4',1/3],['G4',1/3],['G4',1/3],['C5',1,1],['G4',.5],['C5',.5],['E5',1,1],['C5',.5],['E5',.5],['G5',2,1],
+      ['E5',.5],['G5',.5],['E5',.5],['C5',.5],['G4',1],['C5',.5],['E5',.5],['G5',.75],['G5',.25],['G5',.5],['E5',.5],['C6',3.5,1]]);
+    for(let k=1;k<=16;k++)warDrum(t+k*B,k%2?1:.65);
+    roll(t+11*B,1.4*B,.3,.9);warDrum(e-3.5*B,1.2);gong(e-3.5*B,1.1);return e+1;},
+  raid(t){const B=.42;
+    let e=playLine(t,B,[['C5',.5],['C5',.5],['G4',.5],['C5',1,1],[null,.5],['E5',.5],['E5',.5],['C5',.5],['G5',2,1]]);
+    [0,1,2,3,4,5,6].forEach(k=>warDrum(t+k*B,k%2?.7:1));[3.5,3.75].forEach(k=>snare(t+k*B,.8));roll(t+5*B,1.6*B,.3,.8);warDrum(t+5.5*B,1.2);return e+.5;},
+  defeat(t){const B=.7;
+    let e=playLine(t,B,[['G5',1],['E5',.5],['C5',.5],['G4',1.5],[null,.5],['E5',1],['C5',.5],['G4',.5],['C4',3]]);
+    [0,2,4,6].forEach(k=>warDrum(t+k*B,.8,true));gong(t+6*B,.55);return e;}};
+// rim click: a short, bright knock on the drum's wooden edge
+function rim(t,v=1){const o=AC.createOscillator(),g=AC.createGain(),f=AC.createBiquadFilter();o.type='square';o.frequency.value=1650;f.type='bandpass';f.frequency.value=1900;f.Q.value=4;
+  g.gain.setValueAtTime(.22*v,t);g.gain.exponentialRampToValueAtTime(.001,t+.035);o.connect(f).connect(g).connect(out);o.start(t);o.stop(t+.05);}
+// big low drum: a deeper, longer war drum with a skin slap on top
+function boom(t,v=1){const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.setValueAtTime(70,t);o.frequency.exponentialRampToValueAtTime(34,t+.9);
+  g.gain.setValueAtTime(1.1*v,t);g.gain.exponentialRampToValueAtTime(.001,t+1.3);o.connect(g).connect(out);o.start(t);o.stop(t+1.4);
+  const n=nz(t,.1),f=AC.createBiquadFilter(),ng=AC.createGain();f.type='lowpass';f.frequency.value=900;ng.gain.setValueAtTime(.4*v,t);ng.gain.exponentialRampToValueAtTime(.001,t+.09);n.connect(f).connect(ng).connect(out);}
+function flam(t,v=1){snare(t-.025,v*.35);snare(t,v);}
+// brushed snare: soft swish instead of a crack
+function brush(t,v=1){const n=nz(t,.22),f=AC.createBiquadFilter(),g=AC.createGain();f.type='bandpass';f.frequency.value=5200;f.Q.value=.6;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.09*v,t+.04);g.gain.exponentialRampToValueAtTime(.001,t+.2);n.connect(f).connect(g).connect(out);}
+// swell: noise and low hum rising over a bar, for tension
+function swell(t,dur,v=1){const n=nz(t,dur+.1),f=AC.createBiquadFilter(),g=AC.createGain();f.type='bandpass';f.Q.value=1.2;f.frequency.setValueAtTime(400,t);f.frequency.exponentialRampToValueAtTime(3000,t+dur);
+  g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.12*v,t+dur);g.gain.linearRampToValueAtTime(0,t+dur+.08);n.connect(f).connect(g).connect(out);}
+// radar ping: a clean sine blip with a long tail and a few echoes, like a scope return
+function radarPing(t,v=1,f=1240,{pan=0,echo=.34,fbk=.38,tail=1.3}={}){const o=AC.createOscillator(),g=AC.createGain(),dl=AC.createDelay(1),fb=AC.createGain(),lp=AC.createBiquadFilter(),wet=AC.createGain(),p=AC.createStereoPanner();
+  o.type='sine';o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*.985,t+tail*.9);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.085*v,t+.006);g.gain.exponentialRampToValueAtTime(.001,t+tail);
+  dl.delayTime.value=echo;fb.gain.value=fbk;lp.type='lowpass';lp.frequency.value=2200;wet.gain.value=.55;p.pan.value=pan;
+  o.connect(g).connect(p).connect(out);g.connect(dl).connect(lp).connect(fb).connect(dl);lp.connect(wet).connect(p);o.start(t);o.stop(t+tail+.1);}
+// distant thunder / far artillery: a long low rumble of filtered noise
+function rumble(t,dur=2.5,v=1){const n=nz(t,dur),f=AC.createBiquadFilter(),g=AC.createGain();f.type='lowpass';f.frequency.setValueAtTime(160,t);f.frequency.linearRampToValueAtTime(90,t+dur);
+  g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.5*v,t+.12);g.gain.exponentialRampToValueAtTime(.001,t+dur);n.connect(f).connect(g).connect(out);boom(t,.35*v);}
+// radar sweep: a narrow whoosh that turns across the stereo field, ending in a short blip
+function radarSweep(t,dur=1.8,v=1){const n=nz(t,dur),f=AC.createBiquadFilter(),g=AC.createGain(),p=AC.createStereoPanner();f.type='bandpass';f.Q.value=9;
+  f.frequency.setValueAtTime(500,t);f.frequency.exponentialRampToValueAtTime(2400,t+dur);p.pan.setValueAtTime(-.9,t);p.pan.linearRampToValueAtTime(.9,t+dur);
+  g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(.07*v,t+dur*.8);g.gain.linearRampToValueAtTime(0,t+dur);n.connect(f).connect(g).connect(p).connect(out);
+  const o=AC.createOscillator(),og=AC.createGain();o.type='sine';o.frequency.value=2050;og.gain.setValueAtTime(.06*v,t+dur);og.gain.exponentialRampToValueAtTime(.001,t+dur+.09);o.connect(og).connect(out);o.start(t+dur);o.stop(t+dur+.1);}
+// drone: low saw voices through a dark filter, faded in and out across one bar; throb pulses the level
+function drone(t,dur,fs,v=1,throb=0){fs.forEach((f,i)=>{const o=AC.createOscillator(),lp=AC.createBiquadFilter(),g=AC.createGain();o.type='sawtooth';o.frequency.value=f;o.detune.value=i?-7:5;
+    lp.type='lowpass';lp.frequency.value=260;lp.Q.value=1.5;const a=.05*v;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a,t+.35);g.gain.setValueAtTime(a,t+dur-.05);g.gain.linearRampToValueAtTime(0,t+dur+.35);
+    if(throb){const l=AC.createOscillator(),lg=AC.createGain();l.frequency.value=throb;lg.gain.value=a*.6;l.connect(lg).connect(g.gain);l.start(t);l.stop(t+dur+.4);}
+    o.connect(lp).connect(g).connect(out);o.start(t);o.stop(t+dur+.4);});}
+// thin high tone that slides up over a bar: rising tension
+function riser(t,dur,v=1){const o=AC.createOscillator(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();o.type='sine';o.frequency.setValueAtTime(1320,t);o.frequency.exponentialRampToValueAtTime(1760,t+dur);
+  l.frequency.value=7;lg.gain.value=.012*v;l.connect(lg).connect(g.gain);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.02*v,t+dur*.9);g.gain.linearRampToValueAtTime(0,t+dur);
+  o.connect(g).connect(out);o.start(t);o.stop(t+dur+.05);l.start(t);l.stop(t+dur+.05);}
+// loops: bars of 16 steps. Voices: D war drum (d soft), B big boom, T muffled low drum (t soft), S snare (s ghost, F flam),
+// W brush, R rim (r soft). Each style lists its bars and the order they repeat in; "after" runs extra things on a bar.
+const LOOPS={
+  march:{bpm:96,order:['a','b','a','fill'],bars:{
+    a:{D:'x...x.d.x...x...',S:'....x.......x...',s:'..s......s....s.',R:'x.x.x.x.x.x.x.x.'},
+    b:{D:'x...x.d.x.d.x...',S:'....x.......x..x',s:'.s....s..s....s.',R:'x.x.x.x.x.x.x.x.'},
+    fill:{D:'x...x...x.x.xxxx',S:'....x...........',R:'x.x.x.x.........',after:(t,S,n)=>{roll(t+8*S,8*S,.15,.85);if(n%2)gong(t+16*S,.45);}}}},
+  // A variations: same march feel, darker. "every" runs on each bar with the bar's place in the round (i) and the round count (n)
+  tense:{bpm:92,order:['a','b','a','fill'],
+    every:(t,S,n,i)=>{drone(t,16*S,[65.4,69.3],1);if(i===1||i===3)radarPing(t+4*S,1);if(i===2)radarSweep(t+8*S,8*S*.9,1);},
+    bars:{
+    a:{D:'x.......x...x...',S:'....x.......x...',R:'x...x...x...x...'},
+    b:{D:'x.....d.x.......',S:'....x.......x...',s:'.........s......',R:'x...x...x...x...'},
+    fill:{D:'x.......x.x.xxxx',S:'....x...........',R:'x...x...',after:(t,S,n)=>{roll(t+8*S,8*S,.1,.7);if(n%2)gong(t+16*S,.35);}}}},
+  night:{bpm:84,order:['a','b','a','c'],
+    every:(t,S,n,i)=>{drone(t,16*S,[49,73.4],1.1,.7);if(i===2){radarSweep(t,10*S,.9);radarPing(t+11*S,.9);radarPing(t+13*S,.55,1180);}},
+    bars:{
+    a:{T:'x.......x...t...',D:'............x...',W:'....x.......x...',R:'r.r.r.r.r.r.r.r.'},
+    b:{T:'x.....t.x...t...',D:'............x...',W:'....x.......x...',R:'r.r.r.r.r.r.r.r.'},
+    c:{T:'x.......x...tttt',D:'x...........x.x.',W:'....x...........',R:'r.r.r.r.',after:(t,S)=>roll(t+12*S,4*S,.1,.5)}}},
+  // A3 variations
+  deep:{bpm:76,order:['a','b','a','c'],
+    every:(t,S,n,i)=>{drone(t,16*S,[41.2,61.7],1.2,.45);if(i===0)boom(t,.7);if(i===2){radarSweep(t,12*S,.8);radarPing(t+13*S,.8,1100,{echo:.52,fbk:.5,tail:2});}},
+    bars:{
+    a:{T:'x.......x.......',D:'............x...',W:'....x.......x...',R:'r...r...r...r...'},
+    b:{T:'x.......x...t...',D:'............x...',W:'....x.......x...',R:'r...r...r...r...'},
+    c:{T:'x.......x...t.t.',D:'x...........x...',W:'....x...........',R:'r...r...r...',after:(t,S)=>roll(t+12*S,4*S,.08,.4)}}},
+  patrol:{bpm:84,order:['a','b','a','c'],
+    every:(t,S,n,i)=>{drone(t,16*S,[49,58.3],1,.7);if(i===1)radarPing(t+6*S,.8,1240,{pan:-.6});if(i===3)radarPing(t+2*S,.8,1240,{pan:.6});if(i===2){radarSweep(t,10*S,.85);radarPing(t+11*S,.85);}},
+    bars:{
+    a:{T:'x.t.x.t.x.t.x.t.',D:'............x...',W:'....x.......x...',R:'r.r.r.r.r.r.r.r.'},
+    b:{T:'x.t.x.t.x.t.x.t.',D:'......d.....x...',W:'....x.......x...',R:'r.r.r.r.r.r.r.r.'},
+    c:{T:'x.t.x.t.x.t.tttt',D:'x...........x.x.',W:'....x...........',R:'r.r.r.r.',after:(t,S)=>roll(t+12*S,4*S,.1,.5)}}},
+  silent:{bpm:80,order:['a','r','a','c'],
+    every:(t,S,n,i)=>{drone(t,16*S,[49,73.4],.9,.35);if(i===1||i===3)radarPing(t+8*S,.9,880,{echo:.6,fbk:.45,tail:2.2});if(i===2)radarSweep(t+4*S,10*S,.7);},
+    bars:{
+    a:{T:'x..t........x..t',R:'r...r...r...r...'},
+    r:{R:'r...r...r...r...',W:'........x.......'},
+    c:{T:'x..t........x..t',D:'............x...',R:'r...r...r...r...',W:'....x...........'}}},
+  storm:{bpm:84,order:['a','b','a','c'],
+    every:(t,S,n,i)=>{drone(t,16*S,[49,73.4],1.1,.7);if(i===1)rumble(t+9*S,3,.8);if(i===2){radarSweep(t,10*S,.9);radarPing(t+11*S,.9);radarPing(t+13*S,.55,1180);}if(i===3&&n%2)radarSweep(t+2*S,8*S,.6);},
+    bars:{
+    a:{T:'x.......x...t...',D:'............x...',W:'....x.......x...',R:'r.r.r.r.r.r.r.r.'},
+    b:{T:'x.....t.x...t...',D:'............x...',W:'....x.......x...',R:'r.r.r.r.r.r.r.r.'},
+    c:{T:'x.......x...tttt',D:'x...........x.x.',B:'x...............',W:'....x...........',R:'r.r.r.r.',after:(t,S)=>{roll(t+12*S,4*S,.1,.55);gong(t+16*S,.35);}}}},
+  closing:{bpm:96,order:['a','b','a','fill'],
+    every:(t,S,n,i)=>{const gap=[8,6,4,2][i];for(let k=0;k<16;k+=gap)radarPing(t+k*S,i===3?.75:.6,i===3?1300:1240);if(i===3)riser(t,16*S,1);},
+    bars:{
+    a:{T:'x.t.x.t.x.t.x.t.',D:'x...........x...',S:'....x.......x...',R:'..x...x...x...x.'},
+    b:{T:'x.t.x.t.x.t.x.t.',D:'x.....d.....x...',S:'....x.......x..x',R:'..x...x...x...x.'},
+    fill:{T:'x.t.x.t.x.t.x.t.',D:'x.......x.x.xxxx',S:'....x...........',after:(t,S,n)=>{roll(t+8*S,8*S,.15,.9);gong(t+16*S,.4);}}}},
+  heavy:{bpm:72,order:['a','b','a','c'],bars:{
+    a:{B:'x.......x.....x.',D:'....x.......x...',R:'..r...r...r...r.'},
+    b:{B:'x.......x.......',D:'....x.....x.x.x.',R:'..r...r.........'},
+    c:{B:'x.......x...x.x.',D:'....x.x.xxxxxxxx',after:(t,S,n)=>{boom(t+16*S,1.2);gong(t+16*S,.7);}}}},
+  cadence:{bpm:116,order:['a','b','a','fill'],bars:{
+    a:{D:'x...x...x...x...',F:'x.......x.......',S:'..x.x.x...x.xx..',s:'.s.....s.s.....s',R:'....x.......x...'},
+    b:{D:'x...x...x...x...',F:'x...x...........',S:'..x...x.x.x.x.x.',s:'.s.s.s.........s',R:'............x...'},
+    fill:{D:'x...x...x...x...',F:'x.......x...x...',S:'..x.x.x.........',after:(t,S)=>roll(t+9*S,7*S,.25,1)}}},
+  ops:{bpm:88,order:['a','a','b','c'],bars:{
+    a:{T:'x..t....x..t....',R:'..r...r...r...r.',W:'....x.......x...'},
+    b:{T:'x..t....x..t..t.',R:'..r...r...r.r.r.',W:'....x.......x.x.'},
+    c:{T:'x..t....x..t.ttt',R:'..r...r...r...r.',W:'....x.......x...',after:(t,S)=>swell(t,16*S,.8)}}}};
+let loop=null,loopBtn=null;
+function scheduleBar(L,bar,t,n){const p=L.bars[bar],S=60/L.bpm/4;
+  for(let i=0;i<16;i++){const tt=t+i*S,acc=i%4===0,c=k=>p[k]&&p[k][i];
+    if(c('D')==='x')warDrum(tt,acc?1:.8);else if(c('D')==='d')warDrum(tt,.5);
+    if(c('B')==='x')boom(tt,acc?1:.85);
+    if(c('T')==='x')warDrum(tt,.75,true);else if(c('T')==='t')warDrum(tt,.4,true);
+    if(c('F')==='x')flam(tt,.95);else if(c('S')==='x')snare(tt,.8);
+    if(c('s')==='s')snare(tt,.2);if(c('W')==='x')brush(tt,1);
+    if(c('R')==='x')rim(tt,acc?.9:.55);else if(c('R')==='r')rim(tt,.35);}
+  if(p.after)p.after(t,S,n);return 16*S;}
+function loopStart(k){const L=LOOPS[k];let n=0,next=AC.currentTime+.1;
+  const tick=()=>{while(next<AC.currentTime+.6){const i=n%L.order.length,r=Math.floor(n/L.order.length);if(L.every)L.every(next,60/L.bpm/4,r,i);next+=scheduleBar(L,L.order[i],next,r);n++;}};tick();loop=setInterval(tick,150);}
+function loopStop(){clearInterval(loop);loop=null;out.gain.cancelScheduledValues(AC.currentTime);out.gain.setValueAtTime(out.gain.value,AC.currentTime);out.gain.linearRampToValueAtTime(0,AC.currentTime+.25);
+  const ac=AC;AC=null;setTimeout(()=>ac.close(),350); // closing the context drops anything already scheduled
+  loopBtn.classList.remove('on');loopBtn.textContent='▶';loopBtn.setAttribute('aria-pressed','false');loopBtn=null;}
+document.querySelectorAll('button[data-loop]').forEach(b=>b.onclick=()=>{const same=loopBtn===b;if(loop)loopStop();if(same||playing)return;
+  init();AC.resume();loopStart(b.dataset.loop);loopBtn=b;b.classList.add('on');b.textContent='■';b.setAttribute('aria-pressed','true');});
+let playing=null;
+document.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{init();AC.resume();if(playing)return;
+  const t=AC.currentTime+.08,end=TUNES[b.dataset.k](t);playing=b;b.classList.add('on');b.textContent='♪';
+  setTimeout(()=>{b.classList.remove('on');b.textContent='▶';playing=null;},(end-t)*1000);});
+</script>
+</body>
+</html>
