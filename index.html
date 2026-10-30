@@ -130,15 +130,23 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media (min-width:900px){.bpanel{right:auto;width:400px;margin:0;top:70px;bottom:12px;max-height:none}}
 /* phone: the base menu is a bottom sheet; closed it shows only the title and tabs so the base stays in view */
 .bpanel .grab{display:none}
-@media (max-width:899px){#app:not(.xr) .bpanel .tabs{flex-wrap:nowrap;gap:4px}#app:not(.xr) .bpanel .tabs .tbtn{padding:6px 7px;font-size:12px}#app:not(.xr) .bpanel{left:0;right:0;bottom:0;max-width:none;border-radius:18px 18px 0 0;border-bottom:0;padding-top:4px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh;transition:max-height .22s ease}
-  #app:not(.xr) .bpanel .grab{display:block;justify-self:center;width:64px;height:22px;margin:0 0 -4px;padding:0;border:0;background:none;cursor:grab;touch-action:none;position:relative}
-  #app:not(.xr) .bpanel .grab::after{content:"";position:absolute;left:14px;right:14px;top:8px;height:5px;border-radius:3px;background:rgba(255,255,255,.35)}
+@media (max-width:899px){#app:not(.xr) .bpanel .tabs{flex-wrap:nowrap;gap:4px}#app:not(.xr) .bpanel .tabs .tbtn{padding:6px 7px;font-size:12px}#app:not(.xr) .bpanel{left:0;right:0;bottom:0;max-width:none;border-radius:18px 18px 0 0;border-bottom:0;padding-top:4px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:36vh;transition:max-height .22s ease;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+  #app:not(.xr) .bpanel .grab{display:block;justify-self:center;width:84px;height:24px;margin:0 0 -4px;padding:0;border:0;background:none;cursor:grab;touch-action:none;position:relative}
+  #app:not(.xr) .bpanel .grab::after{content:"";position:absolute;left:16px;right:16px;top:8px;height:6px;border-radius:3px;background:rgba(255,255,255,.82);box-shadow:0 0 6px rgba(255,255,255,.35)} /* light so it reads as a pull-up handle */
   /* in the base: the top bar is just the resources and the sound toggle; title, HQ and shield live in the menu sheet */
   #app:has(#basePanel:not([hidden])) .hud>.grp:first-child{display:none}
   #app:has(#basePanel:not([hidden])) .hud>.grp:last-child{flex:1;flex-wrap:nowrap}
   #app:has(#basePanel:not([hidden])) .hud .pill{flex:1;justify-content:space-between;gap:4px;padding:5px 9px}
   #app:not(.xr) .bpanel h3{display:none}
-  #app:not(.xr) .bpanel.peek{max-height:calc(var(--peek,106px) + env(safe-area-inset-bottom,0px));overflow:hidden}}
+  #app:not(.xr) .bpanel.peek{max-height:calc(var(--peek,106px) + env(safe-area-inset-bottom,0px));overflow:hidden;touch-action:none}
+  /* the base name line stays on one line so the closed sheet is shorter */
+  #app:not(.xr) .bpanel>.row:first-of-type .muted{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:11.5px}
+  /* selected building: a small title and a row of compact buttons, Clash style, so the base stays in view */
+  #card{background:none;border:0;padding:0;gap:5px}
+  #card .ct{background:rgba(14,18,16,.82);border-radius:999px;padding:3px 10px}#card .ct b{font-size:12.5px}#card .ct span{font-size:10.5px}
+  #card .cbs{gap:5px;flex-wrap:nowrap}
+  #card .cb{width:50px;min-height:50px;border-radius:13px;padding:3px 1px;gap:1px;font-size:9.5px;background:rgba(14,18,16,.82);box-shadow:0 2px 6px rgba(0,0,0,.35)}
+  #card .cb>i{font-size:16px}#card .cb em{font-size:8.5px;gap:1px;line-height:1}#card .dot{width:10px;height:10px}}
 .card.locked{opacity:.5}.card.locked .cc{font-size:15px;color:var(--muted)}
 .lvup{font:700 15px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}.lvup.new{color:var(--ok)}
 .tbtn{background:transparent;border:1px solid var(--edge);border-radius:8px;padding:5px 9px;font-size:12px;color:var(--ink)}.tbtn:hover{border-color:var(--gold)}
@@ -1576,7 +1584,7 @@ function panelReports(){const sl=shieldLeft();let h=`<span class="muted">${sl>0?
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="attack">Simulate an enemy attack</button><button type="button" class="tbtn" data-act="noshield">Remove shield</button></div>`;
   return h;}
 function initBase(){const el=$('basePanel');makeResIcons();sheet(false);
-  el.addEventListener('pointerdown',e=>{if(!e.target.closest('.grab'))return;const y0=e.clientY;el._dragged=false;
+  el.addEventListener('pointerdown',e=>{if(!e.target.closest('.grab')&&(sheetOpen||!matchMedia('(max-width:899px)').matches))return;const y0=e.clientY;el._dragged=false;
     const mv=ev=>{const dy=ev.clientY-y0;if(Math.abs(dy)>24){el._dragged=true;sheet(dy<0);}},up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);};
     addEventListener('pointermove',mv);addEventListener('pointerup',up);});
   // sounds inside a seeded battle are held and played after the step, so they never draw from the battle's random numbers
