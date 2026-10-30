@@ -173,7 +173,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #tm img{width:24px;height:24px;vertical-align:-4px;margin-right:6px}
 @media (min-width:900px){#app:not(.xr) .bpanel .ihead img{display:none}}
 /* full screen button: phones only (upright or sideways) */
-#fsBtn{font-size:17px;line-height:1;padding:6px 9px}
+#fsBtn{font-size:23px;line-height:1;padding:7px 11px}
 @media (min-width:900px) and (min-height:521px){#fsBtn{display:none}}
 /* unit cards, like a Clash troop bar: just the picture and the count, small so the base stays in view */
 .card{width:66px;height:66px;min-height:0;padding:3px;gap:0;border-radius:11px;display:grid;place-items:center;text-align:center;
@@ -200,7 +200,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app.raid .res .dot{width:10px;height:10px}
   #app.raid #enemyHq,#app.raid #menuBtn{display:none!important}
   #app.raid #perfBtn,#app.raid #fsBtn{padding:3px 7px;font-size:12px;border-radius:8px;background:rgba(10,13,12,.4)}
-  #app.raid #fsBtn{font-size:15px}
+  #app.raid #fsBtn{font-size:20px;padding:5px 9px}
   #app.raid #cancelBtn{position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));
     background:rgba(190,48,36,.85);border-color:rgba(255,255,255,.3);color:#fff;font:700 12px var(--f-display);text-transform:uppercase;letter-spacing:.05em;padding:6px 10px}
   #app.raid .radio{left:50%;transform:translateX(-50%);top:calc(6px + env(safe-area-inset-top,0px));max-width:min(56%,320px);font-size:12px;padding:5px 8px}
@@ -1662,7 +1662,7 @@ function xpDraw(){const el=$('basePanel'),{ctx:x,c,t}=xrPanel.userData,R=el.getB
 // pointer on the panel: where it lands, in panel pixels
 function xpPoint(c){ctrlRay(c);const h=ray.intersectObject(xrPanel,false)[0];return h&&h.uv?{h,px:h.uv.x*XP_W,py:(1-h.uv.y)*XP_H}:null;}
 function xpFrame(){const m=xpMesh(),on=state==='base'&&xrMode&&!$('basePanel').hidden;m.visible=on;xpCursor.visible=false;if(!on)return;
-  m.position.set(btnRow.position.x+3,G+10,-15.5);m.lookAt(V().setFromMatrixPosition((rr.xr.isPresenting?rr.xr.getCamera(cam):cam).matrixWorld));
+  m.position.set(cardRow.position.x+3,G+10,-15.5);m.lookAt(V().setFromMatrixPosition((rr.xr.isPresenting?rr.xr.getCamera(cam):cam).matrixWorld));
   const now=performance.now(),dt=Math.min(.1,(now-(xpLast||now))/1000);xpLast=now;
   for(const c of ctrls){if(!c.userData.src&&rr.xr.isPresenting)continue;const p=xpPoint(c);if(!p)continue;
     xpCursor.position.copy(m.worldToLocal(p.h.point.clone())).setZ(.02);xpCursor.visible=true;
@@ -2767,18 +2767,18 @@ const xrUI=new T.Group();xrUI.visible=false;stage.add(xrUI);
 function canvasPlane(w,h,cw,ch){const c=document.createElement('canvas');c.width=cw;c.height=ch;const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;
   const m=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));m.rotation.y=-Math.PI/2;m.userData={c,ctx:c.getContext('2d'),t};xrUI.add(m);return m;}
 const xrHud=canvasPlane(10,2.9,800,232);xrHud.position.set(11.7,G+3.2,.5);
-// the cards form one row that moves and tilts as a single panel; the buttons get their own row just below it
-const cardRow=new T.Group(),btnRow=new T.Group();xrUI.add(cardRow,btnRow);
+// the cards form one row that moves and tilts as a single panel; the buttons get their own row under the card at the back of the table
+const cardRow=new T.Group(),btnRow=new T.Group();xrUI.add(cardRow,btnRow);btnRow.scale.setScalar(1.2); // read from across the table
 const xrCards=[];for(let i=0;i<8;i++){const m=canvasPlane(2.1,1.6,256,196);cardRow.add(m);m.rotation.set(0,0,0);m.userData.i=i;xrCards.push(m);}
 function layoutRow(list,gap){const w=list.map(m=>m.geometry.parameters.width),tot=w.reduce((a,b)=>a+b,0)+gap*Math.max(0,list.length-1);let x=-tot/2;
   list.forEach((m,i)=>{m.position.set(x+w[i]/2,0,0);x+=w[i]+gap;});}
 // when: which game states show the button
-const xrBtns=[['Tutorial raid','tutorial',-14.8,2.6,-4.6,'menu ended'],['My base','base',-14.8,2.6,-.2,'menu ended'],['Full raid','full',-14.8,2.6,-.2,'menu ended'],['Main menu','menu',-14.8,2.6,4.2,'ended'],['Cancel raid','cancel',-14.8,2.6,0,'battle'],['Main menu','menu',-14.8,2.6,0,'battle']]
+const xrBtns=[['Tutorial raid','tutorial',-14.8,2.6,-4.6,'menu ended'],['My base','base',-14.8,2.6,-.2,'menu ended'],['Full raid','full',-14.8,2.6,-.2,'menu ended'],['Main menu','menu',-14.8,2.6,4.2,'ended'],['Cancel raid','cancel',-14.8,2.6,0,'battle']]
   .map(([label,m,x,y,z,when])=>{const p=canvasPlane(when==='battle'?2.6:3.1,when==='battle'?.82:.98,380,120);btnRow.add(p);p.rotation.set(0,0,0);Object.assign(p.userData,{mode:m,label,when});return p;});
 // exit: the last button in the button row, on every screen while in mixed reality
-const xrExit=canvasPlane(2.6,.82,380,120);btnRow.add(xrExit);xrExit.rotation.set(0,0,0);
-{const {ctx:x,t}=xrExit.userData;x.fillStyle='rgba(160,40,30,.78)';rrect(x,0,0,380,120,20);x.fill();x.strokeStyle='rgba(255,255,255,.55)';x.lineWidth=4;rrect(x,2,2,376,116,18);x.stroke();
-  x.fillStyle='#fff';x.font='700 42px sans-serif';x.textAlign='center';x.fillText('Exit MR',190,76);x.textAlign='left';t.needsUpdate=true;}
+const xrExit=canvasPlane(3.9,.82,570,120);btnRow.add(xrExit);xrExit.rotation.set(0,0,0);
+{const {ctx:x,t}=xrExit.userData;x.fillStyle='rgba(160,40,30,.78)';rrect(x,0,0,570,120,20);x.fill();x.strokeStyle='rgba(255,255,255,.55)';x.lineWidth=4;rrect(x,2,2,566,116,18);x.stroke();
+  x.fillStyle='#fff';x.font='700 42px sans-serif';x.textAlign='center';x.fillText('Exit Mixed Reality',285,76);x.textAlign='left';t.needsUpdate=true;}
 const xrBanner=canvasPlane(15,6.3,1024,430);xrBanner.position.set(0,G+10,.5);xrBanner.visible=false;xrBanner.renderOrder=11;
 // promotion card, laid out like the phone one: the shoulder board pops in over a gold glow, then PROMOTED and the new rank
 const xrPromo=canvasPlane(9,7.2,640,512);xrPromo.position.set(0,G+10,.5);xrPromo.visible=false;xrPromo.renderOrder=11;
@@ -2874,7 +2874,7 @@ function xrFrame(dt){
   xrUI.position.copy(pw);xrUI.rotation.y=uiYaw;xrUI.scale.setScalar(scene.scale.x);xrUI.updateMatrixWorld();
   // the card row sits at the near edge of the board; lean in and it comes along, a little see-through so the board shows behind it
   const dH=-xrUI.worldToLocal(hp.clone()).x,F=clamp(dH-8,1.5,14.8),see=mix(1,.55,clamp((14.8-F)/8,0,1));
-  cardRow.position.set(-F,G+2.95,0);btnRow.position.set(-F,G+.75,0);
+  cardRow.position.set(-F,G+.85,0);btnRow.position.set(xrHud.position.x,G+1.05,xrHud.position.z);
   [cardRow,btnRow].forEach(r=>{r.lookAt(hp);r.children.forEach(m=>{m.material.opacity=see;});}); // each row turns as one panel to face the eyes, even from straight above
   [xrHud,xrBanner,xrPromo].forEach(m=>m.lookAt(hp));
   xrBaseFrame(hp);
