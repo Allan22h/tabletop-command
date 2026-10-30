@@ -165,6 +165,11 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #app.xr .hud,#app.xr .tray,#app.xr .zoom{visibility:hidden}
 @media (max-width:520px){.radio{top:calc(108px + env(safe-area-inset-top,0px))}.card{width:104px;min-height:84px}.card .cn{font-size:14px}.timer b{font-size:22px}.sheet h1{font-size:36px}}
 #perf{position:fixed;right:8px;top:calc(env(safe-area-inset-top) + 92px);z-index:60;font:600 12px ui-monospace,monospace;background:rgba(10,14,12,.82);color:#efe9da;padding:4px 8px;border-radius:8px;pointer-events:none}#perf.ok{color:#8fe39a}#perf.meh{color:#ffd27a}#perf.bad{color:#ff7a6a}
+/* screen messages: see-through, fade out, never block taps; over the base menu they move to the top */
+.prompt{background:rgba(255,210,122,.62);backdrop-filter:blur(4px);box-shadow:0 4px 14px rgba(0,0,0,.2);transition:opacity .4s}
+.radio{background:rgba(10,13,12,.42);transition:opacity .4s}
+.prompt.out,.radio.out{opacity:0}
+#app:has(#basePanel:not([hidden])) .prompt{top:calc(64px + env(safe-area-inset-top,0px));bottom:auto;z-index:30}
 </style>
 </head>
 <body>
@@ -2544,7 +2549,7 @@ function snareHit(t,v){const n=noiseSrc(t,.25),hp=AC.createBiquadFilter(),g=AC.c
 const DRUM={raid:[...Array.from({length:14},(_,k)=>[k*.04,.22+k*.03]),[.62,1,1],[.86,.9,1]], // roll building into two accents
   menu:[[0,.75,1],[.16,.5]],base:[[0,.5],[.11,.45],[.22,.85,1]]};
 function drum(k){if(!AC||!soundOn)return;const t0=AC.currentTime+.02;DRUM[k].forEach(([dt,v,fl])=>{if(fl)snareHit(t0+dt-.028,v*.35);snareHit(t0+dt,v);});}
-function goMenu(){if(state!=='menu')drum('menu');if(defendSim){stopDefense();$('enemyHq').hidden=true;$('cancelBtn').textContent='Cancel raid';}if(state==='battle'&&mode==='full')consumeArmy();leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=$('cancelBtn').hidden=true;state='menu';result=null;clearBattle();buildLayout('full');cards=[];refreshCards();
+function goMenu(){if(state!=='menu')drum('menu');if(TTS)TTS.cancel();if(defendSim){stopDefense();$('enemyHq').hidden=true;$('cancelBtn').textContent='Cancel raid';}if(state==='battle'&&mode==='full')consumeArmy();leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=$('cancelBtn').hidden=true;state='menu';result=null;clearBattle();buildLayout('full');cards=[];refreshCards();
   show('end',false);show('banner',false);show('basePanel',false);show('menu',true);$('radio').hidden=true;$('enemyHq').hidden=true;prompt('',0);orb.target.set(1.5,0,1.5);orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);xrDirty=true;}
 
 /* ---------- step ---------- */
@@ -2566,10 +2571,35 @@ const $=id=>document.getElementById(id);
 const fmtN=n=>Math.round(n).toLocaleString('en-US');
 const fmtClock=s=>{s=Math.ceil(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
 function show(id,on){$(id).hidden=!on;}
-let promptTimer=0;
-function prompt(text,secs){const el=$('prompt');el.textContent=text;el.hidden=!text;clearTimeout(promptTimer);if(text&&secs)promptTimer=setTimeout(()=>{el.hidden=true;xrDirty=true;},secs*1000);xrPrompt=text;xrDirty=true;}
+
+// screen messages are see-through, never take taps, and fade out within 3 seconds so they never sit over the menus
+const msgFade=(el,secs,done)=>{el.classList.remove('out');void el.offsetWidth;el.hidden=false;
+  return [setTimeout(()=>el.classList.add('out'),Math.max(.1,secs-.45)*1000),setTimeout(()=>{el.hidden=true;el.classList.remove('out');if(done)done();},secs*1000)];};
+let promptTimers=[];
+function prompt(text,secs){const el=$('prompt');el.textContent=text;promptTimers.forEach(clearTimeout);promptTimers=[];el.classList.remove('out');el.hidden=!text;
+  if(text)promptTimers=msgFade(el,Math.min(secs||3,3),()=>{xrDirty=true;});xrPrompt=text;xrDirty=true;}
+// a real voice reads radio lines when the browser can speak; the key click, static and end beep play around it.
+// Browsers do not let speech go through Web Audio, so the voice is pitched down and the static sits under it instead.
+const TTS=window.speechSynthesis&&window.SpeechSynthesisUtterance?window.speechSynthesis:null;
+function ttsVoice(){const vs=TTS.getVoices().filter(v=>/^en/i.test(v.lang));if(!vs.length)return null;const want=cur==='eu'?/en[-_]GB/i:/en[-_]US/i;
+  const male=/\bmale|daniel|alex|fred|ralph|aaron|arthur|david|guy|james|tom|mark/i,ok=v=>male.test(v.name)&&!/female/i.test(v.name);
+  return vs.find(v=>want.test(v.lang)&&ok(v))||vs.find(ok)||vs.find(v=>want.test(v.lang))||vs[0];}
+if(TTS)TTS.getVoices();
+function radioVoice(text){if(!TTS)return radioSfx(text);const fx=RADIO[cur],t=AC.currentTime+.03,bus=radioBus(fx),est=.4+text.split(/\s+/).length*.34;
+  const ck=AC.createOscillator(),ckg=AC.createGain();ck.type='square';ck.frequency.value=1800;ck.connect(ckg).connect(bus);env(ckg,t,.012,.5,.001,.004);ck.start(t);ck.stop(t+.03);
+  const sq=noiseSrc(t,.14),sqf=filt('bandpass',2200,.6),sqg=AC.createGain();sq.connect(sqf).connect(sqg).connect(bus);env(sqg,t+.01,.13,.9,.004,.06);
+  const st=noiseSrc(t,12),stf=filt('bandpass',1700,.5),stg=AC.createGain();st.connect(stf).connect(stg).connect(bus);stg.gain.setValueAtTime(0,t);stg.gain.linearRampToValueAtTime(fx.hiss*4,t+.1);
+  TTS.cancel();const u=new SpeechSynthesisUtterance(text),v=ttsVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang=cur==='eu'?'en-GB':'en-US';
+  u.rate=1.1;u.pitch=cur==='ru'?.65:.8;u.volume=.95;let done=false;
+  const end=()=>{if(done)return;done=true;const te=AC.currentTime+.02;stg.gain.cancelScheduledValues(te);stg.gain.setValueAtTime(fx.hiss*4,te);stg.gain.linearRampToValueAtTime(0,te+.05);try{st.stop(te+.3);}catch(e){}
+    const tl=noiseSrc(te,.18),tf=filt('bandpass',2600,.5),tg=AC.createGain();tl.connect(tf).connect(tg).connect(bus);env(tg,te,.16,.8,.003,.12); // squelch tail + end beep
+    if(fx.beep){const bp=AC.createOscillator(),bg=AC.createGain();bp.type='sine';bp.frequency.setValueAtTime(fx.beep,te+.17);if(fx.chirp)bp.frequency.linearRampToValueAtTime(fx.beep*1.6,te+.26);
+      bp.connect(bg).connect(bus);env(bg,te+.17,.09,.5,.003,.02);bp.start(te+.17);bp.stop(te+.3);}};
+  u.onend=u.onerror=end;setTimeout(end,(est+6)*1000);setTimeout(()=>TTS.speak(u),160);return est+.5;}
 function radio(text,force){const now=performance.now()/1000;if(!force&&now-lastRadio<4)return;lastRadio=now;$('rtx').textContent='"'+text+'"';xrRadio=text;xrDirty=true;
-  const box=$('radio');box.hidden=false;box.classList.add('live');clearTimeout(liveTimer);let d=2.6;if(soundOn&&AC)d=radioSfx(text);liveTimer=setTimeout(()=>box.classList.remove('live'),d*1000);}
+  const box=$('radio');box.classList.add('live');clearTimeout(liveTimer);radioTimers.forEach(clearTimeout);let d=2.6;if(soundOn&&AC)d=radioVoice(text);liveTimer=setTimeout(()=>box.classList.remove('live'),Math.min(d,3)*1000);
+  radioTimers=msgFade(box,3);}
+let radioTimers=[];
 // prototype test switch on the menu: field every unit without grinding to level 70
 let unlockAll=false;try{unlockAll=localStorage.getItem('tc.unlockAll')==='1';}catch(_){}
 const levelLocked=c=>!tut&&!unlockAll&&unlockLv(c.k)>levelFor(serviceXp,PLAYER_HQ).L;
