@@ -2891,6 +2891,9 @@ function syncSnd(){}
 soundOn=true;
 function wakeAudio(){if(!AC){try{audioInit();}catch(_){return;}}if(AC.state!=='running')AC.resume();setTimeout(()=>{if(state==='menu')menuMusic(true);},60);}
 ['pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,wakeAudio,{capture:true,passive:true}));
+// try right away: where the browser allows sound without a tap (a site you play often, the installed app, some headsets) the menu music starts on load;
+// elsewhere the context stays paused with the first bars queued, and the first tap releases them
+wakeAudio();
 initBase();setFaction('nato');buildLayout('full');
 // hex colors are written in sRGB, but the renderer outputs sRGB from linear values: convert every solid color once so it isn't washed out
 function linearize(m){if(!m||m._lin)return;m._lin=true;if(m.color)m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();}
