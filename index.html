@@ -939,7 +939,7 @@ const BK={
   airfield:{name:'Airfield',r:.6,hp:1100,res:['f','m'],c:900,zone:'in',desc:'Lets you prepare air strikes.'},
   barrier:{name:'Barrier block',r:.18,item:true,zone:'any',cost:h=>({g:100*h}),desc:'A wall block. New blocks are sandbags; upgrade them to earth barriers, double barriers, concrete and razor walls as the HQ allows.'},
   tree:{name:'Tree',r:.26,item:true,obs:true,zone:'any',cost:h=>({g:50*h+100}),desc:'Clear it for a little gold. Sometimes there is intel underneath.'},
-  rock:{name:'Boulder',r:.3,item:true,obs:true,zone:'any',cost:h=>({g:80*h+150}),desc:'Clear it for a little gold. Sometimes there is intel underneath.'},
+  rock:{name:'Boulder',r:.3,item:true,obs:true,zone:'any',cost:h=>({g:80*h+150}),desc:'Blast it with dynamite for a little gold. Sometimes there is intel in the rubble.'},
   bush:{name:'Bush',r:.2,item:true,obs:true,zone:'any',cost:h=>({g:30*h+50}),desc:'Clear it for a little gold. Sometimes there is intel underneath.'},
   ibox:{name:'Intel case',r:.18,item:true,obs:true,zone:'any',cost:()=>({}),desc:'A lost intel case turned up in your base. Open it for 25 intel.'},
   wire:{name:'Concertina wire',r:.5,item:true,zone:'any',cost:()=>({g:300}),desc:'Slows infantry by 60%. Vehicles drive over it.'},
@@ -1011,6 +1011,8 @@ function loadBase(){let b=null;try{b=JSON.parse(localStorage.getItem('tc.base'))
     campWallSpots(hq).forEach(([x,z])=>{if(fits('barrier',x,z,b.blds,hq))b.blds.push({k:'barrier',s:n++,lv:1,x,z});});b.wallV=1;}
   b.queue=b.queue.filter(q=>q&&TR[q.k]);b.queue.forEach(q=>b.army[q.k]=(b.army[q.k]||0)+1);b.queue=[]; // training is instant now
   for(const k in b.army)if(!TR[k])delete b.army[k];
+  b.blds.forEach(o=>{delete o.blast;}); // a blast cut short by closing the page leaves the rock in place
+  if(!b.rockV){b.blds.forEach(o=>{if(o.k==='tree'||o.k==='bush')o.k='rock';});b.rockV=1;} // obstacles are rocks only now
   if(!b.wallLvV){const hq=b.blds.find(o=>o.k==='hq').lv;b.blds.forEach(o=>{if(o.k==='barrier')o.lv=wallTierFor(hq)+1;});b.wallLvV=1;} // barriers keep the look they had
   {const hq=b.blds.find(o=>o.k==='hq').lv;b.blds.forEach(o=>{const m=maxLv(o.k,hq);if(o.lv>m)o.lv=m;if(o.to>m){delete o.to;delete o.until;delete o.fresh;}});} // levels above the HQ's caps come down to them
   try{autoPlace(b.blds,b.blds.find(o=>o.k==='hq').lv);}catch(e){console.warn('save reset',e);return defaultBase();}
@@ -1041,7 +1043,7 @@ const CH=[
   {id:'held',n:'Hold the line',d:'Attacks on your base that win no stars',at:[1,10,50],r:[20,100,300],v:s=>s.held},
   {id:'train',n:'Boot camp',d:'Units trained',at:[20,250,1500],r:[10,50,200],v:s=>s.train},
   {id:'tech',n:'Arms race',d:'Research levels gained',at:[5,30,80],r:[20,100,300],v:()=>ARMY_ORDER.reduce((n,k)=>n+techOf(k)-1,0)},
-  {id:'clear',n:'Nice and tidy',d:'Obstacles cleared',at:[5,50,500],r:[5,10,100],v:s=>s.clear},
+  {id:'clear',n:'Demolition',d:'Rocks blasted',at:[5,50,500],r:[5,10,100],v:s=>s.clear},
   {id:'wall',n:'Fortify',d:'Barrier blocks in your base',at:[25,100,200],r:[10,50,150],v:()=>BASE.blds.filter(o=>o.k==='barrier').length}];
 const chStats=()=>BASE.stats=Object.assign({win:0,s3:0,hqk:0,gold:0,held:0,train:0,clear:0},BASE.stats||{});
 const chTier=c=>(BASE.claimed&&BASE.claimed[c.id])||0;
@@ -1128,7 +1130,7 @@ function placeItem(k,x,z,raid,h,yaw,lv){if(k==='barrier'){addWall(x,z,yaw||0,lv?
     else{mesh(box(.24,.12,.17),M.dark,0,.06,0,q);mesh(box(.245,.02,.175),M.metal,0,.1,0,q);mesh(box(.06,.03,.02),M.metal,0,.07,.09,q);
       mesh(new T.SphereGeometry(.035,10,8),OBS_M.glow,0,.15,0,q);mesh(cyl(.006,.006,.16,5),M.metal,.09,.2,-.05,q);}}
   return g;}
-const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0x8d8b84,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());
+const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0x5f5c55,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());
 function resetItems(){teethL=[];wireL=[];mines=[];itemEnts=[];}
 // an enemy base for an HQ level: every building, barrier and obstacle it allows, levels near the HQ, 20% of its resources up for grabs
 function genBase(h){resetItems();const list=[];[...BUILD_ORDER,...ITEM_ORDER].forEach(k=>{for(let s=0;s<(k==='barrier'?barExtra(h):LIMIT[k](h));s++)list.push({k,s,lv:k==='hq'?h:clamp(maxLv(k,h)-(Math.random()<.35?1:0),1,maxLv(k,h))});});
@@ -1210,7 +1212,7 @@ function cardActs(){const hq=baseHq(),free=builders()-busy(),now=Date.now(),A=[]
     if(up.length)A.push({id:'rowup',ic:'⬆',l:`Upgrade ${up.length}`,c:costTxt(c),dis:!canPay(c),why:'Not enough gold.',hi:1});
     A.push({id:'rowrot',ic:'⟳',l:'Rotate row'},{id:'move',ic:'✥',l:'Move row'},{id:'rowdel',ic:'✕',l:'Remove row'},{id:'done',ic:'✓',l:'Done'});return A;}
   if(!sel||!sel.o)return A;const o=sel.o,d=BK[o.k];
-  if(d.obs){if(o.k==='ibox')A.push({id:'open',ic:'🎁',l:'Open',c:costTxt({i:25}),hi:1});else{const c=costOf(o.k,1);A.push({id:'clear',ic:'🪓',l:'Clear',c:costTxt(c),dis:!canPay(c),why:'Not enough gold.',hi:1});}return A;}
+  if(d.obs){if(o.k==='ibox')A.push({id:'open',ic:'🎁',l:'Open',c:costTxt({i:25}),hi:1});else{const c=costOf(o.k,1);A.push({id:'clear',ic:'🧨',l:'Blast',c:costTxt(c),dis:!canPay(c),why:'Not enough gold.',hi:1});}return A;}
   A.push({id:'info',ic:'ℹ',l:'Info'});
   if(o.k==='barrier'){A.push({id:'row',ic:'⋯',l:'Select row'});if((o.lv||1)<maxLv('barrier',hq)){const c=wallUpCost(o);A.push({id:'wallup',ic:'⬆',l:'Upgrade',c:costTxt(c),dis:!canPay(c),why:'Not enough gold.',hi:1});}A.push({id:'rot',ic:'⟳',l:'Rotate'});}
   else if(!d.item){if(o.until)A.push({id:'skip',ic:'⚡',l:'Finish now',c:intelBtn(skipCost((o.until-now)/1000)),hi:1});
@@ -1246,18 +1248,32 @@ function moveSel(p){const h=baseHq();moving=false;
     if(!rowO.every(o=>fits('barrier',o.x+dx,o.z+dz,others,h))){prompt('No room there.',1.5);renderBasePanel();return;}rowO.forEach(o=>{o.x=Math.round((o.x+dx)*1000)/1000;o.z=Math.round((o.z+dz)*1000)/1000;});saveBase();refreshBase(true);return;}
   const o=sel&&sel.o;if(!o)return;let x=Math.round(p.x*4)/4,z=Math.round(p.z*4)/4,y=o.y;if(o.k==='barrier'){const sn=snapWall(p.x,p.z,BASE.blds,o,h);x=sn.x;z=sn.z;y=sn.y;}
   if(!fits(o.k,x,z,BASE.blds,h,o)){prompt('No room there.',1.5);renderBasePanel();return;}o.x=x;o.z=z;if(o.k==='barrier'){o.y=y;settleWalls(o,BASE.blds);}saveBase();refreshBase(true);}
-/* ---------- obstacles: trees, rocks and bushes grow in your base; clearing one can turn up intel, and now and then an intel case appears ---------- */
+/* ---------- obstacles: rocks turn up in your base; blasting one with dynamite can turn up intel, and now and then an intel case appears ---------- */
 const OBS_EVERY=6*60000,OBS_MAX=12; // prototype pace: one every few minutes (Clash: about one every 8 hours)
 function spawnObs(n){const h=baseHq(),e=mapExt(h);let made=0;
   for(let t=0;t<n*60&&made<n;t++){if(BASE.blds.filter(o=>BK[o.k].obs&&o.k!=='ibox').length>=OBS_MAX)break;
-    const box=Math.random()<.07&&!BASE.blds.some(o=>o.k==='ibox'),k=box?'ibox':['tree','tree','rock','bush'][Math.floor(Math.random()*4)];
+    const k=Math.random()<.07&&!BASE.blds.some(o=>o.k==='ibox')?'ibox':'rock'; // only rocks grow back (and the odd intel case)
     const x=Math.round((-1+Math.random()*(13+e))*4)/4,z=Math.round((-7.4-e+Math.random()*(18.8+2*e))*4)/4;if(!fits(k,x,z,BASE.blds,h))continue;BASE.blds.push({k,s:0,lv:1,x,z});made++;}
   return made;}
-function clearObs(o){const box=o.k==='ibox';if(!box){const c=costOf(o.k,1);if(!canPay(c)){prompt('Not enough gold.',2);return;}pay(c);}
-  const got=box?25:[0,0,1,2,3,4,5,6][Math.floor(Math.random()*8)];BASE.res.i+=got;if(!box)chStats().clear++;BASE.blds=BASE.blds.filter(q=>q!==o);
-  const e=ents.find(t=>t.o===o);if(e){battle.remove(e.g);ents.splice(ents.indexOf(e),1);}sel=null;if(selRing)selRing.visible=false;
-  for(let i=0;i<6;i++)emit(SMK,V(o.x+rand(-.15,.15),G+.15,o.z+rand(-.15,.15)),{life:1.2,s0:.15,s1:.5,vy:.3,op:.6,c:0x9a8a6a});
-  saveBase();baseHud();renderBasePanel();haptic();prompt(got?`+${got} intel ${box?'from the case.':'found while clearing.'}`:'Cleared. Nothing underneath this time.',2.5);}
+const DYN_M=new T.MeshStandardMaterial({color:0xb8261c,roughness:.55});DYN_M.color.convertSRGBToLinear();
+// a rock: three sticks of dynamite taped to it, the fuse fizzes for a second and a half, then it blows apart; an intel case just opens
+function clearObs(o){if(o.blast)return;const isBox=o.k==='ibox';if(!isBox){const c=costOf(o.k,1);if(!canPay(c)){prompt('Not enough gold.',2);return;}pay(c);}
+  o.blast=1;sel=null;if(selRing)selRing.visible=false;renderBasePanel();const e=ents.find(t=>t.o===o),y=groundY(o.x,o.z);
+  const done=()=>{const got=isBox?25:[0,0,1,2,3,4,5,6][Math.floor(Math.random()*8)];BASE.res.i+=got;if(!isBox)chStats().clear++;BASE.blds=BASE.blds.filter(q=>q!==o);
+    const en=ents.find(t=>t.o===o);if(en){battle.remove(en.g);ents.splice(ents.indexOf(en),1);}if(got)popText(V(o.x,y+.8,o.z),'+'+got,RESC.i,'i');
+    saveBase();baseHud();renderBasePanel();haptic();prompt(got?`+${got} intel ${isBox?'from the case.':'found in the rubble.'}`:'Blasted. Nothing in the rubble this time.',2.5);};
+  if(isBox){for(let i=0;i<5;i++)emit(ADD,V(o.x,y+.25,o.z),{life:.6,s0:.12,s1:.02,vx:rand(-.8,.8),vy:rand(1,2),vz:rand(-.8,.8),g:-3,c:0x8fd0ff});done();return;}
+  const dy=new T.Group();dy.position.set(o.x+.08,y+.22,o.z+.2);dy.rotation.set(-.35,.3,0);battle.add(dy);
+  for(let i=0;i<3;i++)mesh(cyl(.03,.03,.22,10),DYN_M,(i-1)*.06,0,0,dy);
+  for(const ty of[-.06,.06])mesh(box(.19,.025,.068),M.dark,0,ty,0,dy);
+  const fuse=mesh(cyl(.007,.007,.14,5),M.dark,.02,.17,0,dy);fuse.rotation.z=-.4;haptic();
+  for(let k=0;k<15;k++)after(k*.1,()=>{if(!dy.parent)return;const tip=dy.localToWorld(V(.05,.24-k*.008,0));scene.worldToLocal(tip);
+    emit(ADD,tip,{life:.25,s0:.07,s1:.01,vx:rand(-.6,.6),vy:rand(.4,1.2),vz:rand(-.6,.6),g:-3,c:0xffc060});});
+  after(1.5,()=>{battle.remove(dy);const en=ents.find(t=>t.o===o);if(en)en.g.visible=false;const p=V(o.x,y+.15,o.z);explode(p,1.1);
+    for(let i=0;i<12;i++){const m=mesh(new T.DodecahedronGeometry(rand(.04,.09),0),OBS_M.rock,o.x+rand(-.12,.12),y+.15,o.z+rand(-.12,.12),battle),a=rand(0,6.28),sp=rand(1,2.6);
+      debris.push({m,v:V(Math.cos(a)*sp,rand(2,4.5),Math.sin(a)*sp),t:0});}
+    for(let i=0;i<8;i++)after(i*.08,()=>emit(SMK,V(o.x+rand(-.25,.25),y+.2,o.z+rand(-.25,.25)),{life:rand(1.5,2.5),s0:.25,s1:.9,vy:.5,op:.7,c:0xa89a80}));
+    after(.6,done);});}
 /* ---------- daily intel: log in on days in a row; each week of the streak pays more ---------- */
 const LOGIN=[5,10,15,20,25,30,75],LOGIN_TIER=[['Recruit',1],['Veteran',1.5],['Elite',2],['Legend',3]];
 const dayKey=t=>{const d=new Date(t);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();};
@@ -1462,7 +1478,7 @@ function panelResearch(){const il=ownLv('intel'),test=`<div class="row testrow">
   if(BASE.research)h+=`<span>Researching ${NAME(BASE.research.k)} Lv ${BASE.research.to} · ${fmtT((BASE.research.until-Date.now())/1000)}</span><div class="row"><button type="button" class="tbtn" data-act="skipres">Finish now · ${intelBtn(skipCost((BASE.research.until-Date.now())/1000))}</button></div>`;
   return h+test;}
 // what each challenge shows beside it
-const CH_ICO={hq:()=>['hq',Math.min(HQ_MAX,CH[0].at[Math.min(2,chTier(CH[0]))])],win:()=>['tank'],s3:()=>['strike'],hqk:()=>['hq',12],held:()=>['mg',6],train:()=>['rifle'],tech:()=>['intel',6],clear:()=>['tree'],wall:()=>['barrier',baseHq()]};
+const CH_ICO={hq:()=>['hq',Math.min(HQ_MAX,CH[0].at[Math.min(2,chTier(CH[0]))])],win:()=>['tank'],s3:()=>['strike'],hqk:()=>['hq',12],held:()=>['mg',6],train:()=>['rifle'],tech:()=>['intel',6],clear:()=>['rock'],wall:()=>['barrier',baseHq()]};
 function panelIntel(){const st=chStats(),nb=builders();
   let h=`<span class="muted">You have <b>${fmtN(BASE.res.i)}</b> intel. No building makes it and raids cannot take it: earn it from challenges, or get a pack.</span>`;
   if(BASE.login){const L=BASE.login;h+=`<div class="bsel">${dailyHtml()}<div class="row">${L.got!==L.last?`<button type="button" class="act" data-act="claimday">Claim ${fmtN(loginReward(L.streak))} intel</button>`:'<span class="muted">Claimed today. Come back tomorrow.</span>'}</div><div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="nextday">Next day</button></div></div>`;}
