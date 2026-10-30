@@ -207,6 +207,10 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app.raid .prompt{font-size:12px;padding:6px 10px;max-width:min(300px,calc(100% - 32px));bottom:calc(112px + env(safe-area-inset-bottom,0px));background:rgba(255,210,122,.5)}
   #app.raid #perf{top:auto;bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 }
+/* mixed reality button: small and see-through, parked in the bottom-right corner on every screen */
+#xrBtn{position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:40;
+  background:rgba(127,211,230,.16);color:var(--cyan);border:1px solid rgba(127,211,230,.45);backdrop-filter:blur(6px);font:600 12.5px var(--f-mono);letter-spacing:.04em;padding:7px 11px;border-radius:999px}
+#xrBtn:hover{background:rgba(127,211,230,.3)}
 </style>
 </head>
 <body>
@@ -231,7 +235,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <button type="button" class="btn" id="fsBtn" hidden aria-label="Full screen" title="Full screen">⛶</button>
       <button type="button" class="btn" id="perfBtn" aria-pressed="false" title="Show frame rate and draw calls">Stats</button>
       <div id="perf" hidden></div>
-      <button type="button" class="btn xr" id="xrBtn" hidden>Enter mixed reality</button>
+      <button type="button" class="btn xr" id="xrBtn" hidden aria-label="Enter mixed reality">Mixed Reality</button>
     </div>
   </div>
   <div class="radio" id="radio" hidden aria-live="polite"><span class="ch" id="rch">CH 2 · Overlord net</span><span id="rtx"></span></div>
