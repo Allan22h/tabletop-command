@@ -111,6 +111,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media (max-width:899px){#app:not(.xr) .bpanel{left:0;right:0;bottom:0;max-width:none;border-radius:18px 18px 0 0;border-bottom:0;padding-top:4px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh;transition:max-height .22s ease}
   #app:not(.xr) .bpanel .grab{display:block;justify-self:center;width:64px;height:22px;margin:0 0 -4px;padding:0;border:0;background:none;cursor:grab;touch-action:none;position:relative}
   #app:not(.xr) .bpanel .grab::after{content:"";position:absolute;left:14px;right:14px;top:8px;height:5px;border-radius:3px;background:rgba(255,255,255,.35)}
+  /* in the base: the top bar is just the resources and the sound toggle; title, HQ and shield live in the menu sheet */
+  #app:has(#basePanel:not([hidden])) .hud>.grp:first-child{display:none}
+  #app:has(#basePanel:not([hidden])) .hud>.grp:last-child{flex:1;flex-wrap:nowrap}
+  #app:has(#basePanel:not([hidden])) .hud .pill{flex:1;justify-content:space-between;gap:4px;padding:5px 9px}
+  #app:not(.xr) .bpanel h3{display:none}
+  #snd{font-size:0;padding:6px 9px;line-height:1}#snd::before{content:"🔇";font-size:18px}#snd[aria-pressed="true"]::before{content:"🔊"}
   #app:not(.xr) .bpanel.peek{max-height:calc(var(--peek,106px) + env(safe-area-inset-bottom,0px));overflow:hidden}}
 .card.locked{opacity:.5}.card.locked .cc{font-size:15px;color:var(--muted)}
 .lvup{font:700 15px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}.lvup.new{color:var(--ok)}
@@ -1232,9 +1238,12 @@ function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
   if(baseTab==='base')h+=panelBase(hq,free);else if(baseTab==='army')h+=panelArmy();else if(baseTab==='research')h+=panelResearch();else h+=panelReports();
   h+=`<div class="row"><button type="button" class="act" data-act="raid">Raid · enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)} · ${WX[nextWx].n}</button><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
-  el.innerHTML=h;fitPeek(el);}
+  el.innerHTML=h;fitPeek(el);phoneLabels();}
+// on a phone the base stays uncluttered: level tags show only on the selected building and on ones being built or upgraded
+const isPhone=()=>!xrMode&&matchMedia('(max-width:899px)').matches;
+function phoneLabels(){const ph=isPhone();ents.forEach(e=>{const L=e.b&&e.b.label;if(L)L.s.visible=!ph||e===sel||!!(e.o&&e.o.until);});}
 // the closed sheet ends just under the tabs, however the title above them wraps
-function fitPeek(el){const t=el.querySelector('.tabs');if(t)el.style.setProperty('--peek',(t.offsetTop+t.offsetHeight+10)+'px');}
+function fitPeek(el){const t=el.querySelector('.tabs');if(t)el.style.setProperty('--peek',(t.offsetTop+t.offsetHeight+2)+'px');}
 function panelBase(hq,free){let h='';
   if(sel&&sel.o){const o=sel.o,d=BK[o.k],max=o.k==='hq'?HQ_MAX:hq;h+=`<div class="bsel"><b>${d.name}${d.item?'':' · Lv '+o.lv}</b><span class="muted">Drag it to move it.</span>`;
     if(!d.item)h+=`<span class="muted">Health ${fmtN(hpOf(o.k,o.lv))}${o.lv<max?' · '+fmtN(hpOf(o.k,o.lv+1))+' at Lv '+(o.lv+1):''}</span>`;
@@ -1398,29 +1407,64 @@ function makeResIcons(){let r;try{r=new T.WebGLRenderer({antialias:true,alpha:tr
   r.setSize(128,128);r.outputEncoding=T.sRGBEncoding;r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=.95;r.setClearColor(0,0);
   const mt=(c,o)=>new T.MeshStandardMaterial(Object.assign({color:c},o||{})),put=(g,geo,m,x,y,z)=>{const me=new T.Mesh(geo,m);me.position.set(x,y,z);g.add(me);return me;};
   const tex=(draw,w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;};
-  const gold=()=>{const g=new T.Group(),m=mt(0xe9a91f,{metalness:.55,roughness:.28,emissive:0x1a0e00}),s=new T.Shape();s.moveTo(-.5,0);s.lineTo(.5,0);s.lineTo(.4,.26);s.lineTo(-.4,.26);s.closePath();
-    const geo=new T.ExtrudeGeometry(s,{depth:.42,bevelEnabled:true,bevelThickness:.02,bevelSize:.02,bevelSegments:2});geo.translate(0,0,-.21);
-    [[-.52,0,-.04],[.52,0,-.04],[0,.27,.06]].forEach(([x,y,ry])=>{const b=new T.Mesh(geo,m);b.position.set(x,y,0);b.rotation.y=ry;g.add(b);});return g;};
-  const oil=()=>{const g=new T.Group(),b=mt(0x1f4f86,{metalness:.35,roughness:.35});put(g,new T.CylinderGeometry(.48,.48,1.3,32),b,0,.65,0);
-    for(const y of[.05,.43,.87,1.25])put(g,new T.TorusGeometry(.485,.022,8,32),b,0,y,0).rotation.x=Math.PI/2;
-    put(g,new T.CylinderGeometry(.47,.47,.02,32),mt(0x2a5f98,{metalness:.35,roughness:.35}),0,1.31,0);put(g,new T.CylinderGeometry(.07,.07,.05,16),mt(0x9aa3aa,{metalness:.9,roughness:.3}),.22,1.33,.12);
-    const sp=put(g,new T.CircleGeometry(.12,20),mt(0x050505,{roughness:.05,metalness:.3}),-.18,1.322,-.05);sp.rotation.x=-Math.PI/2;return g;};
-  const ammo=()=>{const g=new T.Group(),ol=mt(0x5f6c3a,{roughness:.65,metalness:.1}),dk=mt(0x434d29,{roughness:.8}),bx=(w,h,d)=>new T.BoxGeometry(w,h,d);
-    put(g,bx(1.2,.06,.6),ol,0,.03,0);for(const z of[-.3,.3])put(g,bx(1.2,.5,.04),ol,0,.25,z);for(const x of[-.6,.6])put(g,bx(.04,.5,.62),ol,x,.25,0);
-    const lid=put(g,bx(1.2,.04,.62),ol,0,.55,-.55);lid.rotation.x=-1.25;put(g,bx(.3,.06,.04),dk,0,.18,.33);
-    const lb=new T.Mesh(new T.PlaneGeometry(.7,.16),new T.MeshStandardMaterial({map:tex((x,w,h)=>{x.fillStyle='#5f6c3a';x.fillRect(0,0,w,h);x.fillStyle='#e8e2c8';x.font='bold 54px sans-serif';x.textAlign='center';x.fillText('7.62 MM · 200 RDS',w/2,h/2+20);},512,116),roughness:.8}));lb.position.set(0,.3,.322);g.add(lb);
-    const br=mt(0xd9a440,{metalness:.5,roughness:.3,emissive:0x1a1000}),tp=mt(0xb8683a,{metalness:.45,roughness:.35,emissive:0x140800}),cg=new T.CylinderGeometry(.05,.05,.42,12),kg=new T.ConeGeometry(.05,.13,12);
-    for(let rr=0;rr<3;rr++)for(let c=0;c<8;c++){const x=-.48+c*.137,z=-.16+rr*.16;put(g,cg,br,x,.46,z);put(g,kg,tp,x,.735,z);}return g;};
-  const intel=()=>{const g=new T.Group(),mn=mt(0xc9a556,{roughness:.85}),bx=(w,h,d)=>new T.BoxGeometry(w,h,d);put(g,bx(1.25,.03,.92),mn,0,.015,0);
-    for(let k=0;k<3;k++){const p=put(g,bx(1.12,.008,.82),mt(0xf2efe6,{roughness:.9}),.02+k*.012,.04+k*.008,-.01-k*.01);p.rotation.y=(k-1)*.03;}
-    const cover=new T.Mesh(bx(1.25,.025,.92),new T.MeshStandardMaterial({roughness:.85,map:tex((x,w,h)=>{x.fillStyle='#ddbd74';x.fillRect(0,0,w,h);x.save();x.translate(w/2,h/2);x.rotate(-.18);
-      x.strokeStyle='#c0261c';x.lineWidth=12;x.strokeRect(-200,-58,400,116);x.fillStyle='#c0261c';x.font='bold 78px sans-serif';x.textAlign='center';x.fillText('CLASSIFIED',0,28);x.restore();},512,380)}));
-    const hinge=new T.Group();hinge.position.set(-.62,.03,0);g.add(hinge);cover.position.set(.62,.07,0);hinge.add(cover);hinge.rotation.z=.12;g.rotation.y=.25;return g;};
+  // the same models as the icon preview: gold bars, a fuel pump, three rockets, a field laptop
+  const mat=mt,add=put,canvasTex=tex,box=(w,h,d)=>new T.BoxGeometry(w,h,d);
+  // gold: three narrow, tall trapezoid bars stacked two and one, seen from the front, with a little shine burst
+  function goldBar(){const s=new T.Shape();s.moveTo(-.34,0);s.lineTo(.34,0);s.lineTo(.24,.36);s.lineTo(-.24,.36);s.closePath();
+    const geo=new T.ExtrudeGeometry(s,{depth:.36,bevelEnabled:true,bevelThickness:.025,bevelSize:.025,bevelSegments:3});geo.translate(0,0,-.18);
+    return new T.Mesh(geo,mat(0xf0b420,{metalness:.5,roughness:.26,emissive:0x2a1800}));}
+  function goldModel(){const g=new T.Group();[[-.36,0],[.36,0],[0,.4]].forEach(([x,y])=>{const b=goldBar();b.position.set(x,y,0);g.add(b);});
+    const ray=mat(0xffe7a0,{emissive:0xffd060,emissiveIntensity:.8,roughness:.5});[[.62,1.0,-.5],[.74,.92,-.95],[.78,.78,-1.35]].forEach(([x,y,a])=>{const r=add(g,box(.03,.16,.03),ray,x,y,0);r.rotation.z=a;});return g;}
+  // fuel: a filling-station pump: tall body with a display window, a hose from the side to the nozzle hung on its holster, and an oil drop emblem
+  function fuelModel(){const g=new T.Group(),body=mat(0x2f6fb0,{metalness:.3,roughness:.4}),dark=mat(0x1b1d20,{roughness:.6}),steel=mat(0xb9c0c6,{metalness:.85,roughness:.3});
+    add(g,box(.8,.1,.5),dark,0,.05,0);                       // plinth
+    add(g,box(.66,1.3,.42),body,0,.75,0);                     // body
+    add(g,box(.7,.06,.46),dark,0,1.43,0);                     // cap
+    const scr=new T.Mesh(new T.PlaneGeometry(.46,.3),new T.MeshStandardMaterial({color:0x000000,emissive:0xffffff,emissiveIntensity:.9,emissiveMap:canvasTex((x,w,h)=>{x.fillStyle='#dfe9e2';x.fillRect(0,0,w,h);
+        x.fillStyle='#1b2a22';x.font='bold 64px monospace';x.textAlign='right';x.fillText('42.50',w-16,78);x.font='bold 40px monospace';x.fillText('18.2 L',w-16,140);},256,168)}));
+    scr.position.set(0,1.15,.222);g.add(scr);add(g,box(.52,.36,.02),dark,0,1.15,.205);
+    // oil drop emblem on the front
+    const ds=new T.Shape();ds.moveTo(0,.2);ds.bezierCurveTo(.06,.1,.12,.04,.12,-.04);ds.bezierCurveTo(.12,-.12,.06,-.16,0,-.16);ds.bezierCurveTo(-.06,-.16,-.12,-.12,-.12,-.04);ds.bezierCurveTo(-.12,.04,-.06,.1,0,.2);
+    const drop=new T.Mesh(new T.ExtrudeGeometry(ds,{depth:.02,bevelEnabled:false}),mat(0x0a0806,{roughness:.1,metalness:.3}));drop.position.set(0,.62,.21);g.add(drop);
+    // holster on the right side with the nozzle hanging in it, spout pointing up
+    add(g,box(.1,.18,.16),dark,.38,.95,0);
+    const nz=new T.Group();nz.position.set(.48,.98,0);g.add(nz);add(nz,box(.1,.36,.12),dark,0,0,0);
+    const sp=add(nz,new T.CylinderGeometry(.03,.035,.32,12),steel,-.03,.3,0);sp.rotation.z=.35;
+    // hose: out of the body low on the side, loops down and up into the nozzle
+    const curve=new T.CatmullRomCurve3([new T.Vector3(.33,.45,0),new T.Vector3(.52,.32,.02),new T.Vector3(.68,.42,.03),new T.Vector3(.66,.7,.02),new T.Vector3(.5,.82,0)]);
+    add(g,new T.TubeGeometry(curve,40,.045,10,false),dark,0,0,0);
+    g.position.x=-.08;return g;}
+  // munitions: three rockets standing on their fins, olive bodies with yellow bands and grey noses
+  function rocket(){const g=new T.Group(),bodyM=mat(0x5f6c3a,{roughness:.55,metalness:.2}),band=mat(0xd8b23a,{roughness:.5}),nose=mat(0x8b9096,{metalness:.6,roughness:.35}),fin=mat(0x3f4628,{roughness:.6});
+    add(g,new T.CylinderGeometry(.13,.13,1.1,24),bodyM,0,.62,0);
+    add(g,new T.ConeGeometry(.13,.42,24),nose,0,1.38,0);
+    for(const y of[1.08,.98])add(g,new T.CylinderGeometry(.133,.133,.035,24),band,0,y,0);
+    add(g,new T.CylinderGeometry(.09,.11,.1,16),fin,0,.05,0);
+    for(let k=0;k<4;k++){const f=new T.Shape();f.moveTo(0,0);f.lineTo(.17,0);f.lineTo(.17,.08);f.lineTo(0,.36);f.closePath();
+      const m=new T.Mesh(new T.ExtrudeGeometry(f,{depth:.018,bevelEnabled:false}),fin);m.position.y=.02;m.position.x=.1;m.geometry.translate(0,0,-.009);
+      const piv=new T.Group();piv.rotation.y=k*Math.PI/2+.4;piv.add(m);g.add(piv);}
+    return g;}
+  function ammoModel(){const g=new T.Group();[[-.36,0,.05,1],[.36,0,.05,1],[0,0,-.28,1.08]].forEach(([x,y,z,s])=>{const r=rocket();r.position.set(x,y,z);r.scale.setScalar(s);g.add(r);});return g;}
+  // intel: an open rugged laptop, map and target on the screen
+  function intelModel(){const g=new T.Group(),shell=mat(0x4a5233,{roughness:.7}),dark=mat(0x1e2118,{roughness:.8});
+    add(g,box(1.3,.08,.9),shell,0,.04,0);
+    const keys=new T.Mesh(new T.PlaneGeometry(1.1,.5),new T.MeshStandardMaterial({roughness:.8,map:canvasTex((x,w,h)=>{x.fillStyle='#22251c';x.fillRect(0,0,w,h);x.fillStyle='#3a3f30';
+        for(let r=0;r<5;r++)for(let c=0;c<14;c++)x.fillRect(8+c*36,8+r*36,30,30);x.fillRect(150,190,210,30);},512,232)}));keys.rotation.x=-Math.PI/2;keys.position.set(0,.082,-.1);g.add(keys);
+    add(g,box(.3,.004,.16),dark,0,.082,.29);
+    const lid=new T.Group();lid.position.set(0,.08,-.44);lid.rotation.x=-.32;g.add(lid);
+    add(lid,box(1.3,.86,.06),shell,0,.43,-.03);
+    const scr=new T.Mesh(new T.PlaneGeometry(1.16,.72),new T.MeshStandardMaterial({emissive:0xffffff,emissiveIntensity:.95,color:0x000000,emissiveMap:canvasTex((x,w,h)=>{
+        x.fillStyle='#0b2a1c';x.fillRect(0,0,w,h);x.strokeStyle='rgba(90,230,150,.25)';x.lineWidth=2;for(let i=0;i<w;i+=32){x.beginPath();x.moveTo(i,0);x.lineTo(i,h);x.stroke();}for(let i=0;i<h;i+=32){x.beginPath();x.moveTo(0,i);x.lineTo(w,i);x.stroke();}
+        x.strokeStyle='#5fe39a';x.lineWidth=5;x.beginPath();x.moveTo(40,250);x.bezierCurveTo(140,180,200,290,300,200);x.bezierCurveTo(360,150,420,210,480,120);x.stroke();
+        x.strokeStyle='#ff5a4a';x.lineWidth=6;x.beginPath();x.arc(330,150,34,0,7);x.stroke();x.beginPath();x.moveTo(330,100);x.lineTo(330,200);x.moveTo(280,150);x.lineTo(380,150);x.stroke();
+        x.fillStyle='#5fe39a';x.font='bold 28px monospace';x.fillText('TGT 07  GRID 4417',24,40);},512,320)}));
+    scr.position.set(0,.45,.002);lid.add(scr);
+    g.rotation.y=-.35;return g;}
   const shot=(model,pos,look)=>{const s=new T.Scene();s.add(new T.HemisphereLight(0xfff4e0,0x30362a,.75));const d=new T.DirectionalLight(0xffffff,1.9);d.position.set(2,4,3);s.add(d);
     const d2=new T.DirectionalLight(0x9fc4ff,.6);d2.position.set(-3,1,-2);s.add(d2);const seen=new Set();model.traverse(o=>{const m=o.material;if(!m||seen.has(m))return;seen.add(m);m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();});
     s.add(model);const cam=new T.PerspectiveCamera(30,1,.1,50);cam.position.set(...pos);cam.lookAt(...look);r.render(s,cam);
     model.traverse(o=>{if(o.geometry)o.geometry.dispose();});return r.domElement.toDataURL();};
-  RES_ICON.g=shot(gold(),[.5,1.3,4.1],[0,.24,0]);RES_ICON.f=shot(oil(),[2.1,2.3,3.4],[0,.62,0]);RES_ICON.m=shot(ammo(),[1.2,2.6,2.6],[0,.35,0]);RES_ICON.i=shot(intel(),[.4,2.8,2.0],[0,.05,0]);
+  RES_ICON.g=shot(goldModel(),[0,.5,3.6],[0,.42,0]);RES_ICON.f=shot(fuelModel(),[.9,1.0,3.6],[.05,.72,0]);RES_ICON.m=shot(ammoModel(),[.4,1.6,4.0],[0,.72,0]);RES_ICON.i=shot(intelModel(),[.3,1.8,2.8],[0,.3,0]);
   r.dispose();try{r.forceContextLoss();}catch(_){}
   // every resource dot in the page (top bar, base panel, costs, loot screen) shows its icon
   const st=document.createElement('style');st.textContent=RES.map(k=>`.dot.${k}{background:url(${RES_ICON[k]}) center/contain no-repeat;border-radius:0;width:22px;height:22px;vertical-align:middle}`).join('\n');document.head.appendChild(st);
