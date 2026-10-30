@@ -229,6 +229,18 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* main menu: the full-screen button sits in the top-left corner above the menu sheet */
 #app:has(#menu:not([hidden])) #fsBtn{position:fixed;left:max(10px,env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:40;
   background:rgba(10,13,12,.45);border-color:rgba(255,255,255,.3)}
+/* phone, base: the top bar keeps room for the full screen button however narrow the phone */
+@media (max-width:899px),(max-height:520px){#app:has(#basePanel:not([hidden])) .hud>.grp:last-child{min-width:0}
+  #app:has(#basePanel:not([hidden])) .hud .pill{min-width:0;overflow:hidden;font-size:12px}#fsBtn{flex:none}#app:has(#basePanel:not([hidden])) #perfBtn{display:none}}
+/* phone sideways, base: the command center is a narrow column on the left, the field fills the rest */
+@media (max-height:520px) and (orientation:landscape){
+  #app:not(.xr) .bpanel,#app:not(.xr) .bpanel.peek{left:env(safe-area-inset-left,0px);right:auto;top:52px;bottom:0;width:min(240px,32vw);max-width:none;max-height:none;overflow:auto;
+    border-radius:0 14px 0 0;border-bottom:0;padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px));gap:6px;font-size:12px;touch-action:pan-y;margin:0}
+  #app:not(.xr) .bpanel .grab{display:none}
+  #app:not(.xr) .bpanel .tabs{flex-wrap:wrap;gap:3px}#app:not(.xr) .bpanel .tabs .tbtn{padding:4px 6px;font-size:11px}
+  #app:not(.xr) .bpanel .muted{font-size:11px}#app:not(.xr) .bpanel .ico.lg{width:40px;height:40px}
+  #app:not(.xr) .bpanel>.row:first-of-type .muted{white-space:normal}
+  #app:has(#basePanel:not([hidden])) #card{left:calc(50% + min(120px,16vw))}}
 </style>
 </head>
 <body>
@@ -1376,7 +1388,7 @@ function renderCard(){const el=$('card');if(!el)return;const A=state==='base'&&!
   const h=`<div class="ct"><b>${title}</b>${sub?`<span>${sub}</span>`:''}</div><div class="cbs">${A.map(a=>`<button type="button" class="cb${a.dis?' off':''}${a.hi?' hi':''}${moving&&a.id==='move'?' on':''}" data-c="${a.id}"><i>${a.ic}</i><span>${a.l}</span>${a.c?`<em>${a.c}</em>`:''}</button>`).join('')}</div>`;
   if(el._html!==h){el.innerHTML=h;el._html=h;}el.hidden=false;placeCard();}
 // on a phone the card sits just above the bottom sheet
-function placeCard(){const el=$('card'),p=$('basePanel');if(!el||el.hidden)return;el.style.bottom=isPhone()&&p&&!p.hidden?(innerHeight-p.getBoundingClientRect().top+10)+'px':'';}
+function placeCard(){const el=$('card'),p=$('basePanel');if(!el||el.hidden)return;el.style.bottom=isPhone()&&p&&!p.hidden&&!matchMedia('(max-height:520px) and (orientation:landscape)').matches?(innerHeight-p.getBoundingClientRect().top+10)+'px':'';}
 function selectAt(x,z){const e=entAt(x,z);sel=e;rowO=null;moving=false;if(e)baseTab='base';sheet(false);if(e)ringOn(e);else if(selRing)selRing.visible=false;renderBasePanel();haptic();}
 const costTxt=c=>RES.filter(r=>c[r]).map(r=>`<span class="cost"><i class="dot ${r}"></i>${fmtN(c[r])}</span>`).join(' ');
 const canPay=c=>RES.every(r=>BASE.res[r]>=(c[r]||0));
@@ -1407,12 +1419,13 @@ function startBuild(k,n){const h=baseHq(),d=BK[k];if(d.item&&(n||1)===1)return s
   if(placed){saveBase();refreshBase(true);const last=BASE.blds[BASE.blds.length-1],e=ents.find(e=>e.o===last);if(e){sel=e;ringOn(e);renderBasePanel();}prompt(d.item?'Placed. Drag it where you want it.':'Construction started.',2.5);}}
 function refreshBase(rebuild){if(state!=='base')return;if(rebuild){const ko=sel&&sel.o;enterBase(true);if(ko){const e=ents.find(e=>e.o===ko);if(e){sel=e;ringOn(e);}}renderBasePanel();}else{ents.forEach(e=>e.b&&drawLabel(e.b));renderBasePanel();baseHud();}}
 function syncHq(){PLAYER_HQ=baseHq();try{localStorage.setItem('tc.hq',String(PLAYER_HQ));}catch(_){}renderBadge();refreshCards();xrDirty=true;}
-// drag and drop: press on something in your base and move it; it turns red where it does not fit
+// drag and drop: tap something in your base to select it, then press on it and move it; it turns red where it does not fit.
+// pressing on something not selected yet only turns the camera, so a stray finger never shifts a building
 function initDrag(){const groundAt=e=>{const r=canvasEl.getBoundingClientRect(),ndc=new T.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,cam);
     const h=ray.intersectObject(ground,false)[0];return h?scene.worldToLocal(h.point.clone()):null;};
   canvasEl.addEventListener('pointerdown',e=>{if(state!=='base'||xrMode||drag||!e.isPrimary)return;const p=groundAt(e);if(!p)return;
     if(placing){drag={paint:placing,sx:e.clientX,sy:e.clientY,moved:false,pid:e.pointerId,last:null};if(placing==='barrier'){orb.lock=true;drag.last=placeAt('barrier',p.x,p.z);}return;}
-    let en=moving?null:entAt(p.x,p.z);if(en&&BK[en.o.k].obs)en=null;
+    let en=moving?null:entAt(p.x,p.z);if(en&&BK[en.o.k].obs)en=null;if(en&&sel!==en&&!(rowO&&rowO.includes(en.o)))en=null;
     drag={e:en,sx:e.clientX,sy:e.clientY,moved:false,ox:en?en.g.position.x:0,oz:en?en.g.position.z:0,dx:en?en.g.position.x-p.x:0,dz:en?en.g.position.z-p.z:0,ok:true,pid:e.pointerId};if(en)orb.lock=true;
     if(en&&rowO&&rowO.includes(en.o))drag.row=rowO.map(o=>({o,x:o.x,z:o.z,e:ents.find(t=>t.o===o)}));});
   canvasEl.addEventListener('pointermove',e=>{if(drag&&drag.paint==='barrier'&&e.pointerId===drag.pid){const p=groundAt(e);if(!p)return;
@@ -1534,7 +1547,7 @@ function panelBase(hq,free){let h='';
       else if(o.lv>=max){if(o.k!=='hq'||hq>=HQ_MAX)h+=`<span class="muted">${o.k==='hq'?'Top level.':cap(o.k)}</span>`;}
       else h+=`<span class="muted">Upgrade to Lv ${o.lv+1} takes ${fmtT(timeOf(o.k,o.lv+1))} and a builder.</span>`;}
     h+=actRow()+'</div>';}
-  else h+=`<span class="muted">${placing?'Tap the map to place it. Tap the glowing button below to stop.':'Tap something to see it. Press and drag to move it.'}</span>`;
+  else h+=`<span class="muted">${placing?'Tap the map to place it. Tap the glowing button below to stop.':'Tap something to select it, then drag it to move it.'}</span>`;
   const can=BUILD_ORDER.filter(k=>BASE.blds.filter(b=>b.k===k).length<LIMIT[k](hq));
   if(can.length){h+='<span class="lbl">New buildings</span><div class="row">';can.forEach(k=>{const c=costOf(k,1);h+=`<button type="button" class="tbtn ib" data-build="${k}" ${canPay(c)&&free?'':'disabled'}>${ico(k,1)}${BK[k].name} · ${costTxt(c)}</button>`;});h+='</div>';}
   const its=ITEM_ORDER.filter(k=>LIMIT[k](hq)>0);
