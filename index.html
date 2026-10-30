@@ -703,6 +703,11 @@ const RANKS=[
  [4,650000,'General','General Armii','Shangjiang','General','1,000 credits · gold table edge']];
 const RFAC={nato:2,ru:3,cn:4,eu:5};
 const rankName=(r,f)=>RANKS[r][RFAC[f]||2];
+// short forms for tight spots (the headset title card); China uses the NATO equivalents
+const RABBR={nato:['RCT','PVT','PFC','CPL','SGT','SSG','SFC','MSG','SGM','2LT','1LT','CPT','MAJ','LTC','COL','BG','MG','LTG','GEN'],
+  ru:['NOV','RYAD','YEFR','ML SERZH','SERZH','ST SERZH','STARSH','PRAP','ST PRAP','ML LT','LT','KPT','MAJ','PPLK','PLK','GEN-MAJ','GEN-LT','GEN-PLK','GEN ARM'],
+  eu:['RCT','PTE','LCPL','CPL','SGT','SSGT','CSGT','WO2','WO1','2LT','LT','CAPT','MAJ','LT COL','COL','BRIG','MAJ GEN','LT GEN','GEN']};
+const rankAbbr=(r,f)=>(RABBR[f]||RABBR.nato)[r];
 const rankGate=r=>RTIERS[RANKS[r][0]][1];
 // highest rank the XP earns, and the highest the HQ allows; XP above the HQ limit is banked until the HQ is upgraded
 function rankFor(xp,hq){let byXp=0;RANKS.forEach((R,i)=>{if(xp>=R[1])byXp=i;});let r=byXp;while(r>0&&hq<rankGate(r))r--;return {r,byXp,pending:byXp>r};}
@@ -1438,7 +1443,7 @@ function endReplay(){stopDefense();prompt('',0);$('enemyHq').hidden=true;$('menu
 let sheetOpen=false;
 function sheet(on){sheetOpen=on;const el=$('basePanel');if(el){el.classList.toggle('peek',!on);if(on)el.scrollTop=0;}setTimeout(placeCard,260);}
 function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return;const hq=baseHq(),free=builders()-busy(),sl=shieldLeft();let h='<button type="button" class="grab" data-act="sheet" aria-label="Show or hide the menu"></button>';
-  h+=`<div class="row"><h3>${baseName()}</h3><span class="muted"><b class="bname">${baseName()} · </b>HQ ${hq} of ${HQ_MAX} · builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
+  h+=`<div class="row">${xrMode?`<h3 class="ihead"><img alt="" style="width:30px;height:30px" src="${insigniaImg(levelFor(serviceXp,PLAYER_HQ).r).src}">Command center</h3>`:`<h3>${baseName()}</h3>`}<span class="muted"><b class="bname">${baseName()} · </b>HQ ${hq} of ${HQ_MAX} · builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['intel','Intel'+(chReady()?' ●'+chReady():'')],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
   if(baseTab==='base')h+=panelBase(hq,free);else if(baseTab==='army')h+=panelArmy();else if(baseTab==='research')h+=panelResearch();else if(baseTab==='intel')h+=panelIntel();else h+=panelReports();
   h+=`<div class="row"><button type="button" class="act" data-act="raid">Raid · enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)} · ${WX[nextWx].n}</button><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
@@ -2661,7 +2666,7 @@ function drawBanner(){const {ctx:x,c,t}=xrBanner.userData,r=result,won=r&&r.star
 function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
   {const {ctx:x,c,t}=xrHud.userData;x.clearRect(0,0,c.width,c.height);x.fillStyle='rgba(10,14,12,.78)';rrect(x,0,0,c.width,c.height,22);x.fill();
     const s=stats();x.fillStyle='#ffd27a';x.font='700 64px sans-serif';
-    if(state==='base'){const lv=levelFor(serviceXp,PLAYER_HQ),im=insigniaImg(lv.r),nm=(rankName(lv.r,cur)+(playerName?' '+playerName:'')).toUpperCase();
+    if(state==='base'){const lv=levelFor(serviceXp,PLAYER_HQ),im=insigniaImg(lv.r),nm=(rankAbbr(lv.r,cur)+(playerName?' '+playerName:'')).toUpperCase();
       if(im.complete&&im.naturalWidth)x.drawImage(im,22,12,76,76);let fs=58;x.font=`700 ${fs}px sans-serif`;while(x.measureText(nm).width>510&&fs>22){fs-=2;x.font=`700 ${fs}px sans-serif`;}
       x.fillText(nm,108,72);x.font='600 28px sans-serif';x.textAlign='right';x.fillText('Lv '+lv.sub+' · HQ '+PLAYER_HQ,780,70);x.textAlign='left';}
     else{x.fillText(state==='menu'?'TABLETOP COMMAND':fmtClock(timeLeft),28,74);
@@ -2739,11 +2744,11 @@ function xrSelect(c){if(xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersect
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
 function setShadow(k){Object.assign(sun.shadow.camera,{left:-(16+MAPE)*k,right:(16+MAPE)*k,top:(15+MAPE)*k,bottom:-(15+MAPE)*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
 async function enterXR(){try{const s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['local-floor'],optionalFeatures:['hand-tracking']});
-    rr.xr.setReferenceSpaceType('local-floor');await rr.xr.setSession(s);xrMode=true;stage.background=null;stage.fog=null;
+    rr.xr.setReferenceSpaceType('local-floor');await rr.xr.setSession(s);xrMode=true;if(state==='base')renderBasePanel();stage.background=null;stage.fog=null;
     scene.scale.setScalar(XS);scene.rotation.y=Math.PI/2;scene.position.set(-2*XS,.74-G*XS,-.35-12*XS);setShadow(XS);xrUI.visible=true;xrDirty=true;uiYaw=null;turnLeft=0;
     $('app').classList.add('xr');s.addEventListener('end',exitXR);}
   catch(err){prompt('Mixed reality could not start here. Open this page in the Meta Quest browser from its own address.',5);}}
-function exitXR(){xrMode=false;M.terrain.bumpScale=TERRAIN_BUMP;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);setWeather(wx);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
+function exitXR(){xrMode=false;if(state==='base')renderBasePanel();M.terrain.bumpScale=TERRAIN_BUMP;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);setWeather(wx);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
   setShadow(1);xrUI.visible=false;reticle.visible=false;$('app').classList.remove('xr');}
 if(navigator.xr&&navigator.xr.isSessionSupported){navigator.xr.isSessionSupported('immersive-ar').then(ok=>{if(ok)$('xrBtn').hidden=false;}).catch(()=>{});}
 $('xrBtn').onclick=enterXR;
@@ -2834,7 +2839,7 @@ rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-
   if(state==='menu')orb.theta+=dt*.05;
   else if(state==='ended'&&result){orb.theta+=dt*.12;orb.target.lerp(result.focus,Math.min(1,dt*1.5));orb.r=mix(orb.r,Math.max(orb.minR,orb.r*.97),Math.min(1,dt));} // slow victory lap around the HQ
   orb.apply();rr.render(stage,cam);});
-window.__tcDebug={iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 $('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
 
