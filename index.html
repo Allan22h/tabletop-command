@@ -67,6 +67,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .facs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .facs button{background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:10px;padding:9px;font-weight:500}
 .facs button[aria-pressed="true"]{background:var(--gold);color:#2a1e05;border-color:var(--gold)}
+.primary:disabled{opacity:.4;cursor:default}
 .primary{background:var(--gold);color:#2a1e05;border:0;border-radius:12px;padding:14px;font:700 20px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em}
 .secondary{background:transparent;border:1px solid var(--edge);border-radius:12px;padding:12px;font-weight:500}
 .big{font-size:44px;color:var(--gold);letter-spacing:6px;text-align:center}
@@ -74,7 +75,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .lootrows b{margin-left:auto;font-variant-numeric:tabular-nums}
 .loading{position:absolute;inset:0;display:grid;place-items:center;background:var(--bg);font:600 15px var(--f-mono);color:var(--muted)}
 /* rank badge, XP bar and promotion */
-.rank{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:12px;padding:10px 12px}
+.rank{cursor:pointer;display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:12px;padding:10px 12px}
 .rank svg{display:block;flex:0 0 auto}
 .rank .rk{flex:1;display:grid;gap:6px;min-width:0}
 #rkName{font:700 24px/1 var(--f-display);text-transform:uppercase;letter-spacing:.02em}
@@ -122,6 +123,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #daily .act{background:var(--gold);color:#2a1e05;border:0;border-radius:10px;padding:10px 14px;font:700 14px system-ui,sans-serif;cursor:pointer}#daily .tbtn{border-radius:10px;padding:10px 14px}#daily .muted{color:var(--muted);font-size:12px}#daily .row{display:flex;gap:8px;flex-wrap:wrap}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.day{display:grid;justify-items:center;gap:3px;background:rgba(255,255,255,.05);border-radius:10px;padding:6px 2px;font-size:11px;position:relative;font-variant-numeric:tabular-nums}
 .day .dot{width:16px;height:16px}.day.now{outline:2px solid var(--gold)}.day.got{opacity:.5}.day i:not(.dot){position:absolute;top:1px;right:4px;font-style:normal;color:#6fd36a}
+.bpanel .bname{display:none}@media (max-width:899px){#app:not(.xr) .bpanel .bname{display:inline;color:var(--gold)}}
 .bpanel .ihead{display:flex;align-items:center;gap:8px}.bpanel .tbtn.ib{display:inline-flex;align-items:center;gap:6px;padding-left:6px}
 .bpanel .arow.ic{grid-template-columns:44px 1fr auto}.bpanel .arow.ic .ico{grid-column:1;grid-row:1/span 3;width:44px;height:44px}.bpanel .arow.ic .tbtn{grid-column:3;grid-row:1/span 3}
 @media (min-width:900px){.bpanel{right:auto;width:400px;margin:0;top:70px;bottom:12px;max-height:none}}
@@ -195,11 +197,20 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <div id="card" hidden></div>
   <div id="daily" hidden></div>
 
+  <div class="screen" id="nameDlg" hidden style="z-index:30"><div class="sheet">
+    <span class="lbl">Commander name</span>
+    <h1 style="font-size:34px">Who's in <span>command?</span></h1>
+    <p style="margin:0;color:var(--muted)">Your name is your base's name, and how command calls you on the radio, with your rank in front.</p>
+    <div style="display:flex;gap:8px"><input id="nameIn" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Your name" style="flex:1;min-width:0;font:600 18px var(--f-mono);padding:12px 14px;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--ink)"><button type="button" class="secondary" id="nameRnd" style="width:auto;padding:0 14px">Random</button></div>
+    <span id="namePv" style="font-size:13px;color:var(--muted)"></span>
+    <button type="button" class="primary" id="nameOk">Confirm</button>
+    <button type="button" class="secondary" id="nameCancel">Cancel</button>
+  </div></div>
   <div class="screen" id="menu">
     <div class="sheet">
       <span class="lbl">Raid prototype · <span id="mapName">Operation Iron Delta</span></span>
       <h1>Tabletop <span>Command</span></h1>
-      <div class="rank" aria-label="Your rank and base"><span id="rkIns"></span><div class="rk"><b id="rkName">Recruit</b><div class="xp"><i id="rkFill"></i></div><span id="rkSub"></span></div><span class="rkhq">Your HQ<b id="rkHq">3</b></span></div>
+      <div class="rank" id="rkBadge" role="button" tabindex="0" title="Change your name" aria-label="Your rank and base. Tap to change your name."><span id="rkIns"></span><div class="rk"><b id="rkName">Recruit</b><div class="xp"><i id="rkFill"></i></div><span id="rkSub"></span></div><span class="rkhq">Your HQ<b id="rkHq">3</b></span></div>
       <p>Deploy units from your cards, break into the compound and destroy the HQ before the 3-minute timer runs out. Loot drops from every building you destroy.</p>
       <div style="display:grid;gap:8px"><span class="lbl">Map</span>
         <div class="facs">
@@ -1190,7 +1201,7 @@ function enterBase(keepCam){stopDefense();endXrMove();clearBattle();mode='mine';
   zone.visible=zoneEdge.visible=false;show('menu',false);show('end',false);show('banner',false);show('basePanel',true);$('tray').hidden=true;$('enemyHq').hidden=true;$('menuBtn').hidden=$('cancelBtn').hidden=true;
   if(!keepCam&&!enterBase.checked){enterBase.checked=true;setTimeout(()=>{if(state==='base')checkAttacks();},600);}
   if(!keepCam){const c=CMP;orb.target.set((c.x0+c.x1)/2-.8,0,0);orb.r=clamp((canvasEl.clientWidth<canvasEl.clientHeight?22:15)*c.z/3.6,orb.minR,orb.maxR);}baseHud();renderBasePanel();xrDirty=true;}
-function baseHud(){$('tm').textContent='My base';const sl=shieldLeft();$('pct').textContent='HQ '+baseHq()+(sl>0?' · Shield '+fmtT(sl):'');$('stars').innerHTML='';
+function baseHud(){$('tm').textContent=baseName();const sl=shieldLeft();$('pct').textContent='HQ '+baseHq()+(sl>0?' · Shield '+fmtT(sl):'');$('stars').innerHTML='';
   $('lg').textContent=fmtN(BASE.res.g);$('lf').textContent=fmtN(BASE.res.f);$('lm').textContent=fmtN(BASE.res.m);$('li').textContent=fmtN(BASE.res.i);}
 function ringOn(e,ok){selRing.scale.setScalar(e.r+.15);const p=e.g.position;selRing.position.set(p.x,G+.03,p.z);selRing.material.color.setHex(ok===false?0xe0503c:ok?0x6fd36a:0xffd27a);selRing.visible=true;}
 function entAt(x,z){let best=null,bd=1e9;for(const e of ents){const p=e.g.position,d=Math.hypot(p.x-x,p.z-z)-e.r;if(d<.2&&d<bd){bd=d;best=e;}}return best;}
@@ -1424,7 +1435,7 @@ function endReplay(){stopDefense();prompt('',0);$('enemyHq').hidden=true;$('menu
 let sheetOpen=false;
 function sheet(on){sheetOpen=on;const el=$('basePanel');if(el){el.classList.toggle('peek',!on);if(on)el.scrollTop=0;}setTimeout(placeCard,260);}
 function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return;const hq=baseHq(),free=builders()-busy(),sl=shieldLeft();let h='<button type="button" class="grab" data-act="sheet" aria-label="Show or hide the menu"></button>';
-  h+=`<div class="row"><h3>My base</h3><span class="muted">HQ ${hq} of ${HQ_MAX} · builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
+  h+=`<div class="row"><h3>${baseName()}</h3><span class="muted"><b class="bname">${baseName()} · </b>HQ ${hq} of ${HQ_MAX} · builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['intel','Intel'+(chReady()?' ●'+chReady():'')],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
   if(baseTab==='base')h+=panelBase(hq,free);else if(baseTab==='army')h+=panelArmy();else if(baseTab==='research')h+=panelResearch();else if(baseTab==='intel')h+=panelIntel();else h+=panelReports();
   h+=`<div class="row"><button type="button" class="act" data-act="raid">Raid · enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)} · ${WX[nextWx].n}</button><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
@@ -2206,7 +2217,7 @@ function dmgBld(b,amt){if(!b.alive)return;const before=b.hp;b.hp=Math.max(0,b.hp
 function destroyBld(b){b.alive=false;b.bar.h.visible=false;const rest={};for(const k in b.loot){rest[k]=b.loot[k]-b.taken[k];loot[k]+=rest[k];b.taken[k]=b.loot[k];}destroyFx(b,rest);
   explode(b.p.clone(),1.2);b.g.children.forEach(c=>c.visible=false);
   for(let i=0;i<5;i++){const m=mesh(box(rand(.12,.3),rand(.05,.14),rand(.12,.3)),i%2?M.burnt:M.concrete,rand(-b.r,b.r)*.7,.05,rand(-b.r,b.r)*.7,b.g);m.rotation.y=rand(0,3);}
-  b.burn=9;if(b.hq)radio(mode==='tutorial'?`${CALL[cur]}, the outpost is down.`:`${CALL[cur]}, enemy HQ is burning.`,true);}
+  b.burn=9;if(b.hq)radio(mode==='tutorial'?`${whoAmI()}, the outpost is down.`:`${whoAmI()}, enemy HQ is burning.`,true);}
 function dmgUnit(e,amt){if(!e.alive)return;if(e.dug)amt*=.5;e.hp-=amt;setBar(e.bar,e.hp/e.st.hp);if(e.hp<=0)killUnit(e);}
 function killUnit(e){e.alive=false;e.bar.h.visible=false;const p=e.g.position.clone();
   if(e.kind==='rifle'||e.kind==='gsoldier'){e.g.rotation.set(0,e.heading,Math.PI/2);e.g.position.y=groundY(p.x,p.z)+.04;after(3,()=>battle.remove(e.g));}
@@ -2394,7 +2405,7 @@ function endBattle(cancelled){state='ended';armed=null;zone.visible=zoneEdge.vis
   const before=levelFor(serviceXp,PLAYER_HQ),x0=serviceXp;result.xp=raidXp(s);serviceXp+=result.xp;saveXp();const after=levelFor(serviceXp,PLAYER_HQ);
   result.promo=after.r>before.r?after.r:null;result.levelUp=after.L>before.L;result.L=after.L;
   result.banked=mode==='full'?bankLoot():null;if(mode==='full'){consumeArmy();noteRaid(s,result.banked);}
-  result.unlocked=UNLOCKS.filter(u=>u[1]&&u[0]>before.L&&u[0]<=after.L).map(u=>NAME(u[1]));endXp(x0,before,after);renderBadge();radio(won?`${CALL[cur]}, objective taken. ${s.stars} star${s.stars>1?'s':''}.`:`${CALL[cur]}, pull back. Mission failed.`,true);
+  result.unlocked=UNLOCKS.filter(u=>u[1]&&u[0]>before.L&&u[0]<=after.L).map(u=>NAME(u[1]));endXp(x0,before,after);renderBadge();radio(won?`${whoAmI()}, objective taken. ${s.stars} star${s.stars>1?'s':''}.`:`${whoAmI()}, pull back. Mission failed.`,true);
   document.getElementById('endStars').innerHTML='★'.repeat(s.stars)+'<span class="off">'+'★'.repeat(3-s.stars)+'</span>';
   document.getElementById('endTitle').textContent=result.title;
   document.getElementById('endPct').textContent=s.pct+'% destroyed in '+fmtClock(180-timeLeft);
@@ -2426,8 +2437,8 @@ function finishCelebrate(){if(state!=='ended'||$('banner').hidden)return;
   result.promoDone=true;show('banner',false);show('end',true);requestAnimationFrame(()=>{const f=$('endXp').querySelector('i');if(f)f.style.width=f.dataset.to;});xrDirty=true;}
 // promotion: the new shoulder board pops in and the radio addresses you by your new rank
 function promoBanner(r){const b=$('banner'),n=rankName(r,cur);const lv=levelName(result.L,cur).slice(n.length+1);b.className='banner promo';sting(true);
-  b.innerHTML=`<div class="flash"></div><div class="pins">${insignia(r,cur,150)}</div><div class="pl">Promoted</div><div class="pn">${n}</div><div class="bp">${lv} · level ${result.L} of 200 · reward: ${RANKS[r][6]}</div>`;
-  radio(`${n}, congratulations on your promotion. Command out.`,true);result.promoT=battleT;xrDirty=true;}
+  b.innerHTML=`<div class="flash"></div><div class="pins">${insignia(r,cur,150)}</div><div class="pl">Promoted</div><div class="pn">${n}${playerName?' '+playerName:''}</div><div class="bp">${lv} · level ${result.L} of 200 · reward: ${RANKS[r][6]}</div>`;
+  radio(`${n}${playerName?' '+playerName:''}, congratulations on your promotion. Command out.`,true);result.promoT=battleT;xrDirty=true;}
 /* ---------- ranks in the prototype ---------- */
 let PLAYER_HQ=baseHq(); // your HQ level comes from your base
 const enemyHq=()=>mode==='tutorial'?1:raidHq;
@@ -2439,7 +2450,20 @@ function lvlProgress(xp,lv){const lo=levelXp(lv.L),hi=levelXp(lv.L+1);return lv.
 function rankLine(xp,lv){if(lv.pending){const nr=lv.r+1;return `Level ${lv.L} · ${fmtN(xp)} XP · ${rankName(nr,cur)} waits for HQ ${rankGate(nr)}`;}
   if(lv.L>=200)return `Level 200 · ${fmtN(xp)} XP · top level`;
   return `Level ${lv.L} of 200 · ${fmtN(xp-levelXp(lv.L))} / ${fmtN(levelXp(lv.L+1)-levelXp(lv.L))} XP to ${levelName(lv.L+1,cur)}`;}
-function renderBadge(){const lv=levelFor(serviceXp,PLAYER_HQ);$('rkIns').innerHTML=insignia(lv.r,cur,52);$('rkName').innerHTML=`${rankName(lv.r,cur)} <small>Lv ${lv.sub}</small>`;
+/* ---------- the commander's name: chosen on first launch, names the base, and is how the radio addresses you ---------- */
+let playerName='';try{playerName=localStorage.getItem('tc.name')||'';}catch(_){}
+const NAME_OK=/^[\p{L}\p{N} ._-]{3,16}$/u,cleanName=v=>v.replace(/\s+/g,' ').trim();
+const baseName=()=>playerName?playerName+' Base':'My base';
+const whoAmI=()=>{const lv=levelFor(serviceXp,PLAYER_HQ);return rankName(lv.r,cur)+(playerName?' '+playerName:'');};
+const SUGGEST=['Falcon','Ironside','Nomad','Granite','Vega','Kestrel','Rook','Bastion','Halberd','Specter','Atlas','Wolfram'];
+function nameDlg(first){const el=$('nameDlg'),inp=$('nameIn'),pv=$('namePv'),ok=$('nameOk');el.hidden=false;inp.value=playerName;$('nameCancel').hidden=!!first;
+  const upd=()=>{const v=cleanName(inp.value),good=NAME_OK.test(v);ok.disabled=!good;const lv=levelFor(serviceXp,PLAYER_HQ);
+    pv.innerHTML=good?`Base: <b>${v} Base</b> · Radio: <b>“${rankName(lv.r,cur)} ${v}, objective taken.”</b>`:'3 to 16 letters, numbers, spaces, dots, dashes or underscores.';};
+  inp.oninput=upd;upd();setTimeout(()=>inp.focus(),50);
+  $('nameRnd').onclick=()=>{inp.value=SUGGEST[Math.floor(Math.random()*SUGGEST.length)]+'-'+(10+Math.floor(Math.random()*90));upd();};
+  const done=()=>{const v=cleanName(inp.value);if(!NAME_OK.test(v))return;playerName=v;try{localStorage.setItem('tc.name',v);}catch(_){}el.hidden=true;renderBadge();if(state==='base'){baseHud();renderBasePanel();}xrDirty=true;};
+  ok.onclick=done;inp.onkeydown=e=>{if(e.key==='Enter')done();};$('nameCancel').onclick=()=>{el.hidden=true;};}
+function renderBadge(){const lv=levelFor(serviceXp,PLAYER_HQ);$('rkIns').innerHTML=insignia(lv.r,cur,52);$('rkName').innerHTML=`${rankName(lv.r,cur)}${playerName?' '+playerName:''} <small>Lv ${lv.sub}</small>`;
   $('rkSub').textContent=rankLine(serviceXp,lv);$('rkFill').style.width=(lv.pending?100:lvlProgress(serviceXp,lv)*100).toFixed(1)+'%';$('rkFill').classList.toggle('held',lv.pending);$('rkHq').textContent=PLAYER_HQ;}
 function endXp(x0,before,lv){const from=before.L===lv.L?lvlProgress(x0,before):0,to=lv.pending?1:lvlProgress(serviceXp,lv);
   const up=result.levelUp?`<div class="lvup">Level up · ${levelName(lv.L,cur)}</div>`:'',un=result.unlocked.length?`<div class="lvup new">Unlocked: ${result.unlocked.join(', ')}</div>`:'';
@@ -2591,7 +2615,7 @@ function drawBanner(){const {ctx:x,c,t}=xrBanner.userData,r=result,won=r&&r.star
   x.fillStyle='#d8d2c2';x.font='500 22px sans-serif';x.fillText(lv.L>=200?'Top level':'XP to '+levelName(lv.L+1,cur),640,408);t.needsUpdate=true;}
 function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
   {const {ctx:x,c,t}=xrHud.userData;x.clearRect(0,0,c.width,c.height);x.fillStyle='rgba(10,14,12,.78)';rrect(x,0,0,c.width,c.height,22);x.fill();
-    const s=stats();x.fillStyle='#ffd27a';x.font='700 64px sans-serif';x.fillText(state==='menu'?'TABLETOP COMMAND':state==='base'?'MY BASE':fmtClock(timeLeft),28,74);
+    const s=stats();x.fillStyle='#ffd27a';x.font='700 64px sans-serif';x.fillText(state==='menu'?'TABLETOP COMMAND':state==='base'?baseName().toUpperCase():fmtClock(timeLeft),28,74);
     x.font='600 40px sans-serif';if(state==='menu'||state==='base'){const lv=levelFor(serviceXp,PLAYER_HQ);x.font='600 30px sans-serif';x.fillText(levelName(lv.L,cur)+' · HQ '+PLAYER_HQ,470,70);}
     else{x.fillText('★'.repeat(s.stars)+'☆'.repeat(3-s.stars)+'  '+s.pct+'%',230,70);x.fillStyle='#ff9a7a';x.font='600 32px sans-serif';x.fillText('Enemy HQ '+enemyHq(),560,68);}
     x.fillStyle='#f1ede2';x.font='500 30px sans-serif';{const src=state==='base'?BASE.res:Object.assign({},loot,{i:BASE.res.i});let px=28;RES.forEach(k=>{const im=RES_IMG[k];if(im&&im.complete){x.drawImage(im,px,90,40,40);px+=44;}x.fillText(fmtN(src[k]||0),px,122);px+=x.measureText(fmtN(src[k]||0)).width+26;});}
@@ -2747,6 +2771,7 @@ rr.setAnimationLoop(()=>{const now=performance.now();const dt=Math.min(.05,(now-
   orb.apply();rr.render(stage,cam);});
 window.__tcDebug={iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
+$('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
 
 }
 setTimeout(()=>{try{main();}catch(err){document.getElementById('loading').textContent='Could not start: '+err.message;console.error(err);}},60);
