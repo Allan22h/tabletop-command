@@ -2976,8 +2976,14 @@ scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(linearize);});Obj
 let last=performance.now();
 // scenery built at startup: loose trees become one mesh per material; ships, the bridge and puddles merge their own parts
 // (sub-groups such as a ship's gun stay separate). Groups with unlit parts are skipped, since those are effects and markers.
-const sceneryBaked=(()=>{const loose=scene.children.filter(o=>o.isMesh&&!o.children.length&&(o.material===M.shrub||o.material===M.woodDark));let n=0;
-  if(loose.length){const t=new T.Group();scene.add(t);loose.forEach(o=>t.attach(o));bake(t);}
+// Loose trees become one instanced mesh per part (trunk, crown, top crown) instead of being merged: the board grows with the HQ and
+// every tree has to move outward and back onto the ground, so each keeps its own entry in the map scenery list.
+const sceneryBaked=(()=>{const loose=scene.children.filter(o=>o.isMesh&&!o.isInstancedMesh&&!o.children.length&&(o.material===M.shrub||o.material===M.woodDark));let n=0;
+  const parts=new Map();loose.forEach(o=>{const k=o.geometry.uuid+o.material.uuid;if(!parts.has(k))parts.set(k,[]);parts.get(k).push(o);});
+  parts.forEach(list=>{const f=list[0],im=new T.InstancedMesh(f.geometry,f.material,list.length),inst=[];im.castShadow=f.castShadow;im.receiveShadow=f.receiveShadow;im.frustumCulled=false;
+    list.forEach((o,i)=>{o.updateMatrix();im.setMatrixAt(i,o.matrix);const d=mapDecor&&mapDecor.find(d=>d.o===o),p=o.position; // d: where it stands on the standard board
+      inst.push(d?{m:o.matrix.clone(),x:d.x,z:d.z,dy:d.dy}:{m:o.matrix.clone(),x:p.x,z:p.z,dy:p.y-groundY(p.x,p.z)});scene.remove(o);});
+    if(mapDecor){mapDecor=Object.assign(mapDecor.filter(d=>!list.includes(d.o)),{sea:mapDecor.sea});mapDecor.push({o:im,inst});}scene.add(im);});
   scene.children.forEach(c=>{if(!c.isGroup||c===battle||c===tableG||!c.visible&&c!==puddles)return;const ms=c.children.filter(o=>o.isMesh);
     if(ms.length<4||!ms.every(o=>o.material&&o.material.isMeshStandardMaterial))return;bake(c,c.children.filter(o=>!o.isMesh));n++;});return n;})();
 let perfOn=false;try{perfOn=localStorage.getItem('tc.perf')==='1';}catch(e){}
