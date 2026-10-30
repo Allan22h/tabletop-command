@@ -123,7 +123,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #daily .act{background:var(--gold);color:#2a1e05;border:0;border-radius:10px;padding:10px 14px;font:700 14px system-ui,sans-serif;cursor:pointer}#daily .tbtn{border-radius:10px;padding:10px 14px}#daily .muted{color:var(--muted);font-size:12px}#daily .row{display:flex;gap:8px;flex-wrap:wrap}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.day{display:grid;justify-items:center;gap:3px;background:rgba(255,255,255,.05);border-radius:10px;padding:6px 2px;font-size:11px;position:relative;font-variant-numeric:tabular-nums}
 .day .dot{width:16px;height:16px}.day.now{outline:2px solid var(--gold)}.day.got{opacity:.5}.day i:not(.dot){position:absolute;top:1px;right:4px;font-style:normal;color:#6fd36a}
-.bpanel .bname{display:none}@media (max-width:899px){#app:not(.xr) .bpanel .bname{display:inline;color:var(--gold)}}
+.bpanel .bname{display:none}@media (max-width:899px){#app:not(.xr) .bpanel .bname{display:inline;color:var(--gold)}.bname img{width:18px;height:18px;vertical-align:-4px;margin-right:4px}}
 .bpanel .ihead{display:flex;align-items:center;gap:8px}.bpanel .tbtn.ib{display:inline-flex;align-items:center;gap:6px;padding-left:6px}
 .bpanel .arow.ic{grid-template-columns:44px 1fr auto}.bpanel .arow.ic .ico{grid-column:1;grid-row:1/span 3;width:44px;height:44px}.bpanel .arow.ic .tbtn{grid-column:3;grid-row:1/span 3}
 @media (min-width:900px){.bpanel{right:auto;width:400px;margin:0;top:70px;bottom:12px;max-height:none}}
@@ -1443,7 +1443,7 @@ function endReplay(){stopDefense();prompt('',0);$('enemyHq').hidden=true;$('menu
 let sheetOpen=false;
 function sheet(on){sheetOpen=on;const el=$('basePanel');if(el){el.classList.toggle('peek',!on);if(on)el.scrollTop=0;}setTimeout(placeCard,260);}
 function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return;const hq=baseHq(),free=builders()-busy(),sl=shieldLeft();let h='<button type="button" class="grab" data-act="sheet" aria-label="Show or hide the menu"></button>';
-  h+=`<div class="row"><h3 class="ihead"><img alt="" style="width:30px;height:30px" src="${insigniaImg(levelFor(serviceXp,PLAYER_HQ).r).src}">Command center</h3><span class="muted"><b class="bname">${baseName()} · </b>HQ ${hq} of ${HQ_MAX} · builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
+  const lvR=levelFor(serviceXp,PLAYER_HQ).r;h+=`<div class="row"><h3 class="ihead"><img alt="" style="width:30px;height:30px" src="${insigniaImg(lvR).src}">Command center</h3><span class="muted"><b class="bname"><img alt="" src="${insigniaImg(lvR).src}">${rankAbbr(lvR,cur)} ${baseName()} · </b>HQ ${hq} of ${HQ_MAX} · builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['intel','Intel'+(chReady()?' ●'+chReady():'')],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
   if(baseTab==='base')h+=panelBase(hq,free);else if(baseTab==='army')h+=panelArmy();else if(baseTab==='research')h+=panelResearch();else if(baseTab==='intel')h+=panelIntel();else h+=panelReports();
   h+=`<div class="row"><button type="button" class="act" data-act="raid">Raid · enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)} · ${WX[nextWx].n}</button><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
