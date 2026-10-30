@@ -203,7 +203,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app.raid #fsBtn{font-size:20px;padding:5px 9px}
   #app.raid #cancelBtn{position:fixed;left:max(8px,env(safe-area-inset-left,0px));bottom:calc(72px + env(safe-area-inset-bottom,0px));
     background:rgba(190,48,36,.85);border-color:rgba(255,255,255,.3);color:#fff;font:700 12px var(--f-display);text-transform:uppercase;letter-spacing:.05em;padding:6px 10px}
-  #app.raid .radio{left:50%;transform:translateX(-50%);top:calc(6px + env(safe-area-inset-top,0px));max-width:min(56%,320px);font-size:12px;padding:5px 8px}
+  #app.raid .radio{left:calc(72px + env(safe-area-inset-left,0px));right:calc(136px + env(safe-area-inset-right,0px));max-width:none;margin:0 auto;width:fit-content;top:calc(6px + env(safe-area-inset-top,0px));font-size:12px;padding:5px 8px}
   #app.raid .prompt{font-size:12px;padding:6px 10px;max-width:min(300px,calc(100% - 32px));bottom:calc(112px + env(safe-area-inset-bottom,0px));background:rgba(255,210,122,.5)}
   #app.raid #perf{top:auto;bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 }
@@ -213,7 +213,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #xrBtn:hover{background:rgba(127,211,230,.3)}
 /* phones (upright or sideways): Mixed Reality in the top-right corner, under the top bar */
 @media (max-width:899px),(max-height:520px){#xrBtn{top:calc(54px + env(safe-area-inset-top,0px));bottom:auto;font-size:11.5px;padding:6px 10px}
-  #app.raid #xrBtn{top:calc(112px + env(safe-area-inset-top,0px))}
+  #app.raid #xrBtn{top:calc(58px + env(safe-area-inset-top,0px))} /* right under the stars and % */
   #app:has(#menu:not([hidden])) #xrBtn{top:calc(10px + env(safe-area-inset-top,0px))}}
 /* main menu: the full-screen button sits in the top-left corner above the menu sheet */
 #app:has(#menu:not([hidden])) #fsBtn{position:fixed;left:max(10px,env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:40;
