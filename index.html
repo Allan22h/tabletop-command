@@ -2377,19 +2377,17 @@ function updSnow(dt){if(!snowfall.visible)return;snowfall.material.size=.08*scen
 const WX={day:{n:'Clear day',h:[0xe6edf2,.62],s:[0xfff0d8,2.1],f:.35,bg:BG,fog:[60,170],ex:1.05},
   night:{n:'Night',h:[0x3c56a8,.34],s:[0x7e9cff,.42],f:.04,bg:0x0e1422,fog:[40,140],ex:.95},
   rain:{n:'Rain',h:[0x9aa6ad,.5],s:[0xc8d2da,.55],f:.2,bg:0x5b6268,fog:[30,110],ex:1},
-  snow:{n:'Snow',h:[0xe8eef5,.72],s:[0xe6eefa,1.1],f:.3,bg:0xc4ccd4,fog:[30,120],ex:1.05},
   storm:{n:'Storm',h:[0x6c7680,.3],s:[0xa8b4c0,.28],f:.1,bg:0x2c3238,fog:[22,90],ex:1.15}};
-const WX_ORDER=['day','night','rain','snow','storm'],WX_RADIO={night:'Night op, go dark.',rain:'Heavy rain over the objective.',snow:'Snow on the ground.',storm:'Storm overhead, watch the lightning.'};
+const WX_ORDER=['day','night','rain','storm'],WX_RADIO={night:'Night op, go dark.',rain:'Heavy rain over the objective.',storm:'Storm overhead, watch the lightning.'};
 let wx='day',boltT=4;
-// about 60% of raids are clear day; the rest split between night, rain, snow and storm
-function rollWx(){const r=Math.random();return r<.6?'day':r<.75?'night':r<.86?'rain':r<.94?'snow':'storm';}
+// 70% of raids are clear day; the other 30% split evenly between night, rain and storm
+function rollWx(){return Math.random()<.7?'day':['night','rain','storm'][Math.floor(Math.random()*3)];}
 let nextWx=rollWx();
 const rainFx=(()=>{const n=2200,p=new Float32Array(n*6);for(let i=0;i<n;i++){const x=rand(-16,16),y=rand(0,9),z=rand(-12,16);p.set([x,y,z,x-.06,y-.4,z],i*6);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(p,3));const l=new T.LineSegments(g,new T.LineBasicMaterial({color:0xb8c6d0,transparent:true,opacity:.4,depthWrite:false}));l.visible=false;l.frustumCulled=false;scene.add(l);return l;})();
 function setWeather(w){wx=w;const c=WX[w];hemi.color.setHex(c.h[0]);hemi.intensity=c.h[1];sun.color.setHex(c.s[0]);sun.intensity=c.s[1];fill.intensity=c.f;
   if(stage.background){stage.background.setHex(c.bg);stage.fog.color.setHex(c.bg);stage.fog.near=c.fog[0];stage.fog.far=c.fog[1];}
-  rr.toneMappingExposure=c.ex;rainFx.visible=w==='rain'||w==='storm';rainFx.material.opacity=w==='storm'?.55:.38;snowfall.visible=w==='snow'||!!MAPT.snow;
-  M.terrain.emissive.setHex(w==='snow'&&!MAPT.snow?0x3c4249:0);boltT=rand(2,4);}
+  rr.toneMappingExposure=c.ex;rainFx.visible=w==='rain'||w==='storm';rainFx.material.opacity=w==='storm'?.55:.38;snowfall.visible=!!MAPT.snow;boltT=rand(2,4);}
 function updWeather(dt){if(rainFx.visible){const a=rainFx.geometry.attributes.position.array,v=dt*(wx==='storm'?15:12),sx=wx==='storm'?-.16:-.06;
     for(let i=0;i<a.length;i+=6){a[i+1]-=v;a[i+4]-=v;a[i]+=sx*v*.5;a[i+3]=a[i]+sx;if(a[i+4]<0){const y=rand(8,9.5);a[i+1]=y;a[i+4]=y-.4;a[i]=rand(-16,16);a[i+3]=a[i]+sx;}}rainFx.geometry.attributes.position.needsUpdate=true;}
   if(wx!=='storm')return;const c=WX.storm;hemi.intensity+=(c.h[1]-hemi.intensity)*Math.min(1,dt*7);
