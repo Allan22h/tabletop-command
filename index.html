@@ -171,7 +171,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #app:has(#basePanel:not([hidden])) .prompt{top:calc(64px + env(safe-area-inset-top,0px));bottom:auto;z-index:30}
 /* base top bar: insignia, rank and name; on wide screens the base panel title is just "Command center" */
 #tm img{width:24px;height:24px;vertical-align:-4px;margin-right:6px}
-@media (min-width:900px){#app:not(.xr) .bpanel .ihead img{display:none}}
 </style>
 </head>
 <body>
@@ -713,7 +712,8 @@ const rankName=(r,f)=>RANKS[r][RFAC[f]||2];
 const RABBR={nato:['RCT','PVT','PFC','CPL','SGT','SSG','SFC','MSG','SGM','2LT','1LT','CPT','MAJ','LTC','COL','BG','MG','LTG','GEN'],
   ru:['NOV','RYAD','YEFR','ML SERZH','SERZH','ST SERZH','STARSH','PRAP','ST PRAP','ML LT','LT','KPT','MAJ','PPLK','PLK','GEN-MAJ','GEN-LT','GEN-PLK','GEN ARM'],
   eu:['RCT','PTE','LCPL','CPL','SGT','SSGT','CSGT','WO2','WO1','2LT','LT','CAPT','MAJ','LT COL','COL','BRIG','MAJ GEN','LT GEN','GEN']};
-const rankAbbr=(r,f)=>(RABBR[f]||RABBR.nato)[r];
+// shown as a title before the name: first letter capital, the rest small, a dot after each word (PVT → Pvt., LT COL → Lt. Col., 2LT → 2Lt., GEN-MAJ → Gen-Maj.)
+const rankAbbr=(r,f)=>(RABBR[f]||RABBR.nato)[r].split(' ').map(w=>w.toLowerCase().replace(/(^|-)(\d*)([a-z])/g,(m,h,d,c)=>h+d+c.toUpperCase())+'.').join(' ');
 const rankGate=r=>RTIERS[RANKS[r][0]][1];
 // highest rank the XP earns, and the highest the HQ allows; XP above the HQ limit is banked until the HQ is upgraded
 function rankFor(xp,hq){let byXp=0;RANKS.forEach((R,i)=>{if(xp>=R[1])byXp=i;});let r=byXp;while(r>0&&hq<rankGate(r))r--;return {r,byXp,pending:byXp>r};}
@@ -2747,7 +2747,7 @@ function drawBanner(){const {ctx:x,c,t}=xrBanner.userData,r=result,won=r&&r.star
 function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
   {const {ctx:x,c,t}=xrHud.userData;x.clearRect(0,0,c.width,c.height);x.fillStyle='rgba(10,14,12,.78)';rrect(x,0,0,c.width,c.height,22);x.fill();
     const s=stats();x.fillStyle='#ffd27a';x.font='700 64px sans-serif';
-    if(state==='base'){const lv=levelFor(serviceXp,PLAYER_HQ),im=insigniaImg(lv.r),nm=(rankAbbr(lv.r,cur)+(playerName?' '+playerName:'')).toUpperCase();
+    if(state==='base'){const lv=levelFor(serviceXp,PLAYER_HQ),im=insigniaImg(lv.r),nm=rankAbbr(lv.r,cur)+(playerName?' '+playerName:'');
       if(im.complete&&im.naturalWidth)x.drawImage(im,22,12,76,76);let fs=58;x.font=`700 ${fs}px sans-serif`;while(x.measureText(nm).width>510&&fs>22){fs-=2;x.font=`700 ${fs}px sans-serif`;}
       x.fillText(nm,108,72);x.font='600 28px sans-serif';x.textAlign='right';x.fillText('Lv '+lv.sub+' · HQ '+PLAYER_HQ,780,70);x.textAlign='left';}
     else{x.fillText(state==='menu'?'TABLETOP COMMAND':fmtClock(timeLeft),28,74);
