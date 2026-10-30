@@ -170,6 +170,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .radio{background:rgba(10,13,12,.42);transition:opacity .4s}
 .prompt.out,.radio.out{opacity:0}
 #app:has(#basePanel:not([hidden])) .prompt{top:calc(64px + env(safe-area-inset-top,0px));bottom:auto;z-index:30}
+/* base top bar: insignia, rank and name; on wide screens the base panel title is just "Command center" */
+#tm img{width:24px;height:24px;vertical-align:-4px;margin-right:6px}
+@media (min-width:900px){#app:not(.xr) .bpanel .ihead img{display:none}}
 </style>
 </head>
 <body>
@@ -1214,7 +1217,7 @@ function enterBase(keepCam){if(state!=='base')drum('base');stopDefense();endXrMo
   zone.visible=zoneEdge.visible=false;show('menu',false);show('end',false);show('banner',false);show('basePanel',true);$('tray').hidden=true;$('enemyHq').hidden=true;$('menuBtn').hidden=$('cancelBtn').hidden=true;
   if(!keepCam&&!enterBase.checked){enterBase.checked=true;setTimeout(()=>{if(state==='base')checkAttacks();},600);}
   if(!keepCam){const c=CMP;orb.target.set((c.x0+c.x1)/2-.8,0,0);orb.r=clamp((canvasEl.clientWidth<canvasEl.clientHeight?22:15)*c.z/3.6,orb.minR,orb.maxR);}baseHud();renderBasePanel();xrDirty=true;}
-function baseHud(){$('tm').textContent=baseName();const sl=shieldLeft();$('pct').textContent='HQ '+baseHq()+(sl>0?' · Shield '+fmtT(sl):'');$('stars').innerHTML='';
+function baseHud(){const lvR=levelFor(serviceXp,PLAYER_HQ).r;$('tm').innerHTML=`<img alt="" src="${insigniaImg(lvR).src}">${rankAbbr(lvR,cur)}${playerName?' '+playerName.replace(/[<>&]/g,''):''}`;const sl=shieldLeft();$('pct').textContent='HQ '+baseHq()+(sl>0?' · Shield '+fmtT(sl):'');$('stars').innerHTML='';
   $('lg').textContent=fmtN(BASE.res.g);$('lf').textContent=fmtN(BASE.res.f);$('lm').textContent=fmtN(BASE.res.m);$('li').textContent=fmtN(BASE.res.i);}
 function ringOn(e,ok){selRing.scale.setScalar(e.r+.15);const p=e.g.position;selRing.position.set(p.x,G+.03,p.z);selRing.material.color.setHex(ok===false?0xe0503c:ok?0x6fd36a:0xffd27a);selRing.visible=true;}
 function entAt(x,z){let best=null,bd=1e9;for(const e of ents){const p=e.g.position,d=Math.hypot(p.x-x,p.z-z)-e.r;if(d<.2&&d<bd){bd=d;best=e;}}return best;}
