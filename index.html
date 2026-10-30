@@ -1663,6 +1663,13 @@ function xpDraw(){const el=$('basePanel'),{ctx:x,c,t}=xrPanel.userData,R=el.getB
   for(const [up,on] of [[1,xpScroll>0],[0,xpScroll<xpMax]]){if(!on)continue;const y=up?0:XP_H-XP_BAR;x.fillStyle='rgba(255,210,122,.92)';x.fillRect(0,y,XP_W,XP_BAR);x.fillStyle='#2a1e05';x.fillText(up?'▲  scroll up':'▼  scroll down',XP_W/2,y+XP_BAR/2);}
   x.textAlign='left';t.needsUpdate=true;xpDirty=false;xpT=performance.now();}
 // pointer on the panel: where it lands, in panel pixels
+// hold the trigger (or pinch) on the panel and move up or down: it scrolls like a touch screen; a drag never counts as a click
+let xpDrag=null;
+function xpDragStart(c){if(!xrPanel||!xrPanel.visible)return;const p=xpPoint(c);if(!p)return;const R=$('basePanel').getBoundingClientRect();
+  xpDrag={c,y0:p.py,s0:xpScroll,k:XP_W/Math.max(1,R.width),moved:false};}
+function xpDragEnd(c){if(!xpDrag||xpDrag.c!==c)return;if(xpDrag.moved)c.userData.dragT=performance.now();xpDrag=null;}
+function xpDragTick(){if(!xpDrag)return;const p=xpPoint(xpDrag.c);if(!p)return;const d=xpDrag.y0-p.py;if(Math.abs(d)>10)xpDrag.moved=true;
+  if(xpDrag.moved){const s=clamp(xpDrag.s0+d/xpDrag.k,0,xpMax);if(s!==xpScroll){xpScroll=s;xpDirty=true;}}}
 function xpPoint(c){ctrlRay(c);const h=ray.intersectObject(xrPanel,false)[0];return h&&h.uv?{h,px:h.uv.x*XP_W,py:(1-h.uv.y)*XP_H}:null;}
 function xpFrame(){const m=xpMesh(),on=state==='base'&&xrMode&&!$('basePanel').hidden;m.visible=on;xpCursor.visible=false;if(!on)return;
   m.position.set(cardRow.position.x+3,G+10,-15.5);m.lookAt(V().setFromMatrixPosition((rr.xr.isPresenting?rr.xr.getCamera(cam):cam).matrixWorld));
@@ -1670,9 +1677,9 @@ function xpFrame(){const m=xpMesh(),on=state==='base'&&xrMode&&!$('basePanel').h
   for(const c of ctrls){if(!c.userData.src&&rr.xr.isPresenting)continue;const p=xpPoint(c);if(!p)continue;
     xpCursor.position.copy(m.worldToLocal(p.h.point.clone())).setZ(.02);xpCursor.visible=true;
     const gp=c.userData.src&&c.userData.src.gamepad,ay=gp&&gp.axes.length>3?gp.axes[3]:0;if(Math.abs(ay)>.2){xpScroll=clamp(xpScroll+ay*dt*900,0,xpMax);xpDirty=true;}break;}
-  if(xpDirty&&now-xpT>120)xpDraw();}
+  xpDragTick();if(xpDirty&&now-xpT>(xpDrag&&xpDrag.moved?40:120))xpDraw();}
 // a pinch on the panel clicks the button under the pointer (and never falls through to the board behind it)
-function xpSelect(c){if(!xrPanel||!xrPanel.visible)return false;const p=xpPoint(c);if(!p)return false;
+function xpSelect(c){if(!xrPanel||!xrPanel.visible)return false;if((xpDrag&&xpDrag.c===c&&xpDrag.moved)||performance.now()-(c.userData.dragT||0)<400)return true;const p=xpPoint(c);if(!p)return false;
   if(xpMax>0&&p.py<XP_BAR&&xpScroll>0){xpScroll-=XP_H*.6;xpDraw();return true;}
   if(xpMax>0&&p.py>XP_H-XP_BAR&&xpScroll<xpMax){xpScroll+=XP_H*.6;xpDraw();return true;}
   const el=$('basePanel'),R=el.getBoundingClientRect(),k=XP_W/Math.max(1,R.width),X=R.left+p.px/k,Y=R.top+xpScroll+p.py/k;let hit=null;
@@ -2769,7 +2776,7 @@ const PIV=V(1.5,0,1.5); // board center: the board turns and resizes around this
 const xrUI=new T.Group();xrUI.visible=false;stage.add(xrUI);
 function canvasPlane(w,h,cw,ch){const c=document.createElement('canvas');c.width=cw;c.height=ch;const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;
   const m=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));m.rotation.y=-Math.PI/2;m.userData={c,ctx:c.getContext('2d'),t};xrUI.add(m);return m;}
-const xrHud=canvasPlane(10,2.9,800,232);xrHud.position.set(11.7,G+3.2,.5);
+const xrHud=canvasPlane(10,2.9,800,232);xrHud.position.set(11.7,G+3.6,.5);
 // the cards form one row that moves and tilts as a single panel; the buttons get their own row under the card at the back of the table
 const cardRow=new T.Group(),btnRow=new T.Group();xrUI.add(cardRow,btnRow);btnRow.scale.setScalar(1.2); // read from across the table
 const xrCards=[];for(let i=0;i<8;i++){const m=canvasPlane(2.1,1.6,256,196);cardRow.add(m);m.rotation.set(0,0,0);m.userData.i=i;xrCards.push(m);}
@@ -2780,6 +2787,8 @@ const xrBtns=[['Tutorial raid','tutorial',-14.8,2.6,-4.6,'menu ended'],['My base
   .map(([label,m,x,y,z,when])=>{const p=canvasPlane(when==='battle'?2.6:3.1,when==='battle'?.82:.98,380,120);btnRow.add(p);p.rotation.set(0,0,0);Object.assign(p.userData,{mode:m,label,when});return p;});
 // exit: the last button in the button row, on every screen while in mixed reality
 const xrExit=canvasPlane(3.9,.82,570,120);btnRow.add(xrExit);xrExit.rotation.set(0,0,0);
+// cards, the back card and its buttons always draw over the board, so hills, bridges and buildings never cut into them
+[...xrCards,xrHud,...xrBtns,xrExit].forEach(m=>{m.material.depthTest=false;m.renderOrder=10;});
 {const {ctx:x,t}=xrExit.userData;x.fillStyle='rgba(160,40,30,.78)';rrect(x,0,0,570,120,20);x.fill();x.strokeStyle='rgba(255,255,255,.55)';x.lineWidth=4;rrect(x,2,2,566,116,18);x.stroke();
   x.fillStyle='#fff';x.font='700 42px sans-serif';x.textAlign='center';x.fillText('Exit Mixed Reality',285,76);x.textAlign='left';t.needsUpdate=true;}
 const xrBanner=canvasPlane(15,6.3,1024,430);xrBanner.position.set(0,G+10,.5);xrBanner.visible=false;xrBanner.renderOrder=11;
@@ -2842,8 +2851,8 @@ const ctrls=[0,1].map(i=>{const c=rr.xr.getController(i);stage.add(c);
   const line=new T.Line(new T.BufferGeometry().setFromPoints([V(0,0,0),V(0,0,-1)]),new T.LineBasicMaterial({color:0x7fd3e6}));line.scale.z=1.2;c.add(line);
   c.addEventListener('connected',e=>{c.userData.src=e.data;});c.addEventListener('disconnected',()=>{c.userData.src=null;c.userData.sq=c.userData.pinch=false;});
   // hands have no grip button: pinching with both hands at once grabs the board (and that pinch does not deploy)
-  c.addEventListener('selectstart',()=>{c.userData.pinch=true;if(ctrls.every(o=>o.userData.pinch&&isHand(o))){startGrab2(true);ctrls.forEach(o=>o.userData.skip=true);}});
-  c.addEventListener('selectend',()=>{c.userData.pinch=false;if(grab2&&grab2.hand)grab2=null;});
+  c.addEventListener('selectstart',()=>{c.userData.pinch=true;if(state==='base')xpDragStart(c);if(ctrls.every(o=>o.userData.pinch&&isHand(o))){startGrab2(true);ctrls.forEach(o=>o.userData.skip=true);}});
+  c.addEventListener('selectend',()=>{c.userData.pinch=false;xpDragEnd(c);if(grab2&&grab2.hand)grab2=null;});
   c.addEventListener('select',()=>{if(c.userData.skip){c.userData.skip=false;return;}xrSelect(c);});
   c.addEventListener('squeezestart',()=>{c.userData.sq=true;if(ctrls.every(o=>o.userData.sq)){grab=null;startGrab2(false);}else startGrab(c);});
   c.addEventListener('squeezeend',()=>{c.userData.sq=false;if(grab2&&!grab2.hand){grab2=null;const o=ctrls.find(o=>o.userData.sq);if(o)startGrab(o);}else if(grab&&grab.c===c)grab=null;});return c;});
@@ -2877,7 +2886,7 @@ function xrFrame(dt){
   xrUI.position.copy(pw);xrUI.rotation.y=uiYaw;xrUI.scale.setScalar(scene.scale.x);xrUI.updateMatrixWorld();
   // the card row sits at the near edge of the board; lean in and it comes along, a little see-through so the board shows behind it
   const dH=-xrUI.worldToLocal(hp.clone()).x,F=clamp(dH-8,1.5,14.8),see=mix(1,.55,clamp((14.8-F)/8,0,1));
-  cardRow.position.set(-F,G+.85,0);btnRow.position.set(xrHud.position.x,G+1.05,xrHud.position.z);
+  cardRow.position.set(-F,G+1.35,0);btnRow.position.set(xrHud.position.x,G+1.45,xrHud.position.z);
   [cardRow,btnRow].forEach(r=>{r.lookAt(hp);r.children.forEach(m=>{m.material.opacity=see;});}); // each row turns as one panel to face the eyes, even from straight above
   [xrHud,xrBanner,xrPromo].forEach(m=>m.lookAt(hp));
   xrBaseFrame(hp);
@@ -2990,7 +2999,7 @@ const sceneryBaked=(()=>{const loose=scene.children.filter(o=>o.isMesh&&!o.isIns
   scene.children.forEach(c=>{if(!c.isGroup||c===battle||c===tableG||!c.visible&&c!==puddles)return;const ms=c.children.filter(o=>o.isMesh);
     if(ms.length<4||!ms.every(o=>o.material&&o.material.isMeshStandardMaterial))return;bake(c,c.children.filter(o=>!o.isMesh));n++;});return n;})();
 let perfOn=false;try{perfOn=localStorage.getItem('tc.perf')==='1';}catch(e){}
-const perf={n:0,t0:0,worst:0,last:0},perfPlane=canvasPlane(4.6,1.15,460,115);perfPlane.position.set(11.7,G+5.3,.5);perfPlane.visible=false;
+const perf={n:0,t0:0,worst:0,last:0},perfPlane=canvasPlane(4.6,1.15,460,115);perfPlane.position.set(11.7,G+5.8,.5);perfPlane.visible=false;
 function perfTick(now){if(!perfOn)return;const ms=perf.last?now-perf.last:0;perf.last=now;perf.n++;perf.worst=Math.max(perf.worst,ms);
   if(!perf.t0)perf.t0=now;if(now-perf.t0<500)return;
   const fps=Math.round(perf.n*1000/(now-perf.t0)),i=rr.info.render,txt=[fps+' fps',' · max '+Math.round(perf.worst)+'ms',i.calls+' draws',Math.round(i.triangles/1000)+'k tris'];perf.n=0;perf.t0=now;perf.worst=0;
