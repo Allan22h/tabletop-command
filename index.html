@@ -171,6 +171,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #app:has(#basePanel:not([hidden])) .prompt{top:calc(64px + env(safe-area-inset-top,0px));bottom:auto;z-index:30}
 /* base top bar: insignia, rank and name; on wide screens the base panel title is just "Command center" */
 #tm img{width:24px;height:24px;vertical-align:-4px;margin-right:6px}
+@media (min-width:900px){#app:not(.xr) .bpanel .ihead img{display:none}}
 </style>
 </head>
 <body>
@@ -2617,20 +2618,28 @@ function prompt(text,secs){const el=$('prompt');el.textContent=text;promptTimers
 // a real voice reads radio lines when the browser can speak; the key click, static and end beep play around it.
 // Browsers do not let speech go through Web Audio, so the voice is pitched down and the static sits under it instead.
 const TTS=window.speechSynthesis&&window.SpeechSynthesisUtterance?window.speechSynthesis:null;
-// deep, steady male voices first (Windows, Apple, Android/Quest names), best match on this device wins
-const VOICE_PREF={us:['Christopher','Guy','Davis','Andrew','Eric','Roger','Evan','Nathan','Tom','Alex','Reed','Aaron','Daniel','Google UK English Male','Fred','Ralph'],
-  gb:['Ryan','Thomas','George','Daniel','Google UK English Male','Arthur','Reed','Oliver','Christopher','Guy','Alex','Aaron']};
-function ttsVoice(){const vs=TTS.getVoices().filter(v=>/^en/i.test(v.lang)&&!/female/i.test(v.name));if(!vs.length)return null;
-  const gb=cur==='eu',want=gb?/GB|United Kingdom/i:/US|United States/i;
-  for(const n of VOICE_PREF[gb?'gb':'us']){const m=vs.filter(v=>v.name.includes(n));if(m.length)return m.find(v=>want.test(v.lang+v.name))||m[0];}
-  return vs.find(v=>/\bmale/i.test(v.name))||vs[0];}
+// pick the most natural-sounding male English voice this device has. Neural/"Natural"/premium voices win; the old
+// formant voices (Reed, Rocko, Eddy, Fred, Ralph...) and the novelty ones sound robotic and are skipped.
+// Voices are left at their own pitch: pitch-shifting speech is what makes it sound synthetic.
+const VOICE_PREF={us:['Andrew','Brian','Christopher','Guy','Davis','Eric','Roger','Steffan','Tony','Jason','Evan','Nathan','Tom','Aaron','Alex','Daniel','Arthur','Google UK English Male'],
+  gb:['Ryan','Thomas','George','Oliver','Daniel','Arthur','Google UK English Male','Andrew','Christopher','Guy','Evan','Aaron']};
+const VOICE_ROBOT=/\b(Reed|Rocko|Eddy|Flo|Grandma|Grandpa|Sandy|Shelley|Fred|Ralph|Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Junior|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|eSpeak)\b/i;
+const VOICE_FEMALE=/female|\b(Samantha|Karen|Moira|Tessa|Catherine|Martha|Nicky|Kathy|Victoria|Zira|Aria|Jenny|Sonia|Libby|Susan|Hazel|Ava|Allison|Serena|Fiona|Ana|Emma|Michelle)\b|Google US English$/i;
+function ttsVoice(){const gb=cur==='eu',pref=VOICE_PREF[gb?'gb':'us'],want=gb?/GB|United Kingdom/i:/US|United States/i;
+  let best=null,bs=-1e9;
+  for(const v of TTS.getVoices()){if(!/^en/i.test(v.lang))continue;let sc=0;
+    if(VOICE_ROBOT.test(v.name))sc-=1000;if(VOICE_FEMALE.test(v.name))sc-=200;
+    if(/natural|neural|premium|enhanced|online/i.test(v.name))sc+=100;if(!v.localService)sc+=40;
+    const pi=pref.findIndex(n=>v.name.includes(n));if(pi>=0)sc+=60-pi;if(/\bmale\b/i.test(v.name))sc+=30;if(want.test(v.lang+v.name))sc+=20;
+    if(sc>bs){bs=sc;best=v;}}
+  return best;}
 if(TTS)TTS.getVoices();
 function radioVoice(text){if(!TTS)return radioSfx(text);const fx=RADIO[cur],t=AC.currentTime+.03,bus=radioBus(fx),est=.4+text.split(/\s+/).length*.34;
   const ck=AC.createOscillator(),ckg=AC.createGain();ck.type='square';ck.frequency.value=1800;ck.connect(ckg).connect(bus);env(ckg,t,.012,.5,.001,.004);ck.start(t);ck.stop(t+.03);
   const sq=noiseSrc(t,.14),sqf=filt('bandpass',2200,.6),sqg=AC.createGain();sq.connect(sqf).connect(sqg).connect(bus);env(sqg,t+.01,.13,.9,.004,.06);
   const st=noiseSrc(t,12),stf=filt('bandpass',1700,.5),stg=AC.createGain();st.connect(stf).connect(stg).connect(bus);stg.gain.setValueAtTime(0,t);stg.gain.linearRampToValueAtTime(fx.hiss*.7,t+.1);
   TTS.cancel();const u=new SpeechSynthesisUtterance(text),v=ttsVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang=cur==='eu'?'en-GB':'en-US';
-  u.rate=.96;u.pitch=cur==='ru'?.6:.72;u.volume=1;let done=false;
+  u.rate=1.02;u.pitch=cur==='ru'?.9:1;u.volume=1;let done=false;
   const end=()=>{if(done)return;done=true;const te=AC.currentTime+.02;stg.gain.cancelScheduledValues(te);stg.gain.setValueAtTime(fx.hiss*.7,te);stg.gain.linearRampToValueAtTime(0,te+.05);try{st.stop(te+.3);}catch(e){}
     const tl=noiseSrc(te,.18),tf=filt('bandpass',2600,.5),tg=AC.createGain();tl.connect(tf).connect(tg).connect(bus);env(tg,te,.16,.8,.003,.12); // squelch tail + end beep
     if(fx.beep){const bp=AC.createOscillator(),bg=AC.createGain();bp.type='sine';bp.frequency.setValueAtTime(fx.beep,te+.17);if(fx.chirp)bp.frequency.linearRampToValueAtTime(fx.beep*1.6,te+.26);
