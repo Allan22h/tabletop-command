@@ -103,7 +103,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .bpanel .act{background:var(--gold);color:#2a1e05;border:0;border-radius:10px;padding:10px 12px;font-weight:700}.bpanel button:disabled{opacity:.4;cursor:default}
 .bpanel .cost{display:inline-flex;align-items:center;gap:4px;margin-right:6px;font-variant-numeric:tabular-nums}.bpanel .testrow{border-top:1px solid var(--edge);padding-top:8px}
 /* in mixed reality the panel is drawn into the room from this invisible copy, laid out at full length so nothing scrolls inside it */
-#app.xr .bpanel{visibility:hidden;position:fixed;left:0;top:0;right:auto;bottom:auto;width:420px;max-width:none;max-height:none;overflow:visible;margin:0}
+/* headset: laid out at 300px and drawn onto a 420px-wide canvas, so everything reads 40% larger; secondary text lighter */
+#app.xr .bpanel{--muted:#e2dccb;color:#fff;box-sizing:border-box;visibility:hidden;position:fixed;left:0;top:0;right:auto;bottom:auto;width:300px;max-width:none;max-height:none;overflow:visible;margin:0}
 .bpanel .tabs .tbtn{font-size:13px;padding:7px 10px}.bpanel .tabs .tbtn.on{background:var(--gold);color:#2a1e05;border-color:var(--gold)}
 .bpanel .army{display:grid;gap:6px}.bpanel .arow{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;background:rgba(255,255,255,.04);border-radius:8px;padding:7px 9px}.bpanel .arow .tbtn{grid-row:span 2;grid-column:2}
 .bpanel .ico{width:30px;height:30px;flex:none;object-fit:contain;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}.bpanel .ico.lg{width:60px;height:60px}
@@ -207,10 +208,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app.raid .prompt{font-size:12px;padding:6px 10px;max-width:min(300px,calc(100% - 32px));bottom:calc(112px + env(safe-area-inset-bottom,0px));background:rgba(255,210,122,.5)}
   #app.raid #perf{top:auto;bottom:calc(112px + env(safe-area-inset-bottom,0px))}
 }
-/* mixed reality button: small and see-through, parked in the bottom-right corner on every screen */
-#xrBtn{position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:40;
+/* mixed reality button: small and see-through, top-right corner under the top bar */
+#xrBtn{position:fixed;right:max(10px,env(safe-area-inset-right,0px));top:calc(62px + env(safe-area-inset-top,0px));z-index:40;
   background:rgba(127,211,230,.16);color:#fff;border:1px solid rgba(127,211,230,.45);backdrop-filter:blur(6px);font:600 12.5px var(--f-mono);letter-spacing:.04em;padding:7px 11px;border-radius:999px}
 #xrBtn:hover{background:rgba(127,211,230,.3)}
+/* Quest browser and other wide screens: larger and more solid so it stands out */
+@media (min-width:900px) and (min-height:521px){#xrBtn{font-size:16px;padding:11px 20px;background:rgba(40,120,140,.55);border:2px solid rgba(127,211,230,.85);box-shadow:0 0 18px rgba(127,211,230,.35)}#xrBtn:hover{background:rgba(60,150,170,.75)}}
 /* phones (upright or sideways): Mixed Reality in the top-right corner, under the top bar */
 @media (max-width:899px),(max-height:520px){#xrBtn{top:calc(54px + env(safe-area-inset-top,0px));bottom:auto;font-size:11.5px;padding:6px 10px}
   #app.raid #xrBtn{top:calc(58px + env(safe-area-inset-top,0px))} /* right under the stars and % */
@@ -1627,8 +1630,8 @@ function bankLoot(){const got={};RES.forEach(r=>{got[r]=Math.max(0,Math.min(Math
 /* ---------- Quest: the base panel, floating beside the board ---------- */
 // the page's own base panel stays laid out (only invisible) in mixed reality; every change to it is copied onto a canvas
 // in the room, and a pinch on that canvas clicks whatever button is under the pointer, so tabs, training and research all work
-const XP_W=420,XP_H=760,XP_S=2,XP_BAR=34;let xrPanel=null,xpCursor=null,xpDirty=true,xpScroll=0,xpMax=0,xpT=0,xpLast=0;const xpImgs={};
-function xpMesh(){if(xrPanel)return xrPanel;const w=8.2;xrPanel=canvasPlane(w,w*XP_H/XP_W,XP_W*XP_S,XP_H*XP_S);xrPanel.rotation.set(0,0,0);xrPanel.renderOrder=12;
+const XP_W=420,XP_H=760,XP_S=3,XP_BAR=34;let xrPanel=null,xpCursor=null,xpDirty=true,xpScroll=0,xpMax=0,xpT=0,xpLast=0;const xpImgs={};
+function xpMesh(){if(xrPanel)return xrPanel;const w=9.6;xrPanel=canvasPlane(w,w*XP_H/XP_W,XP_W*XP_S,XP_H*XP_S);xrPanel.rotation.set(0,0,0);xrPanel.renderOrder=12;
   xpCursor=new T.Mesh(new T.CircleGeometry(.09,16),new T.MeshBasicMaterial({color:0x7fd3e6,transparent:true,opacity:.9,depthTest:false}));xpCursor.renderOrder=13;xpCursor.visible=false;xrPanel.add(xpCursor);
   new MutationObserver(()=>{xpDirty=true;}).observe($('basePanel'),{subtree:true,childList:true,attributes:true,characterData:true});return xrPanel;}
 function xpImg(src){let im=xpImgs[src];if(!im){im=xpImgs[src]=new Image();im.onload=()=>{xpDirty=true;};im.src=src;}return im;}
@@ -1653,7 +1656,7 @@ function xpWalk(x,e,root,ox,oy,al){const cs=getComputedStyle(e);if(cs.display===
 function xpDraw(){const el=$('basePanel'),{ctx:x,c,t}=xrPanel.userData,R=el.getBoundingClientRect(),k=XP_W/Math.max(1,R.width),vh=XP_H/k;
   xpMax=Math.max(0,el.scrollHeight-vh);xpScroll=clamp(xpScroll,0,xpMax);
   x.setTransform(1,0,0,1,0,0);x.globalAlpha=1;x.clearRect(0,0,c.width,c.height);x.setTransform(XP_S,0,0,XP_S,0,0);
-  x.fillStyle='rgba(14,18,16,.94)';rrect(x,0,0,XP_W,XP_H,16);x.fill();x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1.5;x.stroke();
+  x.fillStyle='rgba(12,15,14,.98)';rrect(x,0,0,XP_W,XP_H,16);x.fill();x.strokeStyle='rgba(255,255,255,.16)';x.lineWidth=1.5;x.stroke();
   x.save();rrect(x,0,0,XP_W,XP_H,16);x.clip();x.scale(k,k);x.textBaseline='middle';x.textAlign='left';xpWalk(x,el,el,R.left,R.top+xpScroll,1);x.restore();
   // scroll bars at the top and bottom edges when the panel is longer than its window
   x.globalAlpha=1;x.textAlign='center';x.textBaseline='middle';x.font='700 18px sans-serif';
@@ -2887,7 +2890,7 @@ function xrFrame(dt){
 function xrSelect(c){ctrlRay(c);if(xrExit.visible&&ray.intersectObject(xrExit,false).length){haptic();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});return;}
   if(xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersectObjects([...xrCards,...xrBtns].filter(m=>m.visible),false)[0];
   if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='base'){haptic();enterBase();return;}if(u.mode==='menu'){haptic();goMenu();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});}
-    else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();startBattle(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
+    else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();begin(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
 function setShadow(k){Object.assign(sun.shadow.camera,{left:-(16+MAPE)*k,right:(16+MAPE)*k,top:(15+MAPE)*k,bottom:-(15+MAPE)*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
 async function enterXR(){try{const s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['local-floor'],optionalFeatures:['hand-tracking']});
