@@ -137,7 +137,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app:has(#basePanel:not([hidden])) .hud>.grp:last-child{flex:1;flex-wrap:nowrap}
   #app:has(#basePanel:not([hidden])) .hud .pill{flex:1;justify-content:space-between;gap:4px;padding:5px 9px}
   #app:not(.xr) .bpanel h3{display:none}
-  #snd{font-size:0;padding:6px 9px;line-height:1}#snd::before{content:"🔇";font-size:18px}#snd[aria-pressed="true"]::before{content:"🔊"}
   #app:not(.xr) .bpanel.peek{max-height:calc(var(--peek,106px) + env(safe-area-inset-bottom,0px));overflow:hidden}}
 .card.locked{opacity:.5}.card.locked .cc{font-size:15px;color:var(--muted)}
 .lvup{font:700 15px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}.lvup.new{color:var(--ok)}
@@ -194,7 +193,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       </div>
       <button type="button" class="btn" id="cancelBtn" hidden>Cancel raid</button>
       <button type="button" class="btn" id="menuBtn" hidden>Menu</button>
-      <button type="button" class="btn" id="snd" aria-pressed="false">Sound off</button>
       <button type="button" class="btn" id="perfBtn" aria-pressed="false" title="Show frame rate and draw calls">Stats</button>
       <div id="perf" hidden></div>
       <button type="button" class="btn xr" id="xrBtn" hidden>Enter mixed reality</button>
@@ -2887,8 +2885,12 @@ $('unlockAll').checked=unlockAll;$('unlockAll').onchange=e=>{unlockAll=e.target.
 $('banner').onclick=finishCelebrate;
 $('menuBtn').onclick=()=>{if(defendSim&&defendSim.watch){endReplay();return;}if(state!=='battle')return;leaveArmed()?goMenu():armLeave();};
 $('cancelBtn').onclick=()=>{if(defendSim&&defendSim.watch){defendSim.speed=defendSim.speed>=4?1:defendSim.speed*2;$('cancelBtn').textContent='Speed ×'+defendSim.speed;return;}if(state!=='battle')return;cancelArmed()?cancelRaid():armCancel();};
-function syncSnd(){$('snd').textContent=soundOn?'Sound on':'Sound off';$('snd').setAttribute('aria-pressed',String(soundOn));}
-$('snd').onclick=()=>{if(!AC)audioInit();soundOn=!soundOn;soundOn?AC.resume():AC.suspend();syncSnd();menuMusic(soundOn&&state==='menu');};
+// sound is always on and the device volume controls it. Browsers only allow audio after a tap or key press,
+// so the first one starts it (and any later one wakes it if the device paused it); the menu music follows
+function syncSnd(){}
+soundOn=true;
+function wakeAudio(){if(!AC){try{audioInit();}catch(_){return;}}if(AC.state!=='running')AC.resume();setTimeout(()=>{if(state==='menu')menuMusic(true);},60);}
+['pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,wakeAudio,{capture:true,passive:true}));
 initBase();setFaction('nato');buildLayout('full');
 // hex colors are written in sRGB, but the renderer outputs sRGB from linear values: convert every solid color once so it isn't washed out
 function linearize(m){if(!m||m._lin)return;m._lin=true;if(m.color)m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();}
