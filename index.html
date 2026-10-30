@@ -2581,17 +2581,21 @@ function prompt(text,secs){const el=$('prompt');el.textContent=text;promptTimers
 // a real voice reads radio lines when the browser can speak; the key click, static and end beep play around it.
 // Browsers do not let speech go through Web Audio, so the voice is pitched down and the static sits under it instead.
 const TTS=window.speechSynthesis&&window.SpeechSynthesisUtterance?window.speechSynthesis:null;
-function ttsVoice(){const vs=TTS.getVoices().filter(v=>/^en/i.test(v.lang));if(!vs.length)return null;const want=cur==='eu'?/en[-_]GB/i:/en[-_]US/i;
-  const male=/\bmale|daniel|alex|fred|ralph|aaron|arthur|david|guy|james|tom|mark/i,ok=v=>male.test(v.name)&&!/female/i.test(v.name);
-  return vs.find(v=>want.test(v.lang)&&ok(v))||vs.find(ok)||vs.find(v=>want.test(v.lang))||vs[0];}
+// deep, steady male voices first (Windows, Apple, Android/Quest names), best match on this device wins
+const VOICE_PREF={us:['Christopher','Guy','Davis','Andrew','Eric','Roger','Evan','Nathan','Tom','Alex','Reed','Aaron','Daniel','Google UK English Male','Fred','Ralph'],
+  gb:['Ryan','Thomas','George','Daniel','Google UK English Male','Arthur','Reed','Oliver','Christopher','Guy','Alex','Aaron']};
+function ttsVoice(){const vs=TTS.getVoices().filter(v=>/^en/i.test(v.lang)&&!/female/i.test(v.name));if(!vs.length)return null;
+  const gb=cur==='eu',want=gb?/GB|United Kingdom/i:/US|United States/i;
+  for(const n of VOICE_PREF[gb?'gb':'us']){const m=vs.filter(v=>v.name.includes(n));if(m.length)return m.find(v=>want.test(v.lang+v.name))||m[0];}
+  return vs.find(v=>/\bmale/i.test(v.name))||vs[0];}
 if(TTS)TTS.getVoices();
 function radioVoice(text){if(!TTS)return radioSfx(text);const fx=RADIO[cur],t=AC.currentTime+.03,bus=radioBus(fx),est=.4+text.split(/\s+/).length*.34;
   const ck=AC.createOscillator(),ckg=AC.createGain();ck.type='square';ck.frequency.value=1800;ck.connect(ckg).connect(bus);env(ckg,t,.012,.5,.001,.004);ck.start(t);ck.stop(t+.03);
   const sq=noiseSrc(t,.14),sqf=filt('bandpass',2200,.6),sqg=AC.createGain();sq.connect(sqf).connect(sqg).connect(bus);env(sqg,t+.01,.13,.9,.004,.06);
-  const st=noiseSrc(t,12),stf=filt('bandpass',1700,.5),stg=AC.createGain();st.connect(stf).connect(stg).connect(bus);stg.gain.setValueAtTime(0,t);stg.gain.linearRampToValueAtTime(fx.hiss*4,t+.1);
+  const st=noiseSrc(t,12),stf=filt('bandpass',1700,.5),stg=AC.createGain();st.connect(stf).connect(stg).connect(bus);stg.gain.setValueAtTime(0,t);stg.gain.linearRampToValueAtTime(fx.hiss*1.4,t+.1);
   TTS.cancel();const u=new SpeechSynthesisUtterance(text),v=ttsVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang=cur==='eu'?'en-GB':'en-US';
-  u.rate=1.1;u.pitch=cur==='ru'?.65:.8;u.volume=.95;let done=false;
-  const end=()=>{if(done)return;done=true;const te=AC.currentTime+.02;stg.gain.cancelScheduledValues(te);stg.gain.setValueAtTime(fx.hiss*4,te);stg.gain.linearRampToValueAtTime(0,te+.05);try{st.stop(te+.3);}catch(e){}
+  u.rate=.96;u.pitch=cur==='ru'?.6:.72;u.volume=1;let done=false;
+  const end=()=>{if(done)return;done=true;const te=AC.currentTime+.02;stg.gain.cancelScheduledValues(te);stg.gain.setValueAtTime(fx.hiss*1.4,te);stg.gain.linearRampToValueAtTime(0,te+.05);try{st.stop(te+.3);}catch(e){}
     const tl=noiseSrc(te,.18),tf=filt('bandpass',2600,.5),tg=AC.createGain();tl.connect(tf).connect(tg).connect(bus);env(tg,te,.16,.8,.003,.12); // squelch tail + end beep
     if(fx.beep){const bp=AC.createOscillator(),bg=AC.createGain();bp.type='sine';bp.frequency.setValueAtTime(fx.beep,te+.17);if(fx.chirp)bp.frequency.linearRampToValueAtTime(fx.beep*1.6,te+.26);
       bp.connect(bg).connect(bus);env(bg,te+.17,.09,.5,.003,.02);bp.start(te+.17);bp.stop(te+.3);}};
