@@ -2767,6 +2767,10 @@ function layoutRow(list,gap){const w=list.map(m=>m.geometry.parameters.width),to
 // when: which game states show the button
 const xrBtns=[['Tutorial raid','tutorial',-14.8,2.6,-4.6,'menu ended'],['My base','base',-14.8,2.6,-.2,'menu ended'],['Full raid','full',-14.8,2.6,-.2,'menu ended'],['Main menu','menu',-14.8,2.6,4.2,'ended'],['Cancel raid','cancel',-14.8,2.6,0,'battle'],['Main menu','menu',-14.8,2.6,0,'battle']]
   .map(([label,m,x,y,z,when])=>{const p=canvasPlane(when==='battle'?2.6:3.8,when==='battle'?.82:1.2,380,120);btnRow.add(p);p.rotation.set(0,0,0);Object.assign(p.userData,{mode:m,label,when});return p;});
+// exit: always with the button row (just above its right end), on every screen while in mixed reality
+const xrExit=canvasPlane(2.7,.85,380,120);btnRow.add(xrExit);xrExit.rotation.set(0,0,0);xrExit.position.set(8.4,0,0);
+{const {ctx:x,t}=xrExit.userData;x.fillStyle='rgba(160,40,30,.78)';rrect(x,0,0,380,120,20);x.fill();x.strokeStyle='rgba(255,255,255,.55)';x.lineWidth=4;rrect(x,2,2,376,116,18);x.stroke();
+  x.fillStyle='#fff';x.font='700 42px sans-serif';x.textAlign='center';x.fillText('Exit MR',190,76);x.textAlign='left';t.needsUpdate=true;}
 const xrBanner=canvasPlane(15,6.3,1024,430);xrBanner.position.set(0,G+10,.5);xrBanner.visible=false;xrBanner.renderOrder=11;
 // promotion card, laid out like the phone one: the shoulder board pops in over a gold glow, then PROMOTED and the new rank
 const xrPromo=canvasPlane(9,7.2,640,512);xrPromo.position.set(0,G+10,.5);xrPromo.visible=false;xrPromo.renderOrder=11;
@@ -2820,7 +2824,8 @@ function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
     const label=u.mode==='cancel'?(cancelArmed()?'Cancel?':'Cancel raid'):state==='ended'&&u.mode==='full'?(mode==='tutorial'?'Full raid':'Raid again'):u.label,hot=u.mode==='full'||(u.mode==='cancel'&&cancelArmed());
     const {ctx:x,t}=u;x.clearRect(0,0,380,120);x.fillStyle=hot?'rgba(255,210,122,.95)':'rgba(30,38,26,.92)';rrect(x,0,0,380,120,20);x.fill();
     x.fillStyle=hot?'#2a1e05':'#efe9da';x.font='700 42px sans-serif';x.textAlign='center';x.fillText(label,190,76);x.textAlign='left';t.needsUpdate=true;});
-  layoutRow(xrCards.filter(m=>m.visible),.22);layoutRow(xrBtns.filter(m=>m.visible),.4);
+  layoutRow(xrCards.filter(m=>m.visible),.22);{const vb=xrBtns.filter(m=>m.visible);layoutRow(vb,.4);xrExit.visible=xrMode; // exit sits just above the right end of the row
+    xrExit.position.set(vb.length?Math.max(...vb.map(m=>m.position.x+m.geometry.parameters.width/2))-1.35:0,vb.length?1.1:0,0);}
   xrPromo.visible=promoOn();xrBanner.visible=state==='ended'&&!!result&&!xrPromo.visible;if(xrBanner.visible)drawBanner();if(xrPromo.visible)drawPromo();}
 const isHand=c=>!!(c.userData.src&&c.userData.src.hand);
 const ctrls=[0,1].map(i=>{const c=rr.xr.getController(i);stage.add(c);
@@ -2872,7 +2877,8 @@ function xrFrame(dt){
   reticle.visible=false;if(armed==null)return;for(const c of ctrls){if(!c.userData.src)continue;ctrlRay(c);const h=ray.intersectObject(ground,false)[0];if(!h)continue;
     const p=scene.worldToLocal(h.point.clone());const ok=cards[armed].k==='strike'||!!snapDeploy(p.x,p.z);const s=cards[armed].k==='strike'?[p.x,p.z]:(snapDeploy(p.x,p.z)||[p.x,p.z]);
     reticle.position.set(s[0],groundY(s[0],s[1])+.05,s[1]);reticle.material.color.setHex(ok?0x6fd36a:0xe0503c);reticle.visible=true;break;}}
-function xrSelect(c){if(xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersectObjects([...xrCards,...xrBtns].filter(m=>m.visible),false)[0];
+function xrSelect(c){ctrlRay(c);if(xrExit.visible&&ray.intersectObject(xrExit,false).length){haptic();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});return;}
+  if(xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersectObjects([...xrCards,...xrBtns].filter(m=>m.visible),false)[0];
   if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='base'){haptic();enterBase();return;}if(u.mode==='menu'){haptic();goMenu();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});}
     else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();startBattle(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
