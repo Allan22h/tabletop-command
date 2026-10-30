@@ -1208,7 +1208,7 @@ function drawLabel(b){const o=b.own,L=b.label;if(!o||!L)return;const left=o.unti
   if(txt===L.key)return;L.key=txt;const x=L.c.getContext('2d');x.clearRect(0,0,320,96);x.font='700 40px sans-serif';const w=Math.min(310,x.measureText(txt).width+34);
   x.fillStyle=o.until?'rgba(60,40,8,.88)':'rgba(10,14,12,.8)';rrect(x,160-w/2,14,w,64,20);x.fill();x.strokeStyle=o.until?'#ffd27a':'rgba(255,255,255,.3)';x.lineWidth=3;x.stroke();
   x.fillStyle=o.until?'#ffd27a':'#efe9da';x.textAlign='center';x.fillText(txt,160,60);L.t.needsUpdate=true;}
-function enterBase(keepCam){if(state!=='base')drum('base');menuMusic(false);stopDefense();endXrMove();clearBattle();mode='mine';state='base';sel=null;drag=null;rowKey='';if(!keepCam){placing=null;rowO=null;moving=false;}
+function enterBase(keepCam){if(state!=='base')drum('base');menuMusic(true);stopDefense();endXrMove();clearBattle();mode='mine';state='base';sel=null;drag=null;rowKey='';if(!keepCam){placing=null;rowO=null;moving=false;}
   if(!BASE.obsV){BASE.obsV=1;BASE.obsT=Date.now();spawnObs(6);saveBase();}
   if(!keepCam&&loginCheck())setTimeout(()=>{if(state==='base')showDaily(true);},900);buildLayout('mine');ents.forEach(e=>{if(e.b)label(e);});
   selRing=new T.Mesh(new T.RingGeometry(.9,1,40),new T.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:.85,depthWrite:false}));selRing.rotation.x=-Math.PI/2;selRing.visible=false;battle.add(selRing);
@@ -1412,7 +1412,7 @@ function attackPlan(att,h,rng){const c=cmpFor(h),pool=['rifle','rifle','truck','
 function defenseLoot(snap,res,h){const holders={g:[],f:[],m:[],i:[]};snap.forEach((o,ix)=>{const st=BK[o.k].store;if(st&&!o.fresh)holders[st].push([ix,capFor(st,o.lv)]);if(o.k==='hq')['g','f','m'].forEach(r=>holders[r].push([ix,5000*h]));});
   const out={};RES.forEach(r=>{const tot=holders[r].reduce((s,x)=>s+x[1],0);holders[r].forEach(([ix,c])=>{(out[ix]=out[ix]||{})[r]=Math.floor(res[r]*.2*c/Math.max(1,tot));});});return out;}
 function buildDefense(){const L=defendSim.L,lm=defenseLoot(L.snap,L.res,L.myHq);L.snap.forEach((o,ix)=>{if(BK[o.k].item)placeItem(o.k,o.x,o.z,true,L.myHq,wallYaw(o,L.snap),o.lv);else placeB(o.k,o.x,o.z,o.lv,lm[ix]||{},o.fresh);});}
-function setupDefense(L,watch){defendSim={L,idx:0,done:false,watch,acc:0,saved:{cur}};cur=L.fac;attOverride=1+.048*(L.hq-1);simRng=mulberry(L.seed);sfxQ=[];
+function setupDefense(L,watch){menuMusic(false);defendSim={L,idx:0,done:false,watch,acc:0,saved:{cur}};cur=L.fac;attOverride=1+.048*(L.hq-1);simRng=mulberry(L.seed);sfxQ=[];
   clearBattle();mode='defend';withSim(()=>buildLayout('defend'));cards=[];armed=null;loot={g:0,f:0,m:0,i:0};timeLeft=180;battleT=0;endT=0;state='battle';tut=null;result=null;}
 function defendStep(dt){const D=defendSim;withSim(()=>{while(D.idx<D.L.plan.length&&D.L.plan[D.idx].t<=battleT){const u=D.L.plan[D.idx++],sp=snapDeploy(u.x,u.z);if(!sp)continue;
       if(u.k==='rifle')for(let i=0;i<3;i++){const a=i/3*6.28+.4;spawnUnit('rifle',sp[0]+Math.cos(a)*.45,sp[1]+Math.sin(a)*.45,'att');}else spawnUnit(u.k,sp[0],sp[1],'att');}
@@ -2550,8 +2550,8 @@ function snareHit(t,v){const n=noiseSrc(t,.25),hp=AC.createBiquadFilter(),g=AC.c
 const DRUM={raid:[...Array.from({length:14},(_,k)=>[k*.04,.22+k*.03]),[.62,1,1],[.86,.9,1]], // roll building into two accents
   menu:[[0,.75,1],[.16,.5]],base:[[0,.5],[.11,.45],[.22,.85,1]]};
 function drum(k){if(!AC||!soundOn)return;const t0=AC.currentTime+.02;DRUM[k].forEach(([dt,v,fl])=>{if(fl)snareHit(t0+dt-.028,v*.35);snareHit(t0+dt,v);});}
-// menu music: "Night march", an original drum loop synthesized live. Muffled drums, ticking rim, brushed snare,
-// a low pulsing drone, and a radar sweep with two pings once per round. Plays on the menu while Sound is on.
+// menu and base music: "Night march", an original drum loop synthesized live. Muffled drums, ticking rim, brushed snare,
+// a low pulsing drone, and a radar sweep with two pings once per round. Plays on the menu and in your base, stops for raids and defenses.
 let mmBus=null,mmLoop=0;
 function mmDrum(t,v,muffle){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(muffle?80:105,t);o.frequency.exponentialRampToValueAtTime(muffle?45:52,t+.35);
   g.gain.setValueAtTime(.9*v,t);g.gain.exponentialRampToValueAtTime(.001,t+(muffle?.35:.6));o.connect(g).connect(mmBus);o.start(t);o.stop(t+.7);
@@ -2889,7 +2889,7 @@ $('cancelBtn').onclick=()=>{if(defendSim&&defendSim.watch){defendSim.speed=defen
 // so the first one starts it (and any later one wakes it if the device paused it); the menu music follows
 function syncSnd(){}
 soundOn=true;
-function wakeAudio(){if(!AC){try{audioInit();}catch(_){return;}}if(AC.state!=='running')AC.resume();setTimeout(()=>{if(state==='menu')menuMusic(true);},60);}
+function wakeAudio(){if(!AC){try{audioInit();}catch(_){return;}}if(AC.state!=='running')AC.resume();setTimeout(()=>{if(state==='menu'||state==='base')menuMusic(true);},60);}
 ['pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,wakeAudio,{capture:true,passive:true}));
 // try right away: where the browser allows sound without a tap (a site you play often, the installed app, some headsets) the menu music starts on load;
 // elsewhere the context stays paused with the first bars queued, and the first tap releases them
