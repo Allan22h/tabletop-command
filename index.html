@@ -106,6 +106,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .bpanel .tabs .tbtn{font-size:13px;padding:7px 12px}.bpanel .tabs .tbtn.on{background:var(--gold);color:#2a1e05;border-color:var(--gold)}
 .bpanel .army{display:grid;gap:6px}.bpanel .arow{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;background:rgba(255,255,255,.04);border-radius:8px;padding:7px 9px}.bpanel .arow .tbtn{grid-row:span 2;grid-column:2}
 @media (min-width:900px){.bpanel{right:auto;width:400px;margin:0;top:70px;bottom:12px;max-height:none}}
+/* phone: the base menu is a bottom sheet; closed it shows only the title and tabs so the base stays in view */
+.bpanel .grab{display:none}
+@media (max-width:899px){#app:not(.xr) .bpanel{left:0;right:0;bottom:0;max-width:none;border-radius:18px 18px 0 0;border-bottom:0;padding-top:4px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:44vh;transition:max-height .22s ease}
+  #app:not(.xr) .bpanel .grab{display:block;justify-self:center;width:64px;height:22px;margin:0 0 -4px;padding:0;border:0;background:none;cursor:grab;touch-action:none;position:relative}
+  #app:not(.xr) .bpanel .grab::after{content:"";position:absolute;left:14px;right:14px;top:8px;height:5px;border-radius:3px;background:rgba(255,255,255,.35)}
+  #app:not(.xr) .bpanel.peek{max-height:calc(var(--peek,106px) + env(safe-area-inset-bottom,0px));overflow:hidden}}
 .card.locked{opacity:.5}.card.locked .cc{font-size:15px;color:var(--muted)}
 .lvup{font:700 15px/1.2 var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}.lvup.new{color:var(--ok)}
 .tbtn{background:transparent;border:1px solid var(--edge);border-radius:8px;padding:5px 9px;font-size:12px;color:var(--ink)}.tbtn:hover{border-color:var(--gold)}
@@ -1019,8 +1025,10 @@ function autoPlace(list,h){list.forEach(o=>{if(o.x!=null)return;const [ax,az]=an
 function storedFor(k,lv,h){if(k==='hq')return {g:5000*h*rand(.5,.9),f:5000*h*rand(.5,.9),m:5000*h*rand(.5,.9),i:500*h*rand(.4,.8)};const st=BK[k].store;return st?{[st]:capFor(st,lv)*rand(.55,.9)}:{};}
 // a raid can take at most 20% of what the defender owns
 function lootFor(k,lv,h){const s=storedFor(k,lv,h),o={};for(const r in s)o[r]=Math.round(s[r]*.2/10)*10;return o;}
+// health grows with level: +10% a level, the HQ +20% (it also gets sandbags, plating and guns as it grows)
+const hpOf=(k,lv)=>Math.round(BK[k].hp*(1+(k==='hq'?.2:.1)*(lv-1)));
 function placeB(k,x,z,lv,loot,site){const d=BK[k];
-  return addB(site?'site':k,x,z,{r:d.r,hp:Math.round(d.hp*(1+.1*(lv-1))),h:d.h,hq:k==='hq',loot,def:site?null:d.def,lv,garrison:site?null:k==='barracks'?'soldiers':k==='motor'?'tanks':k==='hangar'?'drones':k==='comms'?'reinforce':null});}
+  return addB(site?'site':k,x,z,{r:d.r,hp:hpOf(k,lv),h:d.h,hq:k==='hq',loot,def:site?null:d.def,lv,garrison:site?null:k==='barracks'?'soldiers':k==='motor'?'tanks':k==='hangar'?'drones':k==='comms'?'reinforce':null});}
 let teethL=[],wireL=[],mines=[],itemEnts=[];
 const mineMat=new T.MeshStandardMaterial({color:0x3a3a30,roughness:.8,transparent:true,opacity:.35}),mineShow=new T.MeshStandardMaterial({color:0x2c2c26,roughness:.6});
 const wireGeo=new T.TorusGeometry(.075,.005,3,10),teethGeo=new T.ConeGeometry(.12,.22,4),bagGeo=(()=>{const g=new T.SphereGeometry(.07,8,6);g.scale(1,.5,.65);return g;})();
@@ -1097,14 +1105,14 @@ function baseHud(){$('tm').textContent='My base';const sl=shieldLeft();$('pct').
   $('lg').textContent=fmtN(BASE.res.g);$('lf').textContent=fmtN(BASE.res.f);$('lm').textContent=fmtN(BASE.res.m);$('li').textContent=fmtN(BASE.res.i);}
 function ringOn(e,ok){selRing.scale.setScalar(e.r+.15);const p=e.g.position;selRing.position.set(p.x,G+.03,p.z);selRing.material.color.setHex(ok===false?0xe0503c:ok?0x6fd36a:0xffd27a);selRing.visible=true;}
 function entAt(x,z){let best=null,bd=1e9;for(const e of ents){const p=e.g.position,d=Math.hypot(p.x-x,p.z-z)-e.r;if(d<.2&&d<bd){bd=d;best=e;}}return best;}
-function selectAt(x,z){const e=entAt(x,z);sel=e;if(e)ringOn(e);else if(selRing)selRing.visible=false;renderBasePanel();haptic();}
+function selectAt(x,z){const e=entAt(x,z);sel=e;sheet(!!e);if(e)ringOn(e);else if(selRing)selRing.visible=false;renderBasePanel();haptic();}
 const costTxt=c=>RES.filter(r=>c[r]).map(r=>`<span class="cost"><i class="dot ${r}"></i>${fmtN(c[r])}</span>`).join(' ');
 const canPay=c=>RES.every(r=>BASE.res[r]>=(c[r]||0));
 function pay(c){RES.forEach(r=>BASE.res[r]-=(c[r]||0));}
 function startUpgrade(o){const to=o.lv+1,c=costOf(o.k,to);if(!canPay(c)||busy()>=BUILDERS)return;pay(c);o.to=to;o.until=Date.now()+timeOf(o.k,to)*1000;saveBase();refreshBase();}
 // new buildings take a builder and time; barriers and obstacles are placed at once, then dragged where you want them
 // barriers and obstacles: choose one, then tap the map where it goes (press and drag to lay a line of barriers)
-function setPlacing(k){placing=placing===k?null:k;if(placing)prompt(k==='barrier'?'Tap the map to place barriers. Press and drag to lay a line.':`Tap the map to place: ${BK[k].name.toLowerCase()}.`,3);renderBasePanel();}
+function setPlacing(k){placing=placing===k?null:k;if(placing)sheet(false);if(placing)prompt(k==='barrier'?'Tap the map to place barriers. Press and drag to lay a line.':`Tap the map to place: ${BK[k].name.toLowerCase()}.`,3);renderBasePanel();}
 function placeAt(k,x,z,quiet){const h=baseHq(),have=BASE.blds.filter(b=>b.k===k).length,c=costOf(k,1);
   if(have>=LIMIT[k](h)){placing=null;renderBasePanel();if(!quiet)prompt('None left at this HQ level.',2);return null;}
   if(!canPay(c)){placing=null;renderBasePanel();if(!quiet)prompt('Not enough resources.',2);return null;}
@@ -1143,7 +1151,10 @@ function initDrag(){const groundAt=e=>{const r=canvasEl.getBoundingClientRect(),
   const up=e=>{if(!drag||e.pointerId!==drag.pid)return;const d=drag;drag=null;orb.lock=false;
     if(d.paint){if(d.paint!=='barrier'&&Math.hypot(e.clientX-d.sx,e.clientY-d.sy)<8){const p=groundAt(e);if(p)placeAt(d.paint,p.x,p.z);}saveBase();renderBasePanel();baseHud();return;}
     if(d.e&&d.moved){if(d.ok&&d.x!=null){d.e.o.x=d.x;d.e.o.z=d.z;if(d.y!=null)d.e.o.y=d.y;if(d.e.o.k==='barrier')settleWalls(d.e.o,BASE.blds);saveBase();sel=d.e;refreshBase(true);}else{prompt('No room there.',1.5);refreshBase(true);}return;}
-    if(!d.moved&&Math.hypot(e.clientX-d.sx,e.clientY-d.sy)<8){const p=groundAt(e);if(p)selectAt(p.x,p.z);}};
+    if(!d.moved&&Math.hypot(e.clientX-d.sx,e.clientY-d.sy)<8){const hit=pickAt(e);if(hit)return selectAt(hit.g.position.x,hit.g.position.z);const p=groundAt(e);if(p)selectAt(p.x,p.z);}};
+  // a tap on a building's roof or walls picks it, not the ground behind it
+  const pickAt=e=>{groundAt(e);const gs=ents.filter(n=>n.o&&n.g).map(n=>n.g),h=ray.intersectObjects(gs,true).find(h=>!h.object.isSprite);if(!h)return null;
+    for(let o=h.object;o;o=o.parent){const n=ents.find(n=>n.g===o&&n.o);if(n)return n;}return null;};
   canvasEl.addEventListener('pointerup',up);canvasEl.addEventListener('pointercancel',e=>{if(drag&&drag.paint){saveBase();renderBasePanel();}else if(drag&&drag.e&&drag.moved)refreshBase(true);drag=null;orb.lock=false;});}
 // production, finished construction, training and research, checked a few times a second
 function baseTick(dt){baseAcc+=dt;if(baseAcc<.25)return;baseAcc=0;const now=Date.now();let changed=false,hqUp=false,msg='';
@@ -1212,14 +1223,21 @@ function defendTick(dt){const D=defendSim;if(!D||!D.watch||D.done)return;D.acc+=
 function endReplay(){stopDefense();prompt('',0);$('enemyHq').hidden=true;$('menuBtn').textContent='Menu';$('cancelBtn').textContent='Cancel raid';enterBase();baseTab='reports';renderBasePanel();}
 
 /* ---------- the panel ---------- */
-function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return;const hq=baseHq(),free=BUILDERS-busy(),sl=shieldLeft();let h='';
+// phone bottom sheet: open shows the menu, closed leaves the title and tabs at the bottom edge. Tap or drag the grab bar;
+// tapping a building opens it, tapping open ground or starting to place something closes it
+let sheetOpen=false;
+function sheet(on){sheetOpen=on;const el=$('basePanel');if(el){el.classList.toggle('peek',!on);if(on)el.scrollTop=0;}}
+function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return;const hq=baseHq(),free=BUILDERS-busy(),sl=shieldLeft();let h='<button type="button" class="grab" data-act="sheet" aria-label="Show or hide the menu"></button>';
   h+=`<div class="row"><h3>My base</h3><span class="muted">HQ ${hq} of ${HQ_MAX} · builders ${free}/${BUILDERS} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
   if(baseTab==='base')h+=panelBase(hq,free);else if(baseTab==='army')h+=panelArmy();else if(baseTab==='research')h+=panelResearch();else h+=panelReports();
   h+=`<div class="row"><button type="button" class="act" data-act="raid">Raid · enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)}</button><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
-  el.innerHTML=h;}
+  el.innerHTML=h;fitPeek(el);}
+// the closed sheet ends just under the tabs, however the title above them wraps
+function fitPeek(el){const t=el.querySelector('.tabs');if(t)el.style.setProperty('--peek',(t.offsetTop+t.offsetHeight+10)+'px');}
 function panelBase(hq,free){let h='';
   if(sel&&sel.o){const o=sel.o,d=BK[o.k],max=o.k==='hq'?HQ_MAX:hq;h+=`<div class="bsel"><b>${d.name}${d.item?'':' · Lv '+o.lv}</b><span class="muted">Drag it to move it.</span>`;
+    if(!d.item)h+=`<span class="muted">Health ${fmtN(hpOf(o.k,o.lv))}${o.lv<max?' · '+fmtN(hpOf(o.k,o.lv+1))+' at Lv '+(o.lv+1):''}</span>`;
     if(d.desc)h+=`<span class="muted">${d.desc}</span>`;
     if(d.store)h+=`<span class="muted">Holds up to ${fmtN(capFor(d.store,o.lv))} ${RESN[d.store].toLowerCase()} · makes ${fmtN(PROD[d.store]*o.lv)} per hour</span>`;
     if(d.item)h+=`<div class="row"><button type="button" class="tbtn" data-act="remove">Remove</button></div>`;
@@ -1262,12 +1280,16 @@ function panelReports(){const sl=shieldLeft();let h=`<span class="muted">${sl>0?
   BASE.log.forEach((l,ix)=>{const ago=(Date.now()-l.t)/1000;h+=`<div class="bsel"><b>${l.by} (HQ ${l.hq}) · ${l.pct}% destroyed · ${'★'.repeat(l.stars)}${'☆'.repeat(3-l.stars)}</b><span class="muted">${fmtT(ago)} ago · lost ${costTxt(l.lost)||'nothing'}${l.sh?' · shield '+l.sh+'h':''}</span>${l.plan?`<div class="row"><button type="button" class="tbtn" data-replay="${ix}">Watch replay</button></div>`:''}</div>`;});
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="attack">Simulate an enemy attack</button><button type="button" class="tbtn" data-act="noshield">Remove shield</button></div>`;
   return h;}
-function initBase(){const el=$('basePanel');makeResIcons();
+function initBase(){const el=$('basePanel');makeResIcons();sheet(false);
+  el.addEventListener('pointerdown',e=>{if(!e.target.closest('.grab'))return;const y0=e.clientY;el._dragged=false;
+    const mv=ev=>{const dy=ev.clientY-y0;if(Math.abs(dy)>24){el._dragged=true;sheet(dy<0);}},up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);};
+    addEventListener('pointermove',mv);addEventListener('pointerup',up);});
   // sounds inside a seeded battle are held and played after the step, so they never draw from the battle's random numbers
   const _boom=boom;boom=v=>{if(simRng&&Math.random===simRng){sfxQ.push([_boom,v]);return;}_boom(v);};
   const _rs=radioSfx;radioSfx=v=>{if(simRng&&Math.random===simRng){sfxQ.push([_rs,v]);return 2.6;}return _rs(v);};
   el.onclick=e=>{const t=e.target.closest('button');if(!t||t.disabled)return;const a=t.dataset.act;
-    if(t.dataset.tab){baseTab=t.dataset.tab;renderBasePanel();return;}
+    if(a==='sheet'){if(!el._dragged)sheet(!sheetOpen);el._dragged=false;return;}
+    if(t.dataset.tab){baseTab=t.dataset.tab;sheet(true);renderBasePanel();return;}
     if(t.dataset.build)return startBuild(t.dataset.build,+t.dataset.n||1);
     if(t.dataset.train){const k=t.dataset.train,c=trainCost(k);if(!canPay(c)||armyUsed()+TR[k].sp>armyCap())return;pay(c);BASE.queue.push({k,c});saveBase();renderBasePanel();baseHud();return;}
     if(t.dataset.research){const k=t.dataset.research,to=techOf(k)+1,c=researchCost(k,to);if(!canPay(c)||BASE.research)return;pay(c);BASE.research={k,to,until:Date.now()+researchTime(to)*1000};saveBase();renderBasePanel();baseHud();return;}
@@ -1534,12 +1556,12 @@ function hqTent(root,L){const g=new T.Group();root.add(g);if(L===1)g.scale.setSc
 const BUILD={
   // HQ 1 and 2: command tents, small then full size. From HQ 3 the concrete bunker, and every level adds to it:
   // 3 one floor with slit windows, sandbags and a blast door; 4 a small second floor and a sandbag wall all round; 5 a command vehicle and a .50 cal;
-  // 6 the satellite dish and sandbags on the lower roof; 7 a camouflage net and camouflage paint; 8 the second floor grows to full size, with a second mast and sandbags;
-  // 9 armor plating and a second .50 cal; 10 a radar dome and razor wire; 11 a lookout tower and hedgehogs; 12 gold trim;
+  // 6 the satellite dish and sandbags on the lower roof; 7 a camouflage net; 8 the second floor grows to full size, with a second mast and sandbags;
+  // 9 armor plating and a second .50 cal; 10 a radar dome, razor wire and camouflage paint; 11 a lookout tower and hedgehogs; 12 gold trim;
   // 13 an anti-air gun on the roof; 14 floodlights on the corners; 15 a tall flagpole
   hq(g,b){const L=b.lv||1,rt=L>=4?1.05:.62,
       // roof height under a spot: the top floor where it covers the spot (small from HQ 4, full from HQ 8), else the lower roof
-      rf=(x,z)=>L>=8?rt:L>=4&&x>-.05&&x<.65&&Math.abs(z)<.5?rt:.62,cm=L>=7?camoWall:M.concrete;if(L<=2)return hqTent(g,L);mesh(box(1.74,.06,2.24),M.dark,0,.03,0,g);mesh(box(1.7,.56,2.2),cm,0,.31,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.6,0,g);
+      rf=(x,z)=>L>=8?rt:L>=4&&x>-.05&&x<.65&&Math.abs(z)<.5?rt:.62,cm=L>=10?camoWall:M.concrete;if(L<=2)return hqTent(g,L);mesh(box(1.74,.06,2.24),M.dark,0,.03,0,g);mesh(box(1.7,.56,2.2),cm,0,.31,0,g);mesh(box(1.76,.05,2.26),M.dark,0,.6,0,g);
     for(let i=0;i<5;i++){mesh(box(.02,.05,.24),M.glass,-.86,.42,-.84+i*.42,g);}for(const z of[-1.11,1.11])for(let i=0;i<4;i++)mesh(box(.26,.05,.02),M.glass,-.55+i*.4,.42,z,g);
     for(let i=0;i<22;i++){const z=-1.05+i*.1;if(Math.abs(z)<.28)continue;for(let k=0;k<2;k++)mesh(box(.08,.06,.1),M.sandbag,-.9,.04+k*.06,z+(k?.05:0),g);}
     mesh(box(.04,.34,.3),M.metal,-.87,.17,0,g);mesh(box(.02,.04,.04),M.dark,-.9,.18,.1,g);
