@@ -241,6 +241,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app:not(.xr) .bpanel .muted{font-size:11px}#app:not(.xr) .bpanel .ico.lg{width:40px;height:40px}
   #app:not(.xr) .bpanel>.row:first-of-type .muted{white-space:normal}
   #app:has(#basePanel:not([hidden])) #card{left:calc(50% + min(120px,16vw))}}
+#xrTouch{position:fixed;inset:0;touch-action:none;background:transparent}#xrTouch[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -266,6 +267,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <button type="button" class="btn" id="perfBtn" aria-pressed="false" title="Show frame rate and draw calls">Stats</button>
       <div id="perf" hidden></div>
       <button type="button" class="btn xr" id="xrBtn" hidden aria-label="Enter mixed reality">Mixed Reality</button>
+      <div id="xrTouch" hidden></div>
     </div>
   </div>
   <div class="radio" id="radio" hidden aria-live="polite"><span class="ch" id="rch">CH 2 · Overlord net</span><span id="rtx"></span></div>
@@ -2528,7 +2530,7 @@ function startBattle(m){drum('raid');$('app').classList.add('raid');menuMusic(fa
   hqFlag();$('enemyHq').textContent='Enemy HQ '+enemyHq()+(wx!=='day'?' · '+WX[wx].n:'');$('enemyHq').hidden=false;orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);
   leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=false;$('cancelBtn').textContent='Cancel raid';$('cancelBtn').hidden=false;$('tray').hidden=false;orb.target.set(1.5,0,1.5);fitRaidCam();
   if(tut){radio('Commander, enemy outpost ahead. Deploy armor.',true);armCard(0);prompt(xrMode?'Point at the tank card and pinch, then point at open ground and pinch.':'Tap the tank card, then tap open ground outside the red zone.');}
-  else{radio(`All units, ${CALL[cur]}. ${WX_RADIO[wx]?WX_RADIO[wx]+' ':''}Begin the assault.`,true);prompt(xrMode?'Pinch a card, then pinch the ground to deploy. Squeeze to move the board, twist it or flick the stick to turn it.':'Pick a card, then tap the map to deploy. Drag to rotate, pinch to zoom.',5);}
+  else{radio(`All units, ${CALL[cur]}. ${WX_RADIO[wx]?WX_RADIO[wx]+' ':''}Begin the assault.`,true);prompt(xrMode?'Pinch a card, then pinch the ground to deploy. Squeeze to move the board. Right stick turns and zooms, left stick travels across the field.':'Pick a card, then tap the map to deploy. Drag to rotate, pinch to zoom.',5);}
   xrDirty=true;}
 function tutEvent(ev,k){if(!tut)return;
   if(tut.step===0&&ev==='deploy'){tut.step=1;tut.t=0;prompt('Your tanks pick targets and attack on their own. Watch.',4);}
@@ -2874,7 +2876,7 @@ const ctrls=[0,1].map(i=>{const c=rr.xr.getController(i);stage.add(c);
   // hands have no grip button: pinching with both hands at once grabs the board (and that pinch does not deploy)
   c.addEventListener('selectstart',()=>{c.userData.pinch=true;if(state==='base')xpDragStart(c);if(ctrls.every(o=>o.userData.pinch&&isHand(o))){startGrab2(true);ctrls.forEach(o=>o.userData.skip=true);}});
   c.addEventListener('selectend',()=>{c.userData.pinch=false;xpDragEnd(c);if(grab2&&grab2.hand)grab2=null;});
-  c.addEventListener('select',()=>{if(c.userData.skip){c.userData.skip=false;return;}xrSelect(c);});
+  c.addEventListener('select',()=>{if(c.userData.skip){c.userData.skip=false;return;}if(performance.now()-xtGestT<400)return;xrSelect(c);});
   c.addEventListener('squeezestart',()=>{c.userData.sq=true;if(ctrls.every(o=>o.userData.sq)){grab=null;startGrab2(false);}else startGrab(c);});
   c.addEventListener('squeezeend',()=>{c.userData.sq=false;if(grab2&&!grab2.hand){grab2=null;const o=ctrls.find(o=>o.userData.sq);if(o)startGrab(o);}else if(grab&&grab.c===c)grab=null;});return c;});
 function haptic(){ctrls.forEach(c=>{const s=c.userData.src;try{const h=s&&s.gamepad&&s.gamepad.hapticActuators&&s.gamepad.hapticActuators[0];if(h)h.pulse(.4,35);}catch(_){}});}
@@ -2887,17 +2889,32 @@ function wrap(a){return Math.atan2(Math.sin(a),Math.cos(a));}
 function startGrab(c){grab={c,p0:c.position.clone(),yaw0:yawOf(c),pos0:scene.position.clone(),rot0:scene.rotation.y};turnLeft=0;}
 function startGrab2(hand){const [a,b]=ctrls.map(o=>o.position);grab2={hand,mid0:a.clone().add(b).multiplyScalar(.5),ang0:Math.atan2(b.x-a.x,b.z-a.z),d0:Math.max(.05,a.distanceTo(b)),
   pos0:scene.position.clone(),rot0:scene.rotation.y,s0:scene.scale.x};grab=null;turnLeft=0;haptic();}
+// zoom, turn and slide the board about a point in the room (the ground point you look at or touch), so that point stays put
+const XS_MIN=XS*.5,XS_MAX=XS*5;
+function scaleBoardAt(p,k){const s=clamp(scene.scale.x*k,XS_MIN,XS_MAX);k=s/scene.scale.x;if(Math.abs(k-1)<1e-6)return;
+  scene.position.sub(p).multiplyScalar(k).add(p);scene.scale.setScalar(s);setShadow(s);}
+function turnBoardAt(p,a){scene.position.copy(rotY(scene.position.clone().sub(p),a).add(p));scene.rotation.y+=a;}
+const boardY=()=>scene.position.y+G*scene.scale.x; // room height of the board's ground
+const headCam=()=>rr.xr.isPresenting?rr.xr.getCamera(cam):cam;
+function gazePoint(){const c=headCam();_o.setFromMatrixPosition(c.matrixWorld);_d.set(0,0,-1).transformDirection(c.matrixWorld);
+  const y=boardY();if(_d.y<-.05){const t=(y-_o.y)/_d.y;if(t>0&&t<20)return _o.clone().addScaledVector(_d,t);}scene.updateMatrixWorld();return scene.localToWorld(PIV.clone());}
 function turnBoard(a){scene.updateMatrixWorld();const p=scene.localToWorld(PIV.clone());scene.position.copy(rotY(scene.position.clone().sub(p),a).add(p));scene.rotation.y+=a;}
 const sticks=[0,0];
 function xrFrame(dt){
   if(grab2){const [a,b]=ctrls.map(o=>o.position),mid=a.clone().add(b).multiplyScalar(.5),d=wrap(Math.atan2(b.x-a.x,b.z-a.z)-grab2.ang0);
-    const s=clamp(grab2.s0*a.distanceTo(b)/grab2.d0,XS*.5,XS*2.5),k=s/grab2.s0;
+    const s=clamp(grab2.s0*a.distanceTo(b)/grab2.d0,XS_MIN,XS_MAX),k=s/grab2.s0;
     const off=rotY(grab2.pos0.clone().sub(grab2.mid0),d).multiplyScalar(k);scene.position.set(mid.x+off.x,grab2.pos0.y+G*(grab2.s0-s)+(mid.y-grab2.mid0.y),mid.z+off.z);
     scene.rotation.y=grab2.rot0+d;scene.scale.setScalar(s);setShadow(s);}
   else if(grab){const d=wrap(yawOf(grab.c)-grab.yaw0);scene.rotation.y=grab.rot0+d;scene.position.copy(grab.c.position).add(rotY(grab.pos0.clone().sub(grab.p0),d));}
-  // thumbstick left/right: snap turn 45 degrees, eased over a quarter second
-  ctrls.forEach((c,i)=>{const gp=c.userData.src&&c.userData.src.gamepad;if(!gp)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0);
-    if(!sticks[i]&&Math.abs(ax)>.75){sticks[i]=1;turnLeft+=ax>0?-Math.PI/4:Math.PI/4;haptic();}else if(Math.abs(ax)<.3)sticks[i]=0;});
+  // right stick: left/right snap-turns 45 degrees (eased over a quarter second), forward/back zooms in and out about where you look.
+  // left stick slides the board under you, so you can travel across the field. Pointing at the base menu, a stick scrolls the menu instead
+  ctrls.forEach((c,i)=>{const src=c.userData.src,gp=src&&src.gamepad;if(!gp||grab||grab2)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0),ay=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
+    if(state==='base'&&xrPanel&&xrPanel.visible&&xpPoint(c))return;
+    if(src.handedness==='left'){const m=Math.hypot(ax,ay);if(m<.2)return;const h=headCam();_d.set(0,0,-1).transformDirection(h.matrixWorld);_d.y=0;
+      if(_d.lengthSq()<1e-4)return;_d.normalize();const v=.45*Math.sqrt(scene.scale.x/XS)*dt*Math.min(1,(m-.2)/.7)/m; // metres a second, a little faster when zoomed in
+      scene.position.x+=(_d.x*ay+_d.z*ax)*v;scene.position.z+=(_d.z*ay-_d.x*ax)*v;return;}
+    if(!sticks[i]&&Math.abs(ax)>.75){sticks[i]=1;turnLeft+=ax>0?-Math.PI/4:Math.PI/4;haptic();}else if(Math.abs(ax)<.3)sticks[i]=0;
+    if(Math.abs(ay)>.25&&Math.abs(ay)>Math.abs(ax))scaleBoardAt(gazePoint(),Math.exp(-ay*dt*.9));});
   if(turnLeft&&!grab&&!grab2){const st=Math.sign(turnLeft)*Math.min(Math.abs(turnLeft),dt*Math.PI);turnLeft-=st;turnBoard(st);}
   // bump strength is measured against surface size, so a board shrunk onto a table needs it shrunk too, or the ground looks embossed
   M.terrain.bumpScale=TERRAIN_BUMP*scene.scale.x;
@@ -2923,13 +2940,30 @@ function xrSelect(c){ctrlRay(c);if(xrExit.visible&&ray.intersectObject(xrExit,fa
     else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();begin(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
 function setShadow(k){Object.assign(sun.shadow.camera,{left:-(16+MAPE)*k,right:(16+MAPE)*k,top:(15+MAPE)*k,bottom:-(15+MAPE)*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
-async function enterXR(){try{const s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['local-floor'],optionalFeatures:['hand-tracking']});
+let xtGestT=-1e9,xt=null;
+const xtEl=$('xrTouch'),xtPts=e=>[...e.touches].slice(0,2).map(t=>({x:t.clientX,y:t.clientY}));
+// screen point to the board's ground, through the phone's camera view
+function screenGround(x,y){const v=rr.xr.getCamera(cam).cameras[0];if(!v)return null;const ip=new T.Matrix4().copy(v.projectionMatrix).invert();
+  _o.setFromMatrixPosition(v.matrixWorld);_d.set(x/innerWidth*2-1,1-y/innerHeight*2,.5).applyMatrix4(ip).applyMatrix4(v.matrixWorld).sub(_o).normalize();
+  if(_d.y>-.02)return null;const t=(boardY()-_o.y)/_d.y;return t>0&&t<30?_o.clone().addScaledVector(_d,t):null;}
+function xtGest(a,b){const mid=p=>p.length>1?{x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2}:p[0],m0=mid(a),m1=mid(b),p0=screenGround(m0.x,m0.y),p1=screenGround(m1.x,m1.y);
+  if(p0&&p1){scene.position.x+=p1.x-p0.x;scene.position.z+=p1.z-p0.z;}
+  if(a.length>1&&b.length>1&&p1){const d0=Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y),d1=Math.hypot(b[1].x-b[0].x,b[1].y-b[0].y);
+    if(d0>10)scaleBoardAt(p1,d1/d0);turnBoardAt(p1,-wrap(Math.atan2(b[1].y-b[0].y,b[1].x-b[0].x)-Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)));}}
+xtEl.addEventListener('touchstart',e=>{e.preventDefault();const p=xtPts(e);xt={p,s:p[0],moved:p.length>1};if(xt.moved)xtGestT=performance.now();},{passive:false});
+xtEl.addEventListener('touchmove',e=>{e.preventDefault();if(!xt)return;const p=xtPts(e);if(p.length!==xt.p.length){xt.p=p;return;}
+  if(!xt.moved&&Math.hypot(p[0].x-xt.s.x,p[0].y-xt.s.y)>14)xt.moved=true;if(xt.moved){xtGestT=performance.now();xtGest(xt.p,p);}xt.p=p;},{passive:false});
+xtEl.addEventListener('touchend',e=>{const p=xtPts(e);if(xt&&xt.moved)xtGestT=performance.now();xt=p.length?{p,s:p[0],moved:true}:null;});
+async function enterXR(){try{const quest=/OculusBrowser|Quest/i.test(navigator.userAgent),opt={requiredFeatures:['local-floor'],optionalFeatures:['hand-tracking']};
+    if(!quest){opt.optionalFeatures.push('dom-overlay');opt.domOverlay={root:xtEl};}
+    const s=await navigator.xr.requestSession('immersive-ar',opt);
     rr.xr.setReferenceSpaceType('local-floor');await rr.xr.setSession(s);xrMode=true;if(state==='base')renderBasePanel();stage.background=null;stage.fog=null;
     scene.scale.setScalar(XS);scene.rotation.y=Math.PI/2;scene.position.set(-2*XS,.74-G*XS,-.35-12*XS);setShadow(XS);xrUI.visible=true;xrDirty=true;uiYaw=null;turnLeft=0;
-    $('app').classList.add('xr');s.addEventListener('end',exitXR);}
+    $('app').classList.add('xr');s.addEventListener('end',exitXR);
+    if(s.domOverlayState){xtEl.hidden=false;setTimeout(()=>prompt('Drag to move the board, pinch to zoom, twist with two fingers to turn it.',5),600);}}
   catch(err){prompt('Mixed reality could not start here. Open this page in the Meta Quest browser from its own address.',5);}}
 function exitXR(){xrMode=false;if(state==='base')renderBasePanel();M.terrain.bumpScale=TERRAIN_BUMP;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);setWeather(wx);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
-  setShadow(1);xrUI.visible=false;reticle.visible=false;$('app').classList.remove('xr');}
+  setShadow(1);xrUI.visible=false;reticle.visible=false;$('app').classList.remove('xr');xtEl.hidden=true;xt=null;}
 if(navigator.xr&&navigator.xr.isSessionSupported){navigator.xr.isSessionSupported('immersive-ar').then(ok=>{if(ok)$('xrBtn').hidden=false;}).catch(()=>{});}
 $('xrBtn').onclick=enterXR;
 
