@@ -1033,7 +1033,7 @@ const BK={
   fuel:{name:'Fuel farm',r:.65,hp:1300,res:['g','m'],c:300,store:'f',zone:'in',desc:'Stores and slowly produces fuel.'},
   ammo:{name:'Munitions yard',r:.6,hp:1100,res:['g','f'],c:300,store:'m',zone:'in',desc:'Stores and slowly produces munitions.'},
   barracks:{name:'Barracks',r:.6,hp:1000,res:['g','f'],c:400,zone:'in',desc:'Trains infantry and mortar teams; each level adds army space. Soldiers rush out to defend.'},
-  motor:{name:'Motor pool',r:.6,hp:1100,res:['g','f'],c:500,zone:'in',desc:'Builds trucks, anti-tank vehicles and tanks; each level adds army space. Tanks roll out to defend.'},
+  motor:{name:'Motor pool',r:.6,hp:1100,res:['g','f'],c:500,zone:'in',desc:'Builds trucks, anti-tank vehicles and tanks; each level adds army space. Its best unlocked vehicles roll out to defend.'},
   mg:{name:'Guard tower',r:.3,hp:700,res:['g','m'],c:250,def:'mg',h:1.1,zone:'in',desc:'Gains weapons with level: twin guns, grenade launcher, missile pod, rotary cannon.'},
   mortarPit:{name:'Mortar pit',r:.4,hp:650,res:['g','m'],c:400,def:'mortar',zone:'in',desc:'Long range, hits groups. Fires two rounds from level 8.'},
   atgm:{name:'Anti-tank post',r:.35,hp:650,res:['f','m'],c:500,def:'atgm',zone:'in',desc:'Heavy damage to vehicles. Twin launcher from level 6.'},
@@ -2363,7 +2363,7 @@ function snapDeploy(x,z){if(validDeploy(x,z))return [x,z];for(let r=.3;r<=6;r+=.
 /* ---------- units ---------- */
 function spawnUnit(kind,x,z,side){const st=side==='att'?Object.assign({},STATS[kind],{hp:Math.round(STATS[kind].hp*(attOverride||techK(kind))),dmg:Math.round((STATS[kind].dmg||0)*(attOverride||techK(kind)))}):STATS[kind];let g,turret=null,tipX=.3,wheels=[],extra={};
   if(kind==='tank'||kind==='gtank'){const t=side==='def'?makeTank(M.enemy):tankFor(cur);g=t.g;turret=t.turret;tipX=t.tipX;wheels=t.wheels;}
-  else if(kind==='truck'||kind==='jlav'){const t=truckFor(cur,kind==='jlav');g=t.g;turret=t.turret;tipX=t.tipX;wheels=t.wheels;}
+  else if(kind==='truck'||kind==='jlav'){const t=truckFor(cur,kind==='jlav');g=t.g;if(side==='def')g.traverse(m=>{if(m.material===M.camo)m.material=M.enemy;});turret=t.turret;tipX=t.tipX;wheels=t.wheels;}
   else if(kind==='heli'){const h=heliFor(cur);g=h.g;extra={rot:h.rot,tr:h.tr};}
   else if(kind==='drone'){g=cur==='ru'?makeLancet():makeQuad();}
   else if(kind==='mortar'){g=makeMortarTeam(0,0).g;}
@@ -2475,12 +2475,19 @@ function separate(list){for(let i=0;i<list.length;i++){const a=list[i];if(!a.ali
   const dx=b.g.position.x-a.g.position.x,dz=b.g.position.z-a.g.position.z,d=Math.hypot(dx,dz),m=(a.wheels.length||b.wheels.length)?.5:.25;
   if(d<m&&d>1e-4){const k=(m-d)/2/d;a.g.position.x-=dx*k;a.g.position.z-=dz*k;b.g.position.x+=dx*k;b.g.position.z+=dz*k;}}}}
 
+// defenders follow the same unlocks as attackers. Your own base (attacks on it and their replays) follows your commander level;
+// a generated enemy camp follows its HQ: drones from HQ 2, light vehicles from 3, anti-armor vehicles from 6, tanks from 10
+const CAMP_UNLOCK={drone:2,truck:3,jlav:6,tank:10};
+function defUnlocked(k){if(mode==='defend')return unlockAll||unlockLv(k)<=levelFor(serviceXp,PLAYER_HQ).L;return mode!=='full'||raidHq>=CAMP_UNLOCK[k];}
+const garrisonVeh=()=>['tank','jlav','truck'].find(defUnlocked)||null;
+const VEH_RADIO={tank:'Enemy armor rolling out of the compound!',jlav:'Enemy anti-armor vehicles rolling out!',truck:'Enemy vehicles rolling out of the compound!'};
+function spawnVeh(v,x,z){spawnUnit(v==='tank'?'gtank':v,x,z,'def');}
 function updateDefenses(dt){for(const b of blds){if(!b.alive)continue;
     // the garrison comes out when attackers get close; drones launch from farther out
     if(b.garrison&&!b.spawned&&nearestUnit(atts,b,b.garrison==='drones'?8:5.5)){b.spawned=true;
-      if(b.garrison==='tanks'){spawnUnit('gtank',b.x-.9,b.z-.5,'def');spawnUnit('gtank',b.x-.9,b.z+.5,'def');radio('Enemy armor rolling out of the compound!',true);}
-      else if(b.garrison==='drones'){for(let i=0;i<1+Math.floor((b.lv||1)/5);i++)spawnUnit('drone',b.x,b.z,'def');radio('Enemy drones launching!',true);}
-      else if(b.garrison==='reinforce'){for(let i=0;i<2+Math.floor((b.lv||1)/5);i++)spawnUnit('gsoldier',b.x-.5+rand(-.2,.2),b.z+rand(-.4,.4),'def');if((b.lv||1)>=8)spawnUnit('gtank',b.x-.8,b.z,'def');radio('Coalition reinforcements are joining the defense!',true);}
+      if(b.garrison==='tanks'){const v=garrisonVeh();if(v){spawnVeh(v,b.x-.9,b.z-.5);spawnVeh(v,b.x-.9,b.z+.5);radio(VEH_RADIO[v],true);}}
+      else if(b.garrison==='drones'){if(defUnlocked('drone'))for(let i=0;i<1+Math.floor((b.lv||1)/5);i++)spawnUnit('drone',b.x,b.z,'def');if(defUnlocked('drone'))radio('Enemy drones launching!',true);}
+      else if(b.garrison==='reinforce'){for(let i=0;i<2+Math.floor((b.lv||1)/5);i++)spawnUnit('gsoldier',b.x-.5+rand(-.2,.2),b.z+rand(-.4,.4),'def');if((b.lv||1)>=8&&garrisonVeh())spawnVeh(garrisonVeh(),b.x-.8,b.z);radio('Coalition reinforcements are joining the defense!',true);}
       else for(let i=0;i<4;i++)spawnUnit('gsoldier',b.x-.6+rand(-.2,.2),b.z+rand(-.5,.5),'def');}
     if(b.tube&&b.kick>0){b.kick=Math.max(0,b.kick-dt*4);b.tube.position.copy(b.recoilDir).multiplyScalar(-.05*b.kick);}
     if(b.fire&&Math.random()<dt*14)emit(ADD,V(b.x-.62+rand(-.02,.02),G+.04,b.z+.05+rand(-.02,.02)),{life:rand(.3,.5),s0:.07,s1:.02,vy:.35,c:Math.random()<.5?0xffa040:0xffd070}); // campfire
