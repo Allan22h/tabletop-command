@@ -223,14 +223,13 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* Quest browser and other wide screens: larger and more solid so it stands out */
 @media (min-width:900px) and (min-height:521px){#xrBtn{font-size:16px;padding:11px 20px;background:rgba(40,120,140,.55);border:2px solid rgba(127,211,230,.85);box-shadow:0 0 18px rgba(127,211,230,.35)}#xrBtn:hover{background:rgba(60,150,170,.75)}}
 /* phones (upright or sideways): Mixed Reality up in the top-right corner, level with the slim resource bar */
-@media (max-width:899px),(max-height:520px){#xrBtn{top:calc(40px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));right:auto;bottom:auto;font-size:11px;padding:4px 10px 4px 8px}
-  #app.raid #xrBtn{position:static;margin-top:4px} /* in the loot column, under the resources */
+@media (max-width:899px),(max-height:520px){#xrBtn{top:calc(33px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));right:auto;bottom:auto;font-size:11px;padding:4px 10px 4px 8px}
+  #app.raid #xrBtn{position:static;margin-top:1px} /* in the loot column, under the resources */
   #app:has(#menu:not([hidden])) #xrBtn{top:calc(10px + env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px))}
   /* full screen: small, top-right corner; raid timer and stars sit under it */
   #fsBtn,#app.raid #fsBtn,#app:has(#basePanel:not([hidden])) #fsBtn,#app:has(#menu:not([hidden])) #fsBtn{position:fixed;left:auto;right:max(8px,env(safe-area-inset-right,0px));top:calc(8px + env(safe-area-inset-top,0px));z-index:40;
     font-size:14px;padding:2px 6px;border-radius:8px;background:rgba(10,13,12,.3);border-color:rgba(255,255,255,.18);backdrop-filter:none}
   #app.raid:has(#fsBtn:not([hidden])) .hud>.grp:first-child{top:calc(36px + env(safe-area-inset-top,0px))}
-  #app:has(#fsBtn:not([hidden])) #menu #setBtn{right:44px}
   #app:has(#basePanel:not([hidden])) .hud>.grp:last-child{padding-right:34px}}
 #xrBtn{display:inline-flex;align-items:center;gap:6px}#xrBtn[hidden]{display:none}#xrBtn .vr{width:20px;height:12px;flex:none}
 /* main menu: the full-screen button sits in the top-left corner above the menu sheet */
@@ -270,10 +269,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){.tbtn.coachHi{animation:none;box-shadow:0 0 0 3px rgba(255,210,122,.75)}}
 @media (max-width:899px),(max-height:520px){#coach{top:calc(38px + env(safe-area-inset-top,0px));font-size:12px;padding:6px 8px 6px 10px}
   #app:has(#coach:not([hidden])):has(#basePanel:not([hidden])) .prompt{top:calc(132px + env(safe-area-inset-top,0px))}}
-/* settings: gear in the menu's corner, and a sheet of switches */
-#menu .sheet{position:relative}
-#setBtn{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.3);color:var(--ink);font-size:22px;line-height:1;cursor:pointer}
-#setBtn:hover{background:rgba(255,255,255,.08)}
+/* settings: a sheet of switches, opened from the bottom of the main menu */
 #settings .sheet{max-height:calc(100% - 24px);overflow:auto;gap:14px}
 .setgrp{display:grid;gap:4px}
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);cursor:pointer}
@@ -330,7 +326,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   </div></div>
   <div class="screen" id="menu">
     <div class="sheet">
-      <button type="button" id="setBtn" aria-label="Settings" title="Settings">⚙</button>
       <span class="lbl">Raid prototype · <span id="mapName">Operation Iron Delta</span></span>
       <h1>Tabletop <span>Command</span></h1>
       <div class="rank" id="rkBadge" role="button" tabindex="0" title="Change your name" aria-label="Your rank and base. Tap to change your name."><span id="rkIns"></span><div class="rk"><b id="rkName">Recruit</b><div class="xp"><i id="rkFill"></i></div><span id="rkSub"></span></div><span class="rkhq">Your HQ<b id="rkHq">3</b></span></div>
@@ -352,6 +347,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <button type="button" class="secondary" id="goTut">Start tutorial raid</button>
       <button type="button" class="secondary" id="goCoach">Base setup tutorial</button>
       <button type="button" class="secondary" id="goFull">Skip to the full raid</button>
+      <button type="button" class="secondary" id="setBtn">⚙ Settings</button>
       <p>Phone: tap a card, then tap the map. Drag to rotate, pinch to zoom. Quest: open this page in the Quest browser and press "Enter mixed reality" (top right) to put the board on your table. Squeeze the grip to move it, twist your wrist while squeezing or flick the thumbstick to turn it, squeeze with both hands to turn and resize it.</p>
     </div>
   </div>
