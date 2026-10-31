@@ -30,7 +30,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .timer b{font:700 26px/1 var(--f-display);color:var(--gold);letter-spacing:.02em}
 .stars{color:var(--gold);letter-spacing:2px;font-size:16px}.stars .off,.big .off{color:rgba(255,255,255,.22)}
 .res{display:flex;align-items:center;gap:5px;font-weight:500}
-.dot{width:12px;height:12px;border-radius:50%;display:inline-block}.dot.g{background:#e8c547}.dot.f{background:#d07a3a}.dot.m{background:#a8473a}.dot.i{background:#6fa8e8}
+/* resource icons: drawn here so they always show; the 3D-rendered ones replace them once made */
+.dot{width:14px;height:14px;display:inline-block;vertical-align:middle;background:center/contain no-repeat}.dot.g{background-image:url("data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g stroke="%237a5a10" stroke-width=".8"><path d="M2 20l2-6h7l2 6z" fill="%23e8c547"/><path d="M11 20l2-6h7l2 6z" fill="%23f2d35c"/><path d="M6.5 13.5l2-6h7l2 6z" fill="%23ffe27a"/></g><path d="M9 9l.6-1.4h1.6" stroke="%23fff" stroke-width=".9" fill="none" opacity=".8"/></svg>")}.dot.f{background-image:url("data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="4" y="5" width="11" height="16" rx="1.5" fill="%232f6fb0" stroke="%23173a5e" stroke-width=".8"/><rect x="6" y="7.5" width="7" height="4.5" rx=".8" fill="%23cfe3f5"/><rect x="3" y="20" width="13" height="2" rx=".5" fill="%231b1d20"/><path d="M15 9h2.2a1.5 1.5 0 0 1 1.5 1.5V17a1.4 1.4 0 0 0 2.8 0V8l-2-2.5" fill="none" stroke="%231b1d20" stroke-width="1.4" stroke-linecap="round"/></svg>")}.dot.m{background-image:url("data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g stroke="%233f4628" stroke-width=".7"><path d="M4 21V10q1.75-6 3.5 0v11z" fill="%23c9a43c"/><path d="M10.25 21V8q1.75-6 3.5 0v13z" fill="%23d8b23a"/><path d="M16.5 21V10q1.75-6 3.5 0v11z" fill="%23c9a43c"/></g><g fill="%236b7a3a"><rect x="4" y="16" width="3.5" height="5"/><rect x="10.25" y="16" width="3.5" height="5"/><rect x="16.5" y="16" width="3.5" height="5"/></g></svg>")}.dot.i{background-image:url("data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.2" fill="%233c4a2c" stroke="%231d2416" stroke-width=".8"/><rect x="5.6" y="6.6" width="12.8" height="7.8" fill="%236fd36a"/><path d="M7 9h6M7 11h9M7 13h5" stroke="%231d4a1c" stroke-width=".9"/><path d="M2 17h20l-1.5 3h-17z" fill="%2355633d" stroke="%231d2416" stroke-width=".8"/></svg>")}
 .btn{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:8px 11px;backdrop-filter:blur(6px)}
 .btn[aria-pressed="true"]{border-color:var(--gold)}
 .btn.xr{background:var(--cyan);color:#071216;border-color:var(--cyan);font-weight:600}
@@ -199,7 +200,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app.raid .hud{display:block}
   #app.raid .hud>.grp{position:absolute;top:calc(6px + env(safe-area-inset-top,0px));gap:4px}
   #app.raid .hud>.grp:first-child{right:max(8px,env(safe-area-inset-right,0px));flex-direction:column;align-items:flex-end}
-  #app.raid:has(#xrBtn:not([hidden])) .hud>.grp:first-child{top:calc(38px + env(safe-area-inset-top,0px))} /* under the Mixed Reality button */
   #app.raid .hud>.grp:last-child{left:max(8px,env(safe-area-inset-left,0px));flex-direction:column;align-items:flex-start}
   #app.raid .hud .pill{background:none;border:0;backdrop-filter:none;padding:0 2px;gap:6px;text-shadow:0 1px 2px #000,0 0 4px rgba(0,0,0,.8)}
   #app.raid .timer b{font-size:18px}
@@ -223,8 +223,16 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* Quest browser and other wide screens: larger and more solid so it stands out */
 @media (min-width:900px) and (min-height:521px){#xrBtn{font-size:16px;padding:11px 20px;background:rgba(40,120,140,.55);border:2px solid rgba(127,211,230,.85);box-shadow:0 0 18px rgba(127,211,230,.35)}#xrBtn:hover{background:rgba(60,150,170,.75)}}
 /* phones (upright or sideways): Mixed Reality up in the top-right corner, level with the slim resource bar */
-@media (max-width:899px),(max-height:520px){#xrBtn{top:calc(8px + env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));bottom:auto;font-size:11px;padding:4px 10px}
-  #app:has(#menu:not([hidden])) #xrBtn{top:calc(10px + env(safe-area-inset-top,0px))}}
+@media (max-width:899px),(max-height:520px){#xrBtn{top:calc(40px + env(safe-area-inset-top,0px));left:max(12px,env(safe-area-inset-left,0px));right:auto;bottom:auto;font-size:11px;padding:4px 10px 4px 8px}
+  #app.raid #xrBtn{position:static;margin-top:4px} /* in the loot column, under the resources */
+  #app:has(#menu:not([hidden])) #xrBtn{top:calc(10px + env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px))}
+  /* full screen: small, top-right corner; raid timer and stars sit under it */
+  #fsBtn,#app.raid #fsBtn,#app:has(#basePanel:not([hidden])) #fsBtn,#app:has(#menu:not([hidden])) #fsBtn{position:fixed;left:auto;right:max(8px,env(safe-area-inset-right,0px));top:calc(8px + env(safe-area-inset-top,0px));z-index:40;
+    font-size:14px;padding:2px 6px;border-radius:8px;background:rgba(10,13,12,.3);border-color:rgba(255,255,255,.18);backdrop-filter:none}
+  #app.raid:has(#fsBtn:not([hidden])) .hud>.grp:first-child{top:calc(36px + env(safe-area-inset-top,0px))}
+  #app:has(#fsBtn:not([hidden])) #menu #setBtn{right:44px}
+  #app:has(#basePanel:not([hidden])) .hud>.grp:last-child{padding-right:34px}}
+#xrBtn{display:inline-flex;align-items:center;gap:6px}#xrBtn[hidden]{display:none}#xrBtn .vr{width:20px;height:12px;flex:none}
 /* main menu: the full-screen button sits in the top-left corner above the menu sheet */
 #app:has(#menu:not([hidden])) #fsBtn{position:fixed;left:max(10px,env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));z-index:40;
   background:rgba(10,13,12,.45);border-color:rgba(255,255,255,.3)}
@@ -275,6 +283,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .setrow input:checked{background:var(--gold)}.setrow input:checked::after{transform:translateX(18px)}
 .setrow input:disabled{opacity:.4}
 #app:has(#settings:not([hidden])) #fsBtn,#app:has(#settings:not([hidden])) #xrBtn{display:none}
+@media (max-width:899px),(max-height:520px){#app:has(#menu:not([hidden])) #fsBtn{left:auto}}
 .setrow input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 </style>
 
@@ -297,7 +306,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <button type="button" class="btn" id="menuBtn" hidden>Menu</button>
       <button type="button" class="btn" id="fsBtn" hidden aria-label="Full screen" title="Full screen">⛶</button>
       <div id="perf" hidden></div>
-      <button type="button" class="btn xr" id="xrBtn" hidden aria-label="Enter mixed reality">Mixed Reality</button>
+      <button type="button" class="btn xr" id="xrBtn" hidden aria-label="Enter mixed reality"><svg class="vr" viewBox="0 0 32 18" aria-hidden="true"><path d="M3 3.5Q3 1 6 1h20q3 0 3 2.5v9q0 3.5-3.5 3.5h-4.2q-1.8 0-2.8-2l-1.2-2.4q-.6-1.2-1.3-1.2t-1.3 1.2L13.5 14q-1 2-2.8 2H6.5Q3 16 3 12.5z" fill="currentColor"/><path d="M1 6v5M31 6v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9.5" cy="8.5" r="2.6" fill="rgba(0,0,0,.45)"/><circle cx="22.5" cy="8.5" r="2.6" fill="rgba(0,0,0,.45)"/></svg><span>Mixed Reality</span></button>
       <div id="xrTouch" hidden></div>
     </div>
   </div>
@@ -1532,7 +1541,7 @@ function initDrag(){const groundAt=e=>{const r=canvasEl.getBoundingClientRect(),
 // production, finished construction, training and research, checked a few times a second
 function baseTick(dt){baseAcc+=dt;if(baseAcc<.25)return;baseAcc=0;const now=Date.now();let changed=false,hqUp=false,msg='';
   // storages produce over time, up to what they hold
-  const hrs=(now-BASE.prodT)/3600000;if(hrs>.0005){BASE.blds.forEach(o=>{const st=BK[o.k].store;if(st&&!o.fresh)BASE.res[st]=Math.min(capOf(st),BASE.res[st]+PROD[st]*o.lv*hrs*(o.boost>now?2:1));});BASE.prodT=now;}
+  const hrs=(now-BASE.prodT)/3600000;if(hrs>.0005){BASE.blds.forEach(o=>{const st=BK[o.k].store;if(st&&!o.fresh)BASE.res[st]=Math.max(BASE.res[st],Math.min(capOf(st),BASE.res[st]+PROD[st]*o.lv*hrs*(o.boost>now?2:1)));});BASE.prodT=now;}
   BASE.blds.forEach(o=>{if(o.until&&now>=o.until){o.lv=o.to;if(o.k==='hq')hqUp=true;delete o.until;delete o.to;delete o.fresh;changed=true;msg='Construction complete.';}});
   // one training queue: each unit starts when the one before it is done
   while(BASE.queue.length){const q=BASE.queue[0];if(!q.until)q.until=now+TR[q.k].t*1000;if(now<q.until)break;BASE.army[q.k]=(BASE.army[q.k]||0)+1;BASE.queue.shift();
@@ -3079,10 +3088,7 @@ function exitXR(){xrMode=false;if(state==='base')renderBasePanel();M.terrain.bum
   setShadow(1);xrUI.visible=false;reticle.visible=false;$('app').classList.remove('xr');xtEl.hidden=true;xt=null;}
 if(navigator.xr&&navigator.xr.isSessionSupported){navigator.xr.isSessionSupported('immersive-ar').then(ok=>{if(ok)$('xrBtn').hidden=false;}).catch(()=>{});}
 $('xrBtn').onclick=enterXR;
-// on narrow phones the button sits beside the resource bar; when the full name would run into it, it shortens to "MR"
-function fitXrBtn(){const x=$('xrBtn');if(x.hidden)return;x.textContent='Mixed Reality';const bar=$('fsBtn').parentElement.getBoundingClientRect(),r=x.getBoundingClientRect();
-  if(bar.width&&r.top<bar.bottom&&r.bottom>bar.top&&r.left<bar.right+6)x.textContent='MR';}
-addEventListener('resize',fitXrBtn);setInterval(fitXrBtn,1000);
+
 
 /* ---------- menu + buttons ---------- */
 // the jets parked on the carrier deck are your faction's jet, a little smaller than the one that flies the strike
