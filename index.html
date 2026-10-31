@@ -281,6 +281,25 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #app:has(#settings:not([hidden])) #fsBtn,#app:has(#settings:not([hidden])) #xrBtn{display:none}
 @media (max-width:899px),(max-height:520px){#app:has(#menu:not([hidden])) #fsBtn{left:auto}}
 .setrow input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* Attack! in your base: always in reach, just above the bottom sheet on a phone, bottom-right otherwise; the rifles beat like a call to arms */
+#attackBtn{position:fixed;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:19;display:flex;align-items:center;gap:7px;
+  padding:4px 14px 4px 4px;border-radius:999px;border:2px solid #fff;background:linear-gradient(#ffe08f,#f0b23c);color:#2a1e05;cursor:pointer;
+  box-shadow:0 6px 18px rgba(0,0,0,.45);animation:atkGlow 1.6s ease-in-out infinite}
+#attackBtn[hidden],#app.xr #attackBtn,#app:has(#basePanel[hidden]) #attackBtn{display:none}
+#attackBtn .atkIc{width:40px;height:40px;border-radius:50%;background:radial-gradient(#fff6d8,#ffd27a 70%);display:grid;place-items:center}
+#attackBtn .atkIc svg{width:34px;height:34px;animation:atkBeat 1.6s ease-in-out infinite;transform-origin:50% 55%}
+#attackBtn .atkTx{display:grid;text-align:left;line-height:1.05}
+#attackBtn b{font:800 19px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em}
+#attackBtn small{font:600 9.5px/1.2 var(--f-mono,monospace);opacity:.8;margin-top:3px;white-space:nowrap}
+#attackBtn:active{transform:scale(.96)}
+@keyframes atkBeat{0%,60%,100%{transform:scale(1) rotate(0)}10%{transform:scale(1.18) rotate(-9deg)}20%{transform:scale(1.12) rotate(8deg)}30%{transform:scale(1.16) rotate(-5deg)}40%{transform:scale(1.05) rotate(0)}}
+@keyframes atkGlow{0%,100%{box-shadow:0 6px 18px rgba(0,0,0,.45),0 0 0 0 rgba(255,210,122,.7)}50%{box-shadow:0 6px 18px rgba(0,0,0,.45),0 0 0 10px rgba(255,210,122,0)}}
+@media (prefers-reduced-motion:reduce){#attackBtn,#attackBtn .atkIc svg{animation:none}}
+.tutpick{display:grid;gap:4px;text-align:left;background:rgba(255,255,255,.04);border:1px solid var(--edge);border-radius:12px;padding:12px 14px;color:inherit;cursor:pointer}
+.tutpick b{font:700 16px var(--f-display);text-transform:uppercase;letter-spacing:.03em;color:var(--gold)}
+.tutpick small{font-size:12.5px;opacity:.85}
+.tutpick:hover{border-color:var(--gold)}
+#app:has(#tuts:not([hidden])) #fsBtn,#app:has(#tuts:not([hidden])) #xrBtn{display:none}
 </style>
 
 <div id="app">
@@ -309,6 +328,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <div class="radio" id="radio" hidden aria-live="polite"><span class="ch" id="rch">CH 2 · Overlord net</span><span id="rtx"></span></div>
   <div class="zoom"><button type="button" id="zIn" aria-label="Zoom in">+</button><button type="button" id="zOut" aria-label="Zoom out">−</button></div>
   <div class="prompt" id="prompt" hidden></div>
+  <button type="button" id="attackBtn" hidden><span class="atkIc" id="atkIc"></span><span class="atkTx"><b>Attack!</b><small id="attackSub"></small></span></button>
   <div id="coach" hidden role="status" aria-live="polite"><span class="cstep" id="coachStep"></span><span id="coachText"></span><button type="button" id="coachSkip">Skip</button></div>
   <div class="tray" id="tray"></div>
   <div class="bpanel" id="basePanel" hidden></div>
@@ -344,13 +364,19 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
           <button type="button" data-f="eu" aria-pressed="false">Europe / Middle East</button>
         </div></div>
       <button type="button" class="primary" id="goBase">My base</button>
-      <button type="button" class="secondary" id="goTut">Start tutorial raid</button>
-      <button type="button" class="secondary" id="goCoach">Base setup tutorial</button>
-      <button type="button" class="secondary" id="goFull">Skip to the full raid</button>
+      <button type="button" class="secondary" id="goTuts">Tutorials</button>
       <button type="button" class="secondary" id="setBtn">⚙ Settings</button>
       <p>Phone: tap a card, then tap the map. Drag to rotate, pinch to zoom. Quest: open this page in the Quest browser and press "Enter mixed reality" (top right) to put the board on your table. Squeeze the grip to move it, twist your wrist while squeezing or flick the thumbstick to turn it, squeeze with both hands to turn and resize it.</p>
     </div>
   </div>
+
+  <div class="screen" id="tuts" hidden style="z-index:31"><div class="sheet">
+    <h2 style="margin:0">Tutorials</h2>
+    <button type="button" class="tutpick" id="tutRaid"><b>Raid tutorial</b><small>Deploy tanks, call in an air strike and take down an enemy outpost.</small></button>
+    <button type="button" class="tutpick" id="tutBase"><b>Base setup tutorial</b><small>Place your buildings, lay barriers and move things around your base.</small></button>
+    <p class="muted" id="tutHow" style="margin:0;font-size:12px"></p>
+    <button type="button" class="primary" id="tutClose">Back</button>
+  </div></div>
 
   <div class="screen" id="settings" hidden style="z-index:31"><div class="sheet">
     <h2 style="margin:0">Settings</h2>
@@ -1341,6 +1367,12 @@ function enterBase(keepCam){$('app').classList.remove('raid');if(state!=='base')
   zone.visible=zoneEdge.visible=false;show('menu',false);show('end',false);show('banner',false);show('basePanel',true);$('tray').hidden=true;$('enemyHq').hidden=true;$('menuBtn').hidden=$('cancelBtn').hidden=true;
   if(!keepCam&&!enterBase.checked){enterBase.checked=true;setTimeout(()=>{if(state==='base')checkAttacks();},600);}
   if(!keepCam){const c=CMP;orb.target.set((c.x0+c.x1)/2-.8,0,0);orb.r=clamp((canvasEl.clientWidth<canvasEl.clientHeight?22:15)*c.z/3.6,orb.minR,orb.maxR);}baseHud();renderBasePanel();xrDirty=true;}
+// Attack! sits just above the bottom sheet on a phone (it follows the sheet up and down), bottom-right when the panel is at the side
+function placeAttack(){const b=$('attackBtn'),p=$('basePanel');if(b.hidden||p.hidden)return;const r=p.getBoundingClientRect(),wide=r.left<=2&&r.right>=innerWidth-2;
+  if(wide){b.style.bottom='auto';b.style.top=Math.max(80,r.top-b.offsetHeight-12)+'px';}else{b.style.top='';b.style.bottom='';}}
+function initAttack(){$('atkIc').innerHTML=ATK_SVG;$('attackBtn').onclick=()=>begin('full');const p=$('basePanel');
+  if(window.ResizeObserver)new ResizeObserver(placeAttack).observe(p);p.addEventListener('transitionend',placeAttack);addEventListener('resize',placeAttack);
+  new MutationObserver(placeAttack).observe($('attackBtn'),{attributes:true,attributeFilter:['hidden']});}
 function baseHud(){const lvR=levelFor(serviceXp,PLAYER_HQ).r;$('tm').innerHTML=`<img alt="" src="${insigniaImg(lvR).src}">${rankAbbr(lvR,cur)}${playerName?' '+playerName.replace(/[<>&]/g,''):''}`;const sl=shieldLeft();$('pct').textContent='HQ '+baseHq()+(sl>0?' · Shield '+fmtT(sl):'');$('stars').innerHTML='';
   $('lg').textContent=fmtN(BASE.res.g);$('lf').textContent=fmtN(BASE.res.f);$('lm').textContent=fmtN(BASE.res.m);$('li').textContent=fmtN(BASE.res.i);}
 function ringOn(e,ok){selRing.scale.setScalar(e.r+.15);const p=e.g.position;selRing.position.set(p.x,G+.03,p.z);selRing.material.color.setHex(ok===false?0xe0503c:ok?0x6fd36a:0xffd27a);selRing.visible=true;}
@@ -1453,22 +1485,23 @@ function startUpgrade(o){const to=o.lv+1,c=costOf(o.k,to);if(to>maxLv(o.k,baseHq
 // barriers and obstacles: choose one, then tap the map where it goes (press and drag to lay a line of barriers)
 /* base training: walks a new commander through placing the HQ, a defense, storage and a barrier line, moving things, and the automatic layout */
 const COACH=[
-  {k:'hq',t:'Place your headquarters first. Tap Headquarters below, then tap open ground near the middle of the field.'},
-  {k:'mg',t:'Defenses protect whatever is near them. Tap Guard tower, then place it right beside your HQ.'},
-  {k:'vault',t:'Keep storage deep inside, where raiders reach it last. Tap Gold vault and place it next to your HQ.'},
-  {k:'barrier',need:4,t:'Barriers slow down soldiers and vehicles. Tap Barrier block, then press on the map and drag to lay a line in front of your buildings.'},
-  {id:'move',t:'To move something, tap it to select it, then drag it, or tap Move and then tap the new spot. A green ring means it fits there, red means it does not. Try it now.'},
-  {id:'rest',sel:'[data-act="autolay"]',t:'Place the rest the same way, or tap Automatic layout to set everything at once. You can still drag things around after.'}];
+  {k:'hq',t:(v,V,x)=>`Place your headquarters first. ${V} Headquarters in the ${x?'panel on your left':'list below'}, then ${v} open ground near the middle of the field.`},
+  {k:'mg',t:(v,V)=>`Defenses protect whatever is near them. ${V} Guard tower, then place it right beside your HQ.`},
+  {k:'vault',t:(v,V)=>`Keep storage deep inside, where raiders reach it last. ${V} Gold vault and place it next to your HQ.`},
+  {k:'barrier',need:4,t:(v,V,x)=>x?`Barriers slow down soldiers and vehicles. ${V} Barrier block, then ${v} the ground once for each block, in a line in front of your buildings.`:`Barriers slow down soldiers and vehicles. ${V} Barrier block, then press on the map and drag to lay a line in front of your buildings.`},
+  {id:'move',t:(v,V,x)=>x?`To move something, ${v} it to select it, ${v} the Move button above it, then ${v} the new spot. Green means it fits there, red means it does not. Try it now.`:`To move something, ${v} it to select it, then drag it, or ${v} Move and then ${v} the new spot. A green ring means it fits there, red means it does not. Try it now.`},
+  {id:'rest',sel:'[data-act="autolay"]',t:(v,V)=>`Place the rest the same way, or ${v} Automatic layout to set everything at once. You can still move things around after.`}];
+const coachText=c=>c.t(verb(),Verb(),xrMode);
 let coach=null;
 function coachStart(){if(state!=='base')enterBase();showDaily(false);coach={i:-1,n:0};coachGo(0);}
-function coachEnd(done){coach=null;BASE.coachDone=1;saveBase();$('coach').hidden=true;renderBasePanel();if(BASE.login&&BASE.login.got!==BASE.login.last)setTimeout(()=>{if(state==='base'&&!coach)showDaily(true);},done?4200:600);if(done)prompt('Base setup done. When you are ready, tap Raid to attack.',4);}
+function coachEnd(done){coach=null;BASE.coachDone=1;saveBase();$('coach').hidden=true;renderBasePanel();if(BASE.login&&BASE.login.got!==BASE.login.last)setTimeout(()=>{if(state==='base'&&!coach)showDaily(true);},done?4200:600);if(done)prompt(`Base setup done. When you are ready, ${verb()} Attack!`,4);}
 function coachGo(i){for(;i<COACH.length;i++){const c=COACH[i];if(c.k&&!stashLeft(c.k))continue;if(c.id==='rest'&&!BASE.blds.some(o=>o.stash))continue;break;}
   if(i>=COACH.length)return coachEnd(true);coach.i=i;coach.n=0;prompt('',0);const c=COACH[i];
-  $('coachStep').textContent=`Base setup · step ${i+1} of ${COACH.length}`;$('coachText').textContent=c.t;$('coach').hidden=false;
+  $('coachStep').textContent=`Base setup · step ${i+1} of ${COACH.length}`;$('coachText').textContent=coachText(c);$('coach').hidden=false;
   if(c.id==='move'){placing=null;sheet(false);}else{baseTab='base';sel=null;rowO=null;if(selRing)selRing.visible=false;if(placing!==c.k)placing=null;sheet(true);}
   renderBasePanel();xrDirty=true;}
 function coachEv(ev,k){if(!coach)return;const c=COACH[coach.i];
-  if(ev==='place'&&c.k===k){coach.n++;if(!c.need)coachGo(coach.i+1);}
+  if(ev==='place'&&c.k===k){coach.n++;if(!c.need)coachGo(coach.i+1);else if(xrMode&&(coach.n>=c.need||!stashLeft(k))){placing=null;coachGo(coach.i+1);}}
   else if(ev==='paintEnd'&&c.k==='barrier'&&(coach.n>=c.need||!stashLeft('barrier'))){placing=null;coachGo(coach.i+1);}
   else if(ev==='move'&&c.id==='move')coachGo(coach.i+1);
   else if(ev==='auto')coachEnd(true);
@@ -1476,7 +1509,7 @@ function coachEv(ev,k){if(!coach)return;const c=COACH[coach.i];
 // glow on the button the current step points to
 function coachMark(el){el.querySelectorAll('.coachHi').forEach(b=>b.classList.remove('coachHi'));if(!coach)return;const c=COACH[coach.i],q=c.sel||(c.k&&`[data-place="${c.k}"]`);
   const b=q&&el.querySelector(q);if(b&&placing!==c.k)b.classList.add('coachHi');}
-function setPlacing(k){placing=placing===k?null:k;if(placing)sheet(false);if(placing)prompt(k==='barrier'&&stashLeft(k)>1?`Tap the map to place barriers (${stashLeft(k)} waiting). Press and drag to lay a line.`:k==='barrier'?'Tap the map to place barriers. Press and drag to lay a line.':`Tap the map to place: ${BK[k].name.toLowerCase()}.`,3);renderBasePanel();}
+function setPlacing(k){placing=placing===k?null:k;if(placing)sheet(false);const tm=`${Verb()} the ${xrMode?'ground':'map'}`;if(placing)prompt(k==='barrier'?`${tm} to place barriers${stashLeft(k)>1?` (${stashLeft(k)} waiting)`:''}.${xrMode?'':' Press and drag to lay a line.'}`:`${tm} to place: ${BK[k].name.toLowerCase()}.`,3);renderBasePanel();}
 function stashLeft(k){return BASE.blds.filter(b=>b.k===k&&b.stash).length;}
 function unstash(st){delete st.stash;if(!stashLeft(st.k))placing=null;if(!BASE.blds.some(b=>b.stash)&&!coach)prompt('Your base is set up. Tap something, then drag it to move it.',3);coachEv('place',st.k);}
 function placeAt(k,x,z,quiet){const h=baseHq(),have=BASE.blds.filter(b=>b.k===k).length,c=costOf(k,1),st=BASE.blds.find(b=>b.k===k&&b.stash);
@@ -1611,9 +1644,9 @@ function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['intel','Intel'+(chReady()?' ●'+chReady():'')],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
   if(baseTab==='raid'&&raidPick)h+=panelRaid();else if(baseTab==='base')h+=panelBase(hq,free);else if(baseTab==='army')h+=panelArmy();else if(baseTab==='research')h+=panelResearch();else if(baseTab==='intel')h+=panelIntel();else h+=panelReports();
   if(baseTab==='raid'&&raidPick)h+=`<div class="row"><button type="button" class="act" data-act="raidgo" ${pickCount()?'':'disabled'}>Attack · ${pickCount()} unit${pickCount()===1?'':'s'}</button><button type="button" class="tbtn" data-act="raidback">Back</button></div>`;
-  else h+=`<div class="row"><button type="button" class="act" data-act="raid">Raid · enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)} · ${WX[nextWx].n}</button><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
+  else h+=`<div class="row"><button type="button" class="tbtn" data-act="menu">Back to menu</button></div>`;
   // redrawn a few times a second while timers run: only touch the page when something changed, so a button is not replaced mid-tap
-  el.classList.toggle('pickArmy',baseTab==='raid'&&!!raidPick);if(el._html!==h){el.innerHTML=h;el._html=h;fitPeek(el);}coachMark(el);phoneLabels();renderCard();drawRow();}
+  el.classList.toggle('pickArmy',baseTab==='raid'&&!!raidPick);$('attackBtn').hidden=!!(raidPick&&baseTab==='raid')||!!coach||!!sel;$('attackSub').textContent=attackSub();if(el._html!==h){el.innerHTML=h;el._html=h;fitPeek(el);}coachMark(el);phoneLabels();renderCard();drawRow();}
 // on a phone the base stays uncluttered: level tags show only on the selected building and on ones being built or upgraded
 const isPhone=()=>!xrMode&&matchMedia('(max-width:899px)').matches;
 function phoneLabels(){const ph=isPhone();ents.forEach(e=>{const L=e.b&&e.b.label;if(L)L.s.visible=!ph||e===sel||!!(e.o&&e.o.until);});}
@@ -1739,7 +1772,7 @@ function initBase(){const el=$('basePanel');makeResIcons();sheet(false);
   $('card').onclick=e=>{const t=e.target.closest('button');if(t)doAct(t.dataset.c);};
   $('daily').onclick=e=>{const t=e.target.closest('button');if(!t)return;if(t.dataset.act==='claimday')claimLogin();else if(t.dataset.act==='later')showDaily(false);};
   addEventListener('resize',placeCard);
-  $('goBase').onclick=()=>enterBase();$('coachSkip').onclick=()=>coachEnd(false);$('goCoach').onclick=()=>{show('menu',false);coachStart();};$('endBase').onclick=()=>enterBase();initDrag();}
+  $('goBase').onclick=()=>enterBase();$('coachSkip').onclick=()=>coachEnd(false);$('endBase').onclick=()=>enterBase();initDrag();initAttack();}
 // a raid's cards are the army you trained
 function armyCards(){raidArmy={};ARMY_ORDER.forEach(k=>{const have=BASE.army[k]||0;raidArmy[k]=raidPick&&raidPick[k]!=null?Math.min(raidPick[k],have):have;});raidPick=null;
   return ARMY_ORDER.filter(k=>raidArmy[k]>0).map(k=>({k,n:raidArmy[k],per:k==='rifle'?3:undefined}));}
@@ -1824,7 +1857,20 @@ function moveBtnMesh(){if(xrMoveBtn)return xrMoveBtn;const c=document.createElem
 function ghostOf(e){const g=e.g.clone(true);g.traverse(m=>{if(m.isMesh||m.isInstancedMesh){m.material=ghostOk;m.castShadow=false;m.visible=true;}});g.userData.ghost=true;scene.add(g);return g;}
 function endXrMove(){if(xrMove){scene.remove(xrMove.g);xrMove=null;}}
 // each headset frame in your base: the Move button floats over the selection; while moving, the preview follows the pointer
-function xrBaseFrame(hp){xpFrame();const b=moveBtnMesh();b.visible=state==='base'&&xrMode&&!!sel&&!xrMove;if(b.visible){const p=sel.g.position;b.position.set(p.x,G+Math.max(1.4,sel.r*1.2+1.1),p.z);b.lookAt(hp);}
+let xrCoach=null,xrCoachKey='';
+function xrCoachFrame(hp){if(!xrCoach){xrCoach=canvasPlane(10,3.4,800,272);xrCoach.material.depthTest=false;xrCoach.renderOrder=10;}
+  const raidTut=state==='battle'&&mode==='tutorial'&&!!xrPrompt,on=xrMode&&((state==='base'&&!!coach)||raidTut);xrCoach.visible=on;if(!on){xrCoachKey='';return;}
+  xrCoach.position.set(xrHud.position.x,xrHud.position.y+4.2,xrHud.position.z);xrCoach.lookAt(hp);
+  const head=raidTut?'Tutorial raid':`Base setup · step ${coach.i+1} of ${COACH.length}`,txt=raidTut?xrPrompt:coachText(COACH[coach.i]),key=head+'|'+txt;if(key===xrCoachKey)return;xrCoachKey=key;
+  const {ctx:x,c,t}=xrCoach.userData;x.clearRect(0,0,c.width,c.height);x.fillStyle='rgba(255,210,122,.96)';rrect(x,0,0,c.width,c.height,22);x.fill();
+  x.fillStyle='#2a1e05';x.font='700 24px monospace';x.fillText(head.toUpperCase(),28,46);
+  if(!raidTut){x.lineWidth=3;x.strokeStyle='#2a1e05';rrect(x,664,14,118,44,22);x.stroke();x.font='700 24px sans-serif';x.textAlign='center';x.fillText('Skip',723,45);x.textAlign='left';}
+  x.font='600 31px sans-serif';const ws=txt.split(' ');let ln='',y=96,n=0;
+  for(const w of ws){const tr=ln?ln+' '+w:w;if(x.measureText(tr).width>744&&ln){x.fillText(ln,28,y);y+=40;ln=w;if(++n>=4)break;}else ln=tr;}if(n<4)x.fillText(ln,28,y);t.needsUpdate=true;}
+// a pinch on the tutorial card: Skip ends the base setup; anywhere else on the card does nothing (and never reaches the board)
+function xrCoachSelect(c){if(!xrCoach||!xrCoach.visible)return false;ctrlRay(c);const h=ray.intersectObject(xrCoach,false)[0];if(!h)return false;
+  if(coach&&h.uv&&h.uv.x>650/800&&h.uv.y>1-64/272){haptic();coachEnd(false);}return true;}
+function xrBaseFrame(hp){xrCoachFrame(hp);xpFrame();const b=moveBtnMesh();b.visible=state==='base'&&xrMode&&!!sel&&!xrMove;if(b.visible){const p=sel.g.position;b.position.set(p.x,G+Math.max(1.4,sel.r*1.2+1.1),p.z);b.lookAt(hp);}
   if(!xrMove)return;for(const c of ctrls){if(!c.userData.src)continue;ctrlRay(c);const h=ray.intersectObject(ground,false)[0];if(!h)continue;const p=scene.worldToLocal(h.point.clone());
     let x=Math.round(p.x*4)/4,z=Math.round(p.z*4)/4;if(xrMove.e.o.k==='barrier'){const sn=snapWall(p.x,p.z,BASE.blds,xrMove.e.o,baseHq());x=sn.x;z=sn.z;xrMove.y=sn.y;xrMove.g.rotation.y=sn.y;}
     const ok=fits(xrMove.e.o.k,x,z,BASE.blds,baseHq(),xrMove.e.o);xrMove.g.position.x=x;xrMove.g.position.z=z;xrMove.x=x;xrMove.z=z;xrMove.ok=ok;
@@ -1832,7 +1878,7 @@ function xrBaseFrame(hp){xpFrame();const b=moveBtnMesh();b.visible=state==='base
 // a pinch in your base: the Move button starts moving; while moving, a pinch places it (if it fits)
 function xrBaseSelect(c){if(state!=='base')return false;if(xpSelect(c))return true;ctrlRay(c);
   if(placing){const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());if(placeAt(placing,p.x,p.z)){saveBase();renderBasePanel();xrDirty=true;}}return true;}
-  if(xrMove){if(xrMove.ok&&xrMove.x!=null){xrMove.e.o.x=xrMove.x;xrMove.e.o.z=xrMove.z;if(xrMove.y!=null)xrMove.e.o.y=xrMove.y;if(xrMove.e.o.k==='barrier')settleWalls(xrMove.e.o,BASE.blds);saveBase();endXrMove();refreshBase(true);haptic();}else{prompt('No room there.',1.5);}return true;}
+  if(xrMove){if(xrMove.ok&&xrMove.x!=null){xrMove.e.o.x=xrMove.x;xrMove.e.o.z=xrMove.z;if(xrMove.y!=null)xrMove.e.o.y=xrMove.y;if(xrMove.e.o.k==='barrier')settleWalls(xrMove.e.o,BASE.blds);saveBase();endXrMove();refreshBase(true);haptic();coachEv('move');}else{prompt('No room there.',1.5);}return true;}
   if(xrMoveBtn&&xrMoveBtn.visible&&ray.intersectObject(xrMoveBtn,false)[0]){xrMove={e:sel,g:ghostOf(sel)};haptic();return true;}
   return false;}
 
@@ -2647,8 +2693,8 @@ function startBattle(m){drum('raid');$('app').classList.add('raid');menuMusic(fa
   tut=m==='tutorial'?{step:0,t:0}:null;result=null;show('menu',false);show('end',false);show('banner',false);refreshCards();
   hqFlag();$('enemyHq').textContent='Enemy HQ '+enemyHq()+(wx!=='day'?' · '+WX[wx].n:'');$('enemyHq').hidden=false;orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);
   leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=false;$('cancelBtn').textContent='Cancel raid';$('cancelBtn').hidden=false;$('tray').hidden=false;orb.target.set(1.5,0,1.5);fitRaidCam();
-  if(tut){radio('Commander, enemy outpost ahead. Deploy armor.',true);armCard(0);prompt(xrMode?'Point at the tank card and pinch, then point at open ground and pinch.':'Tap the tank card, then tap open ground outside the red zone.');}
-  else{radio(`All units, ${CALL[cur]}. ${WX_RADIO[wx]?WX_RADIO[wx]+' ':''}Begin the assault.`,true);prompt(xrMode?'Pinch a card, then pinch the ground to deploy. Squeeze to move the board. Right stick turns and zooms, left stick travels across the field.':'Pick a card, then tap the map to deploy. Drag to rotate, pinch to zoom.',5);}
+  if(tut){radio('Commander, enemy outpost ahead. Deploy armor.',true);armCard(0);prompt(questXR()?'Point at the tank card and pinch, then pinch open ground outside the red zone.':`${Verb()} the tank card, then ${verb()} open ground outside the red zone.`);}
+  else{radio(`All units, ${CALL[cur]}. ${WX_RADIO[wx]?WX_RADIO[wx]+' ':''}Begin the assault.`,true);prompt(questXR()?'Pinch a card, then pinch the ground to deploy. Squeeze to move the board. Right stick turns and zooms, left stick travels across the field.':xrMode?'Tap a card, then tap the board to deploy. Drag to move the board, pinch to zoom.':verb()==='click'?'Pick a card, then click the map to deploy. Drag to rotate, scroll to zoom.':'Pick a card, then tap the map to deploy. Drag to rotate, pinch to zoom.',5);}
   xrDirty=true;}
 function tutEvent(ev,k){if(!tut)return;
   if(tut.step===0&&ev==='deploy'){tut.step=1;tut.t=0;prompt('Your tanks pick targets and attack on their own. Watch.',4);}
@@ -2656,7 +2702,7 @@ function tutEvent(ev,k){if(!tut)return;
   refreshCards();}
 function tutTick(dt){if(!tut)return;tut.t+=dt;
   if(tut.step===1){const o=blds.find(b=>b.hq);if(tut.t>9||(o&&o.hp<o.max*.75)){tut.step=2;radio('Air strike ready. Point at the outpost and call it in.',true);armCard(1);
-    prompt(xrMode?'Pinch the strike card, then pinch the outpost.':'Tap the strike card, then tap the outpost.');refreshCards();}}}
+    prompt(questXR()?'Point at the strike card and pinch, then pinch the outpost.':`${Verb()} the strike card, then ${verb()} the outpost.`);refreshCards();}}}
 let result=null;
 function endBattle(cancelled){state='ended';armed=null;zone.visible=zoneEdge.visible=false;const s=stats();
   const won=s.stars>0,hq=blds.find(b=>b.hq);
@@ -2788,8 +2834,8 @@ function mmBar(i,t){const S=60/84/4,p=NIGHT[i];mmDrone(t,16*S);
 function menuMusic(on){if(on&&!mmLoop&&AC&&soundOn&&prefs.sound&&prefs.music){mmBus=AC.createGain();mmBus.gain.setValueAtTime(0,AC.currentTime);mmBus.gain.linearRampToValueAtTime(.75,AC.currentTime+1.2);mmBus.connect(master);
     let n=0,next=AC.currentTime+.15;const tick=()=>{while(next<AC.currentTime+.6){next+=mmBar(n%4,next);n++;}};tick();mmLoop=setInterval(tick,150);}
   else if(!on&&mmLoop){clearInterval(mmLoop);mmLoop=0;const b=mmBus,t=AC.currentTime;b.gain.cancelScheduledValues(t);b.gain.setValueAtTime(b.gain.value,t);b.gain.linearRampToValueAtTime(0,t+.6);setTimeout(()=>b.disconnect(),2500);mmBus=null;}}
-function goMenu(){$('app').classList.remove('raid');if(state!=='menu')drum('menu');menuMusic(true);if(TTS)TTS.cancel();if(defendSim){stopDefense();$('enemyHq').hidden=true;$('cancelBtn').textContent='Cancel raid';}if(state==='battle'&&mode==='full')consumeArmy();leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=$('cancelBtn').hidden=true;state='menu';result=null;clearBattle();buildLayout('full');cards=[];refreshCards();
-  show('end',false);show('banner',false);show('basePanel',false);show('menu',true);$('radio').hidden=true;$('enemyHq').hidden=true;prompt('',0);orb.target.set(1.5,0,1.5);orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);xrDirty=true;}
+function goMenu(){$('app').classList.remove('raid');if(state!=='menu')drum('menu');menuMusic(true);if(TTS)TTS.cancel();if(defendSim){stopDefense();$('enemyHq').hidden=true;$('cancelBtn').textContent='Cancel raid';}if(state==='battle'&&mode==='full')consumeArmy();leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=$('cancelBtn').hidden=true;state='menu';xrTutPick=false;result=null;clearBattle();buildLayout('mine');cards=[];refreshCards();
+  show('end',false);show('banner',false);show('basePanel',false);show('menu',true);$('radio').hidden=true;$('enemyHq').hidden=true;prompt('',0);{const c=CMP;orb.target.set((c.x0+c.x1)/2-.8,0,0);orb.r=clamp((canvasEl.clientWidth<canvasEl.clientHeight?26:18)*c.z/3.6,orb.minR,orb.maxR);}xrDirty=true;}
 
 /* ---------- step ---------- */
 let burnAcc=0;
@@ -2907,7 +2953,7 @@ canvasEl.addEventListener('pointerup',e=>{if(!down)return;if(down.n>1){down=null
   if(moved>10||dt>600||xrMode||state==='base')return;const r=canvasEl.getBoundingClientRect();
   const ndc=new T.Vector2((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(ndc,cam);const h=ray.intersectObject(ground,false)[0];if(!h)return;
   const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);});
-function onGroundTap(x,z){if(state==='base')return selectAt(x,z);if(state!=='battle')return;if(armed==null){prompt(xrMode?'Pinch a card first.':'Pick a card at the bottom first.',2);return;}deploy(armed,x,z);}
+function onGroundTap(x,z){if(state==='base')return selectAt(x,z);if(state!=='battle')return;if(armed==null){prompt(xrMode?Verb()+' a card first.':'Pick a card at the bottom first.',2);return;}deploy(armed,x,z);}
 $('zIn').onclick=()=>{orb.r=clamp(orb.r*.8,orb.minR,orb.maxR);};$('zOut').onclick=()=>{orb.r=clamp(orb.r*1.25,orb.minR,orb.maxR);};
 
 /* ---------- Quest mixed reality ---------- */
@@ -2915,6 +2961,10 @@ const XS=.045,TERRAIN_BUMP=M.terrain.bumpScale;let xrMode=false,xrDirty=true,xrR
 const PIV=V(1.5,0,1.5); // board center: the board turns and resizes around this point
 // the UI lives in room space, not on the board: it follows the board's position and size but always turns to face the player
 const xrUI=new T.Group();xrUI.visible=false;stage.add(xrUI);
+// pinch in the Quest headset, tap on a touch screen (phone mixed reality too), click with a mouse; tutorials and hints use the right word
+function verb(){return xrMode?(xtEl.hidden?'pinch':'tap'):matchMedia('(pointer:coarse)').matches?'tap':'click';}
+const Verb=()=>{const v=verb();return v[0].toUpperCase()+v.slice(1);};
+const questXR=()=>xrMode&&xtEl.hidden;
 function canvasPlane(w,h,cw,ch){const c=document.createElement('canvas');c.width=cw;c.height=ch;const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;
   const m=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));m.rotation.y=-Math.PI/2;m.userData={c,ctx:c.getContext('2d'),t};xrUI.add(m);return m;}
 const xrHud=canvasPlane(10,2.9,800,232);xrHud.position.set(11.7,G+3.6,.5);
@@ -2924,7 +2974,8 @@ const xrCards=[];for(let i=0;i<8;i++){const m=canvasPlane(2.1,1.6,256,196);cardR
 function layoutRow(list,gap){const w=list.map(m=>m.geometry.parameters.width),tot=w.reduce((a,b)=>a+b,0)+gap*Math.max(0,list.length-1);let x=-tot/2;
   list.forEach((m,i)=>{m.position.set(x+w[i]/2,0,0);x+=w[i]+gap;});}
 // when: which game states show the button
-const xrBtns=[['Tutorial raid','tutorial',-14.8,2.6,-4.6,'menu ended'],['My base','base',-14.8,2.6,-.2,'menu ended'],['Full raid','full',-14.8,2.6,-.2,'menu ended'],['Main menu','menu',-14.8,2.6,4.2,'ended'],['Cancel raid','cancel',-14.8,2.6,0,'battle']]
+var xrTutPick=false; // the menu's Tutorials button swaps the row for the two tutorials and Back
+const xrBtns=[['My base','base',0,0,0,'menu ended'],['Tutorials','tuts',0,0,0,'menu'],['Attack!','full',0,0,0,'base'],['Full raid','full',0,0,0,'ended'],['Raid tutorial','tutorial',0,0,0,'tutpick'],['Base setup','coach',0,0,0,'tutpick'],['Back','back',0,0,0,'tutpick'],['Main menu','menu',0,0,0,'ended'],['Cancel raid','cancel',0,0,0,'battle']]
   .map(([label,m,x,y,z,when])=>{const p=canvasPlane(when==='battle'?2.6:3.1,when==='battle'?.82:.98,380,120);btnRow.add(p);p.rotation.set(0,0,0);Object.assign(p.userData,{mode:m,label,when});return p;});
 // exit: the last button in the button row, on every screen while in mixed reality
 const xrExit=canvasPlane(3.9,.82,570,120);btnRow.add(xrExit);xrExit.rotation.set(0,0,0);
@@ -2971,22 +3022,30 @@ function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
     else{x.fillText(state==='menu'?'TABLETOP COMMAND':fmtClock(timeLeft),28,74);
     x.font='600 40px sans-serif';if(state==='menu'){const lv=levelFor(serviceXp,PLAYER_HQ);x.font='600 30px sans-serif';x.fillText(levelName(lv.L,cur)+' · HQ '+PLAYER_HQ,470,70);}
     else{x.fillText('★'.repeat(s.stars)+'☆'.repeat(3-s.stars)+'  '+s.pct+'%',230,70);x.fillStyle='#ff9a7a';x.font='600 32px sans-serif';x.fillText('Enemy HQ '+enemyHq(),560,68);}}
-    x.fillStyle='#f1ede2';x.font='500 30px sans-serif';{const src=state==='base'?BASE.res:Object.assign({},loot,{i:BASE.res.i});let px=28;RES.forEach(k=>{const im=RES_IMG[k];if(im&&im.complete){x.drawImage(im,px,90,40,40);px+=44;}x.fillText(fmtN(src[k]||0),px,122);px+=x.measureText(fmtN(src[k]||0)).width+26;});}
+    x.fillStyle='#f1ede2';x.font='500 30px sans-serif';{const src=state==='base'||state==='menu'?BASE.res:Object.assign({},loot,{i:BASE.res.i});let px=28;RES.forEach(k=>{const im=RES_IMG[k];if(im&&im.complete){x.drawImage(im,px,90,40,40);px+=44;}x.fillText(fmtN(src[k]||0),px,122);px+=x.measureText(fmtN(src[k]||0)).width+26;});}
     x.fillStyle='#a9d9e4';x.font='500 26px sans-serif';x.fillText(xrRadio?'RADIO › '+xrRadio.slice(0,58):'',28,168);
     x.fillStyle='#ffffff';x.font='600 26px sans-serif';
-    const pr=state==='base'?(xrMove?'Pinch where it should go.':placing?'Pinch the ground to place. Pinch the panel to stop.':'Pinch the panel on your left. Pinch a building to select it.'):state==='ended'?`${$('endTitle').textContent}! ${$('endPct').textContent}. Pinch a button to continue.`:state==='menu'?'Pinch a button to start. Squeeze to move, twist to turn.':xrPrompt;x.fillText((pr||'').slice(0,64),28,210);t.needsUpdate=true;}
+    const V=Verb(),pr=state==='base'?(xrMove?V+' where it should go.':placing?`${V} the ground to place. ${V} the panel to stop.`:`${V} the panel on your left. ${V} a building to select it.`):state==='ended'?`${$('endTitle').textContent}! ${$('endPct').textContent}. Pinch a button to continue.`:state==='menu'?(questXR()?'Pinch a button to start. Squeeze to move, twist to turn.':'Tap a button. Drag to move the board, pinch to zoom.'):xrPrompt;x.fillText((pr||'').slice(0,64),28,210);t.needsUpdate=true;}
   xrCards.forEach((m,i)=>{const c=cards[i],{ctx:x,c:cv,t}=m.userData;m.visible=state==='battle'&&!!c;if(!m.visible)return;const on=armed===i,lock=c.n<=0||cardLocked(i);
     x.clearRect(0,0,256,196);x.fillStyle=on?'rgba(255,210,122,.95)':lock?'rgba(30,32,28,.6)':'rgba(30,38,26,.92)';rrect(x,0,0,256,196,18);x.fill();
     x.strokeStyle=on?'#fff':'rgba(255,255,255,.35)';x.lineWidth=4;x.stroke();const th=thumb(c.k);
     if(th.img&&th.img.complete&&th.img.naturalWidth){x.globalAlpha=lock?.45:1;x.drawImage(th.img,40,4,176,110);x.globalAlpha=1;}
     x.fillStyle=on?'#2a1e05':lock?'#888':'#efe9da';const nm=(c.per?c.per+'× ':'')+NAME(c.k);let fs=28;x.font=`700 ${fs}px sans-serif`;while(x.measureText(nm).width>232&&fs>16){fs-=2;x.font=`700 ${fs}px sans-serif`;}
     x.fillText(nm,12,142);x.font='600 34px sans-serif';x.fillText(levelLocked(c)?'Lv '+unlockLv(c.k):'×'+c.n,12,184);t.needsUpdate=true;});
-  xrBtns.forEach(b=>{const u=b.userData;b.visible=u.when.split(' ').includes(state);if(!b.visible)return;
+  const xk=state==='menu'&&xrTutPick?'tutpick':state;
+  xrBtns.forEach(b=>{const u=b.userData;b.visible=u.when.split(' ').includes(xk)&&!(state==='base'&&((raidPick&&baseTab==='raid')||coach));if(!b.visible)return;
+    if(state==='base'){drawAttackXR(u);return;}
     const label=u.mode==='cancel'?(cancelArmed()?'Cancel?':'Cancel raid'):state==='ended'&&u.mode==='full'?(mode==='tutorial'?'Full raid':'Raid again'):u.label,hot=u.mode==='full'||(u.mode==='cancel'&&cancelArmed());
     const {ctx:x,t}=u;x.clearRect(0,0,380,120);x.fillStyle=hot?'rgba(255,210,122,.95)':'rgba(30,38,26,.92)';rrect(x,0,0,380,120,20);x.fill();
     x.fillStyle=hot?'#2a1e05':'#efe9da';x.font='700 42px sans-serif';x.textAlign='center';x.fillText(label,190,76);x.textAlign='left';t.needsUpdate=true;});
   layoutRow(xrCards.filter(m=>m.visible),.22);xrExit.visible=xrMode;layoutRow([...xrBtns,xrExit].filter(m=>m.visible),.4); // exit is the last button in the row
   xrPromo.visible=promoOn();xrBanner.visible=state==='ended'&&!!result&&!xrPromo.visible;if(xrBanner.visible)drawBanner();if(xrPromo.visible)drawPromo();}
+const ATK_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><g fill="#2a1e05"><g transform="rotate(38 24 24)"><path d="M3 22l10-1v7l-8 2z"/><rect x="13" y="21" width="22" height="4.5" rx="1"/><rect x="35" y="22" width="11" height="1.8"/><rect x="23" y="25" width="3.5" height="6" rx="1"/></g><g transform="translate(48 0) scale(-1 1) rotate(38 24 24)"><path d="M3 22l10-1v7l-8 2z"/><rect x="13" y="21" width="22" height="4.5" rx="1"/><rect x="35" y="22" width="11" height="1.8"/><rect x="23" y="25" width="3.5" height="6" rx="1"/></g></g><path d="M24 31l2.4 4.8 5.3.8-3.9 3.7.9 5.2-4.7-2.5-4.7 2.5.9-5.2-3.9-3.7 5.3-.8z" fill="#b8321f"/></svg>';
+const atkImg=new Image();atkImg.src='data:image/svg+xml,'+encodeURIComponent(ATK_SVG);atkImg.onload=()=>{xrDirty=true;};
+function drawAttackXR(u){const {ctx:x,t}=u;x.clearRect(0,0,380,120);x.fillStyle='rgba(255,210,122,.97)';rrect(x,0,0,380,120,20);x.fill();x.strokeStyle='#fff';x.lineWidth=4;rrect(x,2,2,376,116,18);x.stroke();
+  if(atkImg.complete&&atkImg.naturalWidth)x.drawImage(atkImg,14,12,96,96);x.fillStyle='#2a1e05';x.font='800 50px sans-serif';x.fillText('Attack!',122,64);
+  x.font='600 22px sans-serif';x.fillText(attackSub(),124,98);t.needsUpdate=true;}
+function attackSub(){const hq=baseHq();return `Enemy HQ ${Math.max(1,hq-1)}–${Math.min(HQ_MAX,hq+1)} · ${WX[nextWx].n}`;}
 const isHand=c=>!!(c.userData.src&&c.userData.src.hand);
 const ctrls=[0,1].map(i=>{const c=rr.xr.getController(i);stage.add(c);
   const line=new T.Line(new T.BufferGeometry().setFromPoints([V(0,0,0),V(0,0,-1)]),new T.LineBasicMaterial({color:0x7fd3e6}));line.scale.z=1.2;c.add(line);
@@ -3053,8 +3112,8 @@ function xrFrame(dt){
     const p=scene.worldToLocal(h.point.clone());const ok=cards[armed].k==='strike'||!!snapDeploy(p.x,p.z);const s=cards[armed].k==='strike'?[p.x,p.z]:(snapDeploy(p.x,p.z)||[p.x,p.z]);
     reticle.position.set(s[0],groundY(s[0],s[1])+.05,s[1]);reticle.material.color.setHex(ok?0x6fd36a:0xe0503c);reticle.visible=true;break;}}
 function xrSelect(c){ctrlRay(c);if(xrExit.visible&&ray.intersectObject(xrExit,false).length){haptic();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});return;}
-  if(xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersectObjects([...xrCards,...xrBtns].filter(m=>m.visible),false)[0];
-  if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='base'){haptic();enterBase();return;}if(u.mode==='menu'){haptic();goMenu();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});}
+  if(xrCoachSelect(c)||xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersectObjects([...xrCards,...xrBtns].filter(m=>m.visible),false)[0];
+  if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='tuts'||u.mode==='back'){haptic();xrTutPick=u.mode==='tuts';xrDirty=true;return;}if(u.mode==='coach'){haptic();xrTutPick=false;coachStart();return;}xrTutPick=false;if(u.mode==='base'){haptic();enterBase();return;}if(u.mode==='menu'){haptic();goMenu();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});}
     else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();begin(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
 function setShadow(k){Object.assign(sun.shadow.camera,{left:-(16+MAPE)*k,right:(16+MAPE)*k,top:(15+MAPE)*k,bottom:-(15+MAPE)*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
@@ -3128,7 +3187,11 @@ function setMap(id){if(MAPT===MAPS[id])return;const old=M.terrain.map,oldB=M.ter
 document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent='Loading…';setTimeout(()=>{setMap(b.dataset.map);b.textContent=b.dataset.label;},20);});
 function begin(m){if(m==='full'&&armyEmpty()){enterBase();baseTab='army';renderBasePanel();prompt('Train an army first: your raid cards are the units you train.',4);return;}
   if(m==='full'&&!raidGo){openRaidPick();return;}if(!AC){try{audioInit();}catch(_){}}if(AC){AC.resume();soundOn=true;}syncSnd();startBattle(m);}
-$('goTut').onclick=()=>begin('tutorial');$('goFull').onclick=()=>begin('full');
+// Tutorials: the raid tutorial or the base setup one; the steps use the word for how you play here
+function openTuts(on){$('tuts').hidden=!on;if(on){const v=verb();$('tutHow').textContent=v==='click'?'The steps tell you where to click. On a phone they say tap, and in the Quest headset they say pinch.':'The steps tell you where to tap. With a mouse they say click, and in the Quest headset they say pinch.';}}
+$('goTuts').onclick=()=>openTuts(true);$('tutClose').onclick=()=>openTuts(false);$('tuts').addEventListener('click',e=>{if(e.target.id==='tuts')openTuts(false);});
+$('tutRaid').onclick=()=>{openTuts(false);begin('tutorial');};$('tutBase').onclick=()=>{openTuts(false);show('menu',false);coachStart();};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('tuts').hidden)openTuts(false);});
 $('endNext').onclick=()=>begin(mode==='tutorial'?'full':'full');$('endMenu').onclick=goMenu;
 // test profiles: General Lv 22 (level 200) on an HQ 15 base, or back to a fresh Recruit. Also reachable with ?rank=general in the address
 function setProfile(general){serviceXp=general?XP_MAX:0;saveXp();BASE=general?maxedBase(HQ_MAX):defaultBase();saveBase();syncHq();}
@@ -3171,7 +3234,7 @@ function wakeAudio(){if(!AC){try{audioInit();}catch(_){return;}}if(AC.state!=='r
 // try right away: where the browser allows sound without a tap (a site you play often, the installed app, some headsets) the menu music starts on load;
 // elsewhere the context stays paused with the first bars queued, and the first tap releases them
 wakeAudio();
-initBase();setFaction('nato');buildLayout('full');
+initBase();setFaction('nato');buildLayout('mine');
 // hex colors are written in sRGB, but the renderer outputs sRGB from linear values: convert every solid color once so it isn't washed out
 function linearize(m){if(!m||m._lin)return;m._lin=true;if(m.color)m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();}
 scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(linearize);});Object.values(M).forEach(m=>[].concat(m).forEach(linearize));
