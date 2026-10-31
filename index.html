@@ -1,6 +1,5 @@
 <!doctype html>
-<html lang="en">
-<head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Tabletop Command</title></head><body>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Tabletop Command Raid</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -222,8 +221,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #xrBtn:hover{background:rgba(127,211,230,.3)}
 /* Quest browser and other wide screens: larger and more solid so it stands out */
 @media (min-width:900px) and (min-height:521px){#xrBtn{font-size:16px;padding:11px 20px;background:rgba(40,120,140,.55);border:2px solid rgba(127,211,230,.85);box-shadow:0 0 18px rgba(127,211,230,.35)}#xrBtn:hover{background:rgba(60,150,170,.75)}}
-/* phones (upright or sideways): Mixed Reality in the top-right corner, under the top bar */
-@media (max-width:899px),(max-height:520px){#xrBtn{top:calc(54px + env(safe-area-inset-top,0px));bottom:auto;font-size:11.5px;padding:6px 10px}
+/* phones (upright or sideways): Mixed Reality up in the top-right corner, level with the slim resource bar */
+@media (max-width:899px),(max-height:520px){#xrBtn{top:calc(8px + env(safe-area-inset-top,0px));right:max(8px,env(safe-area-inset-right,0px));bottom:auto;font-size:11px;padding:4px 10px}
   #app.raid #xrBtn{top:calc(58px + env(safe-area-inset-top,0px))} /* right under the stars and % */
   #app:has(#menu:not([hidden])) #xrBtn{top:calc(10px + env(safe-area-inset-top,0px))}}
 /* main menu: the full-screen button sits in the top-left corner above the menu sheet */
@@ -251,8 +250,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .bpanel .arow.pick .pkb{grid-column:3;grid-row:1/span 2;display:flex;align-items:center;gap:6px}.bpanel .arow.pick .pkb .tbtn{grid-row:auto;grid-column:auto;min-width:38px;font-size:18px;line-height:1;padding:6px 0}.bpanel .arow.pick .pkb b{min-width:22px;text-align:center;font-size:15px}.bpanel .arow.pick.off{opacity:.55}
 @media (max-width:899px){#app:not(.xr) .bpanel.pickArmy:not(.peek){max-height:64vh}}
 </style>
-</head>
-<body>
 
 <div id="app">
   <canvas id="c" aria-label="Battlefield on a table. Tap a card, then tap the map to deploy."></canvas>
@@ -3013,6 +3010,10 @@ function exitXR(){xrMode=false;if(state==='base')renderBasePanel();M.terrain.bum
   setShadow(1);xrUI.visible=false;reticle.visible=false;$('app').classList.remove('xr');xtEl.hidden=true;xt=null;}
 if(navigator.xr&&navigator.xr.isSessionSupported){navigator.xr.isSessionSupported('immersive-ar').then(ok=>{if(ok)$('xrBtn').hidden=false;}).catch(()=>{});}
 $('xrBtn').onclick=enterXR;
+// on narrow phones the button sits beside the resource bar; when the full name would run into it, it shortens to "MR"
+function fitXrBtn(){const x=$('xrBtn');if(x.hidden)return;x.textContent='Mixed Reality';const bar=$('fsBtn').parentElement.getBoundingClientRect(),r=x.getBoundingClientRect();
+  if(bar.width&&r.top<bar.bottom&&r.bottom>bar.top&&r.left<bar.right+6)x.textContent='MR';}
+addEventListener('resize',fitXrBtn);setInterval(fitXrBtn,1000);
 
 /* ---------- menu + buttons ---------- */
 // the jets parked on the carrier deck are your faction's jet, a little smaller than the one that flies the strike
@@ -3132,5 +3133,5 @@ $('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
 setTimeout(()=>{try{main();}catch(err){document.getElementById('loading').textContent='Could not start: '+err.message;console.error(err);}},60);
 })();
 </script>
-</body>
-</html>
+
+</body></html>
