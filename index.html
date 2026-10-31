@@ -247,7 +247,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app:not(.xr) .bpanel .muted{font-size:11px}#app:not(.xr) .bpanel .ico.lg{width:40px;height:40px}
   #app:not(.xr) .bpanel>.row:first-of-type .muted{white-space:normal}
   #app:has(#basePanel:not([hidden])) #card{left:calc(50% + min(120px,16vw))}}
-#xrTouch{position:fixed;inset:0;touch-action:none;background:transparent}#xrTouch[hidden]{display:none}
+#xrTouch{position:fixed;inset:0;touch-action:none;background:transparent;visibility:visible;pointer-events:auto;z-index:70}#xrTouch[hidden]{display:none}
 /* phone, base: the resource bar is a small, nearly see-through strip so the field shows through it */
 @media (max-width:899px),(max-height:520px){#app:has(#basePanel:not([hidden])) .hud>.grp:last-child{flex:0 1 auto;gap:6px;align-items:center}
   #app:has(#basePanel:not([hidden])) .hud .pill{flex:0 1 auto;background:rgba(10,13,12,.14);border-color:rgba(255,255,255,.08);backdrop-filter:none;-webkit-backdrop-filter:none;
@@ -285,6 +285,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 
 <div id="app">
   <canvas id="c" aria-label="Battlefield on a table. Tap a card, then tap the map to deploy."></canvas>
+  <div id="xrTouch" hidden></div>
   <div class="hud">
     <div class="grp">
       <div class="pill timer"><b id="tm">3:00</b></div>
@@ -303,7 +304,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <button type="button" class="btn" id="fsBtn" hidden aria-label="Full screen" title="Full screen">⛶</button>
       <div id="perf" hidden></div>
       <button type="button" class="btn xr" id="xrBtn" hidden aria-label="Enter mixed reality"><svg class="vr" viewBox="0 0 32 18" aria-hidden="true"><path d="M3 3.5Q3 1 6 1h20q3 0 3 2.5v9q0 3.5-3.5 3.5h-4.2q-1.8 0-2.8-2l-1.2-2.4q-.6-1.2-1.3-1.2t-1.3 1.2L13.5 14q-1 2-2.8 2H6.5Q3 16 3 12.5z" fill="currentColor"/><path d="M1 6v5M31 6v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9.5" cy="8.5" r="2.6" fill="rgba(0,0,0,.45)"/><circle cx="22.5" cy="8.5" r="2.6" fill="rgba(0,0,0,.45)"/></svg><span>Mixed Reality</span></button>
-      <div id="xrTouch" hidden></div>
     </div>
   </div>
   <div class="radio" id="radio" hidden aria-live="polite"><span class="ch" id="rch">CH 2 · Overlord net</span><span id="rtx"></span></div>
