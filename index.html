@@ -242,6 +242,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #app:not(.xr) .bpanel>.row:first-of-type .muted{white-space:normal}
   #app:has(#basePanel:not([hidden])) #card{left:calc(50% + min(120px,16vw))}}
 #xrTouch{position:fixed;inset:0;touch-action:none;background:transparent}#xrTouch[hidden]{display:none}
+/* phone, base: the resource bar is a small, nearly see-through strip so the field shows through it */
+@media (max-width:899px),(max-height:520px){#app:has(#basePanel:not([hidden])) .hud>.grp:last-child{flex:0 1 auto;gap:6px;align-items:center}
+  #app:has(#basePanel:not([hidden])) .hud .pill{flex:0 1 auto;background:rgba(10,13,12,.14);border-color:rgba(255,255,255,.08);backdrop-filter:none;-webkit-backdrop-filter:none;
+    padding:2px 7px;gap:7px;font-size:10.5px;font-weight:600;border-radius:8px;text-shadow:0 1px 2px #000,0 0 3px rgba(0,0,0,.7)}
+  #app:has(#basePanel:not([hidden])) .hud .res{gap:3px}#app:has(#basePanel:not([hidden])) .hud .res .dot{width:12px;height:12px;background-size:contain}
+  #app:has(#basePanel:not([hidden])) #fsBtn{padding:2px 7px;font-size:15px;background:rgba(10,13,12,.14);border-color:rgba(255,255,255,.12);backdrop-filter:none}}
 </style>
 </head>
 <body>
