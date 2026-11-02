@@ -1378,7 +1378,7 @@ const PINE=(()=>{let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,parts
   parts.forEach(g=>{P.set(g.attributes.position.array,o);N.set(g.attributes.normal.array,o);C.set(g.attributes.color.array,o);o+=g.attributes.position.count*3;});
   const m=new T.BufferGeometry();m.setAttribute('position',new T.BufferAttribute(P,3));m.setAttribute('normal',new T.BufferAttribute(N,3));m.setAttribute('color',new T.BufferAttribute(C,3));return m;})();
 const pineMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.85,side:T.DoubleSide});pineMat.userData.wind=[.016,1.2,1];pineMat.userData.snowy=1;
-const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0x8a867f,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());
+const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0xa29e96,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());OBS_M.rock.userData.gfx=-1; // rocks keep their own gray: no ground-contact darkening
 function resetItems(){teethL=[];wireL=[];mines=[];itemEnts=[];}
 // an enemy base for an HQ level: every building, barrier and obstacle it allows, levels near the HQ, 20% of its resources up for grabs
 function genBase(h){resetItems();const list=[];[...BUILD_ORDER,...ITEM_ORDER].forEach(k=>{for(let s=0;s<(k==='barrier'?barExtra(h):LIMIT[k](h));s++)list.push({k,s,lv:k==='hq'?h:clamp(maxLv(k,h)-(Math.random()<.35?1:0),1,maxLv(k,h))});});
@@ -1510,11 +1510,11 @@ function moveSel(p){const h=baseHq();moving=false;
     if(!rowO.every(o=>fits('barrier',o.x+dx,o.z+dz,others,h))){prompt('No room there.',1.5);renderBasePanel();return;}rowO.forEach(o=>{o.x=Math.round((o.x+dx)*1000)/1000;o.z=Math.round((o.z+dz)*1000)/1000;});saveBase();refreshBase(true);return;}
   const o=sel&&sel.o;if(!o)return;let x=Math.round(p.x*4)/4,z=Math.round(p.z*4)/4,y=o.y;if(o.k==='barrier'){const sn=snapWall(p.x,p.z,BASE.blds,o,h);x=sn.x;z=sn.z;y=sn.y;}
   if(!fits(o.k,x,z,BASE.blds,h,o)){prompt('No room there.',1.5);renderBasePanel();return;}o.x=x;o.z=z;if(o.k==='barrier'){o.y=y;settleWalls(o,BASE.blds);}saveBase();refreshBase(true);coachEv('move');}
-/* ---------- obstacles: rocks turn up in your base and cost a little gold to blast away; now and then an intel case appears ---------- */
+/* ---------- obstacles: the rocks already in your base cost a little gold to blast away; now and then an intel case appears ---------- */
 const OBS_EVERY=6*60000,OBS_MAX=12; // prototype pace: one every few minutes (Clash: about one every 8 hours)
 function spawnObs(n){const h=baseHq(),e=mapExt(h);let made=0;
   for(let t=0;t<n*60&&made<n;t++){if(BASE.blds.filter(o=>BK[o.k].obs&&o.k!=='ibox').length>=OBS_MAX)break;
-    const k=Math.random()<.07&&!BASE.blds.some(o=>o.k==='ibox')?'ibox':'rock'; // only rocks grow back (and the odd intel case)
+    if(Math.random()>=.07||BASE.blds.some(o=>o.k==='ibox'))break;const k='ibox'; // rocks no longer turn up; only the odd intel case
     const x=Math.round((-1+Math.random()*(13+e))*4)/4,z=Math.round((-7.4-e+Math.random()*(18.8+2*e))*4)/4;if(!fits(k,x,z,BASE.blds,h)||MAPT.dunes&&groundY(x,z)-G>.05)continue;BASE.blds.push({k,s:0,lv:1,x,z});made++;}
   return made;}
 // on the dune map, obstacles already standing on a dune are cleared away (they would sit on the slope)
@@ -3070,7 +3070,7 @@ if(gOn>.5){vec3 w=gWP/gS;gH=w.y-gY/gS;gN=(texture2D(gTex,w.xz*4.).r+texture2D(gT
   if(gAO>.5)diffuseColor.rgb*=1.-.38*smoothstep(.15,-.8,normalize(gWN).y)-.12*(1.-smoothstep(0.,.35,gH))*(1.-abs(normalize(gWN).y));}`+(this.userData.snowy?`
 if(gSnow>.5){float hk=smoothstep(.25,1.15,gH),ny=normalize(gWN).y;float sn=smoothstep(.55-.35*hk,.9-.3*hk,ny)*(.35+.65*texture2D(gTex,gWP.xz/gS*6.).r)*(.15+1.05*hk);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.88,.92,.96),clamp(sn*1.35,0.,.95));}`:'')).replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nif(gOn>.5)roughnessFactor=clamp(roughnessFactor+(gN-.5)*.35+(1.-smoothstep(0.,.2,gH))*.12,.05,1.);');};
 // level 2 adds a warm-sun, cool-shadow grade with blue haze toward the horizon, and shading under overhangs and low on walls
-const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);
+const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;M.rock.userData.gfx=-1;M.boulder.userData.gfx=-1;laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);
 
 // land layer: a ground map painted once from the layout (shade under every building and wall, worn dirt around them and footpaths to the HQ,
 // wet ground along rivers and sea) repainted only when the layout really changes, so it costs nothing per frame.
