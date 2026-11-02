@@ -2257,10 +2257,10 @@ const BUILD={
     frustum(.36,.03,.035,.06,.06,M.enemy,h,-.32,.11,0,0);mesh(box(.02,.1,.06),M.enemy,-.5,.16,0,h);for(const z of[-.07,.07])mesh(box(.32,.012,.012),M.dark,.04,.012,z,h);
     for(const a of[0,Math.PI/2]){const bl=mesh(box(.8,.006,.035),M.dark,.05,.23,0,h);bl.rotation.y=a;}mesh(cyl(.012,.012,.05,6),M.dark,.05,.21,0,h);}
     mesh(cyl(.006,.006,.35,4),M.metal,.42,.17,-.42,g);const ws=mesh(new T.ConeGeometry(.03,.12,8,1,true),siteTape,.48,.33,-.42,g);ws.rotation.z=Math.PI/2;},
-  // airfield: a short runway with a centre line, an arched aircraft shelter and a jet parked in front of it
-  airfield(g,b){const cr=ownCraft('jet',.62);if(cr){cr.position.set(.32,.014,.25);cr.rotation.y=-Math.PI/2;g.add(cr);}mesh(box(.42,.012,1.25),M.dark,-.1,.006,0,g);for(let k=0;k<6;k++)mesh(box(.02,.004,.1),M.white,-.1,.014,-.5+k*.2,g);for(const z of[-.6,.6])for(let k=0;k<4;k++)mesh(box(.04,.004,.04),M.white,-.25+k*.1,.014,z*1.0,g);
-    const sh=new T.Mesh(new T.CylinderGeometry(.26,.26,.5,16,1,false,0,Math.PI),M.concrete);sh.rotation.z=Math.PI/2;sh.rotation.y=Math.PI/2;sh.position.set(.32,.0,-.25);g.add(sh);mesh(box(.5,.22,.012),barracksDark,.32,.1,0.005,g);
-    if(!cr){const j=new T.Group();j.position.set(.32,.05,.25);j.rotation.y=-Math.PI/2;g.add(j);mesh(cyl(.035,.04,.45,10),M.enemy,0,0,0,j).rotation.z=Math.PI/2;mesh(new T.ConeGeometry(.035,.12,10),M.enemy,.28,0,0,j).rotation.z=-Math.PI/2;
+  // airfield: a short runway with a centre line; the arched aircraft shelter stands on its far end and the jet waits on the runway in front of its doors, nose down the strip
+  airfield(g,b){const cr=ownCraft('jet',.62);if(cr){cr.position.set(0,.014,.25);cr.rotation.y=-Math.PI/2;g.add(cr);}mesh(box(.58,.012,1.25),M.dark,0,.006,0,g);for(let k=0;k<4;k++)mesh(box(.02,.004,.1),M.white,0,.014,-.1+k*.2,g);for(let k=0;k<4;k++)mesh(box(.04,.004,.04),M.white,-.15+k*.1,.014,.6,g);
+    const sh=new T.Mesh(new T.CylinderGeometry(.26,.26,.5,16,1,false,0,Math.PI),M.concrete);sh.rotation.z=Math.PI/2;sh.rotation.y=Math.PI/2;sh.position.set(0,.012,-.34);g.add(sh);mesh(box(.5,.22,.012),barracksDark,0,.11,-.585,g);
+    if(!cr){const j=new T.Group();j.position.set(0,.05,.25);j.rotation.y=-Math.PI/2;g.add(j);mesh(cyl(.035,.04,.45,10),M.enemy,0,0,0,j).rotation.z=Math.PI/2;mesh(new T.ConeGeometry(.035,.12,10),M.enemy,.28,0,0,j).rotation.z=-Math.PI/2;
     mesh(new T.SphereGeometry(.03,10,8),M.glass,.12,.035,0,j).scale.set(2,.8,1);const wg=new T.Shape();wg.moveTo(.06,0);wg.lineTo(-.12,.22);wg.lineTo(-.18,.22);wg.lineTo(-.16,0);wg.closePath();
     for(const s of[1,-1]){const w=new T.Mesh(new T.ExtrudeGeometry(wg,{depth:.01,bevelEnabled:false}),M.enemy);w.rotation.x=s*Math.PI/2;w.position.y=-.005;g.add(w);j.add(w);}mesh(box(.1,.1,.01),M.enemy,-.18,.06,0,j);}},
   // intelligence centre: a two-storey block with a glass band, server units, satellite dishes and an antenna array
