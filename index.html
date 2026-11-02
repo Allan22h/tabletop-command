@@ -67,6 +67,15 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .facs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .facs button{background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:10px;padding:9px;font-weight:500}
 .facs button[aria-pressed="true"]{background:var(--gold);color:#2a1e05;border-color:var(--gold)}
+/* choice cards (map, faction): taller tiles with a colour band, same width as before */
+.facs.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.facs button.card{display:grid;align-content:start;justify-items:start;gap:5px;width:100%;min-width:0;min-height:66px;padding:10px 10px 11px;text-align:left;line-height:1.15}
+.facs .card .sw{width:100%;height:9px;border-radius:4px;background:var(--sw);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.facs .card b{font:600 14px/1.15 var(--f-display);letter-spacing:.02em;text-transform:uppercase}
+.facs .card small{font-size:11px;opacity:.72}
+.facs .card.busy b::after{content:' …'}
+/* the main menu has no battle running: no timer or stars in the corner */
+#app:has(#menu:not([hidden])) .hud>.grp:first-child{visibility:hidden}
 .primary:disabled{opacity:.4;cursor:default}
 .primary{background:var(--gold);color:#2a1e05;border:0;border-radius:12px;padding:14px;font:700 20px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em}
 .secondary{background:transparent;border:1px solid var(--edge);border-radius:12px;padding:12px;font-weight:500}
@@ -346,7 +355,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <div id="xrTouch" hidden></div>
   <div class="hud">
     <div class="grp">
-      <div class="pill timer"><b id="tm">3:00</b></div>
+      <div class="pill timer"><b id="tm">4:00</b></div>
       <div class="pill enemy" id="enemyHq" hidden>Enemy HQ 4</div>
       <div class="pill"><span class="stars" id="stars"><span class="off">★★★</span></span><span id="pct">0%</span></div>
     </div>
@@ -386,27 +395,24 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   </div></div>
   <div class="screen" id="menu">
     <div class="sheet">
-      <span class="lbl">Raid prototype · <span id="mapName">Operation Iron Delta</span></span>
       <h1>Tabletop <span>Command</span></h1>
       <div class="rank" id="rkBadge" role="button" tabindex="0" title="Change your name" aria-label="Your rank and base. Tap to change your name."><span id="rkIns"></span><div class="rk"><b id="rkName">Recruit</b><div class="xp"><i id="rkFill"></i></div><span id="rkSub"></span></div><span class="rkhq">Your HQ<b id="rkHq">3</b></span></div>
-      <p>Deploy units from your cards, break into the compound and destroy the HQ before the 3-minute timer runs out. Loot drops from every building you destroy.</p>
       <div style="display:grid;gap:8px"><span class="lbl">Map</span>
-        <div class="facs">
-          <button type="button" data-map="delta" data-label="Iron Delta · wetlands" aria-pressed="true">Iron Delta · wetlands</button>
-          <button type="button" data-map="dust" data-label="Dust Crown · desert" aria-pressed="false">Dust Crown · desert</button>
-          <button type="button" data-map="birch" data-label="Birch Line · snow" aria-pressed="false">Birch Line · snow</button>
+        <div class="facs three">
+          <button type="button" class="card" data-map="delta" aria-pressed="true"><i class="sw" style="--sw:linear-gradient(100deg,#6f7d3f 0 55%,#3f6466 55% 70%,#5d6a3c 70%)"></i><b>Iron Delta</b><small>Wetlands</small></button>
+          <button type="button" class="card" data-map="dust" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(100deg,#d39a5e 0 40%,#e6bf86 40% 75%,#cf8f52 75%)"></i><b>Dust Crown</b><small>Desert</small></button>
+          <button type="button" class="card" data-map="birch" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(100deg,#eef2f5 0 50%,#9cc8e0 50% 68%,#2f4a33 68%)"></i><b>Birch Line</b><small>Snow</small></button>
         </div></div>
       <div style="display:grid;gap:8px"><span class="lbl">Your faction</span>
         <div class="facs">
-          <button type="button" data-f="nato" aria-pressed="true">USA / NATO</button>
-          <button type="button" data-f="ru" aria-pressed="false">Russia</button>
-          <button type="button" data-f="cn" aria-pressed="false">China</button>
-          <button type="button" data-f="eu" aria-pressed="false">Europe / Middle East</button>
+          <button type="button" class="card" data-f="nato" aria-pressed="true"><i class="sw" style="--sw:linear-gradient(90deg,#1f3a7a 0 34%,#f2f2f2 34% 67%,#b22234 67%)"></i><b>USA / NATO</b></button>
+          <button type="button" class="card" data-f="ru" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(90deg,#f2f2f2 0 34%,#1c3f94 34% 67%,#d52b1e 67%)"></i><b>Russia</b></button>
+          <button type="button" class="card" data-f="cn" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(90deg,#de2910 0 70%,#ffde00 70%)"></i><b>China</b></button>
+          <button type="button" class="card" data-f="eu" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(90deg,#003399 0 50%,#ffcc00 50% 62%,#1a7a3c 62%)"></i><b>Europe / Middle East</b></button>
         </div></div>
       <button type="button" class="primary" id="goBase">My base</button>
       <button type="button" class="secondary" id="goTuts">Tutorials</button>
       <button type="button" class="secondary" id="setBtn">⚙ Settings</button>
-      <p>Phone: tap a card, then tap the map. Drag to rotate, pinch to zoom. Quest: open this page in the Quest browser and press "Enter mixed reality" (top right) to put the board on your table. Squeeze the grip to move it, twist your wrist while squeezing or flick the thumbstick to turn it, squeeze with both hands to turn and resize it.</p>
     </div>
   </div>
 
@@ -1697,7 +1703,7 @@ function defenseLoot(snap,res,h){const holders={g:[],f:[],m:[],i:[]};snap.forEac
   const out={};RES.forEach(r=>{const tot=holders[r].reduce((s,x)=>s+x[1],0);holders[r].forEach(([ix,c])=>{(out[ix]=out[ix]||{})[r]=Math.floor(res[r]*.2*c/Math.max(1,tot));});});return out;}
 function buildDefense(){const L=defendSim.L,lm=defenseLoot(L.snap,L.res,L.myHq);L.snap.forEach((o,ix)=>{if(BK[o.k].item)placeItem(o.k,o.x,o.z,true,L.myHq,wallYaw(o,L.snap),o.lv);else placeB(o.k,o.x,o.z,o.lv,lm[ix]||{},o.fresh);});}
 function setupDefense(L,watch){menuMusic(false);defendSim={L,idx:0,done:false,watch,acc:0,saved:{cur}};cur=L.fac;attOverride=1+.048*(L.hq-1);simRng=mulberry(L.seed);sfxQ=[];
-  clearBattle();mode='defend';withSim(()=>buildLayout('defend'));cards=[];armed=null;loot={g:0,f:0,m:0,i:0};timeLeft=180;battleT=0;endT=0;state='battle';tut=null;result=null;}
+  clearBattle();mode='defend';withSim(()=>buildLayout('defend'));cards=[];armed=null;loot={g:0,f:0,m:0,i:0};timeLeft=RAID_TIME;battleT=0;endT=0;state='battle';tut=null;result=null;}
 function defendStep(dt){const D=defendSim;withSim(()=>{while(D.idx<D.L.plan.length&&D.L.plan[D.idx].t<=battleT){const u=D.L.plan[D.idx++],sp=snapDeploy(u.x,u.z);if(!sp)continue;
       if(u.k==='rifle')for(let i=0;i<3;i++){const a=i/3*6.28+.4;spawnUnit('rifle',sp[0]+Math.cos(a)*.45,sp[1]+Math.sin(a)*.45,'att');}else spawnUnit(u.k,sp[0],sp[1],'att');}
     step(dt);});
@@ -1705,8 +1711,13 @@ function defendStep(dt){const D=defendSim;withSim(()=>{while(D.idx<D.L.plan.leng
 function stopDefense(){if(!defendSim)return;cur=defendSim.saved.cur;defendSim=null;attOverride=null;simRng=null;sfxQ=[];}
 const yieldUI=()=>new Promise(r=>setTimeout(r,0));
 async function runDefense(L){const prevState=state;setupDefense(L,false);let n=0;
-  while(!defendSim.done&&n<6000){defendStep(1/30);n++;if(n%300===0)await yieldUI();}
+  while(!defendSim.done&&n<8000){defendStep(1/30);n++;if(n%300===0)await yieldUI();}
   const s=stats(),lost={};RES.forEach(r=>lost[r]=Math.round(loot[r]||0));stopDefense();clearBattle();state=prevState;$('radio').hidden=true;return {pct:s.pct,stars:s.stars,lost};}
+// testing aid: one simulated raid on your base with a given seed, reporting how long it ran
+async function debugAttack(seed,att){const h=baseHq();att=att||h;const rng=mulberry(seed^0x5bd1e995);
+  const L={t:Date.now(),by:'Test',fac:FACS.filter(f=>f!==cur)[0],hq:att,myHq:h,seed,free:1,snap:BASE.blds.filter(o=>!BK[o.k].obs&&!o.stash).map(o=>({k:o.k,x:o.x,z:o.z,y:o.y,lv:o.lv,fresh:!!o.fresh})),res:Object.assign({},BASE.res),plan:attackPlan(att,h,rng)};
+  const prevState=state;setupDefense(L,false);let n=0;while(!defendSim.done&&n<8000){defendStep(1/30);n++;}const t=battleT,s=stats();const alive=atts.filter(e=>e.alive).length;
+  stopDefense();clearBattle();state=prevState;$('radio').hidden=true;return {t:Math.round(t),pct:s.pct,stars:s.stars,attackersLeft:alive,units:L.plan.length};}
 async function simulateAttack(){const h=baseHq(),att=clamp(h+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX),seed=Math.floor(Math.random()*2147483647),rng=mulberry(seed^0x5bd1e995);
   const L={t:Date.now(),by:ATT_NAMES[Math.floor(Math.random()*ATT_NAMES.length)],fac:FACS.filter(f=>f!==cur)[Math.floor(Math.random()*3)],hq:att,myHq:h,seed,
     free:1,snap:(BASE.blds.some(o=>o.stash)?(()=>{const c=BASE.blds.map(o=>{const q=Object.assign({},o);delete q.stash;return q;});autoPlace(c,h);return c;})():BASE.blds).filter(o=>!BK[o.k].obs).map(o=>({k:o.k,x:o.x,z:o.z,y:o.y,lv:o.lv,fresh:!!o.fresh})),res:Object.assign({},BASE.res),plan:attackPlan(att,h,rng)};
@@ -2162,7 +2173,7 @@ const TUT_CARDS=[{k:'tank',n:1,per:3},{k:'strike',n:1}];
 /* ---------- world state ---------- */
 const battle=new T.Group();scene.add(battle);
 let atts=[],defs=[],blds=[],walls=[],strikes=[];
-let mode='full',state='menu',timeLeft=180,cards=[],armed=null,loot={g:0,f:0,m:0},endT=0,tut=null,tutT=0,battleT=0;
+let mode='full',state='menu',timeLeft=240,cards=[],armed=null,loot={g:0,f:0,m:0},endT=0,tut=null,tutT=0,battleT=0;
 
 /* ---------- health bars ---------- */
 const barBg=new T.SpriteMaterial({color:0x101010,depthTest:false,transparent:true,opacity:.75});
@@ -2599,7 +2610,9 @@ const tpos=t=>t.g&&!t.wall&&t.st?t.g.position:t.p;
 const tdist=(e,t)=>{const p=tpos(t);return Math.hypot(p.x-e.g.position.x,p.z-e.g.position.z)-(t.r||.2);};
 function wallAt(x,z,r){for(const w of walls)if(w.alive&&Math.abs(w.x-x)<r&&Math.abs(w.z-z)<r)return w;return null;}
 
-function dmgBld(b,amt){if(!b.alive)return;const before=b.hp;b.hp=Math.max(0,b.hp-amt);
+// battle pace: every hit, by attackers and by defenses alike, is scaled by this, so fights last longer without changing who wins
+let PACE=.6;const RAID_TIME=240;
+function dmgBld(b,amt){if(!b.alive)return;amt*=PACE;const before=b.hp;b.hp=Math.max(0,b.hp-amt);
   // tutorial: the outpost holds until the air strike is called
   if(tut&&b.hq&&tut.step<3)b.hp=Math.max(b.hp,b.max*.45);
  const f=(before-b.hp)/b.max;
@@ -2611,7 +2624,7 @@ function destroyBld(b){b.alive=false;b.bar.h.visible=false;const rest={};for(con
   explode(b.p.clone(),1.2);b.g.children.forEach(c=>c.visible=false);
   const rb=new T.Group();b.g.add(rb);for(let i=0;i<5;i++){const m=mesh(box(rand(.12,.3),rand(.05,.14),rand(.12,.3)),i%2?M.burnt:M.concrete,rand(-b.r,b.r)*.7,.05,rand(-b.r,b.r)*.7,rb);m.rotation.y=rand(0,3);}bake(rb);
   b.burn=9;if(b.hq)radio(mode==='tutorial'?`${whoAmI()}, the outpost is down.`:`${whoAmI()}, enemy HQ is burning.`,true);}
-function dmgUnit(e,amt){if(!e.alive)return;if(e.dug)amt*=.5;e.hp-=amt;setBar(e.bar,e.hp/e.st.hp);if(e.hp<=0)killUnit(e);}
+function dmgUnit(e,amt){if(!e.alive)return;amt*=PACE;if(e.dug)amt*=.5;e.hp-=amt;setBar(e.bar,e.hp/e.st.hp);if(e.hp<=0)killUnit(e);}
 function killUnit(e){e.alive=false;e.bar.h.visible=false;const p=e.g.position.clone();
   if(e.kind==='rifle'||e.kind==='gsoldier'){e.g.rotation.set(0,e.heading,Math.PI/2);e.g.position.y=groundY(p.x,p.z)+.04;after(3,()=>battle.remove(e.g));}
   else if(e.air){explode(p,.8,false);battle.remove(e.g);}
@@ -2788,7 +2801,7 @@ function fitRaidCam(){const w=canvasEl.clientWidth,h=canvasEl.clientHeight;if((w
 function startBattle(m){drum('raid');$('app').classList.add('raid');menuMusic(false);clearBattle();mode=m;setWeather(m==='full'?nextWx:'day');if(m==='full')nextWx=rollWx();if(m==='full')raidHq=clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
   cards=m==='tutorial'?TUT_CARDS.map(c=>Object.assign({},c)):armyCards();if(m!=='full')raidArmy=null;
   if(m==='full'&&shieldLeft()>0){BASE.shield=Math.max(0,BASE.shield-3*3600000);saveBase();}
-  armed=null;battleUsed=false;loot={g:0,f:0,m:0,i:0};timeLeft=180;battleT=0;state='battle';endT=0;
+  armed=null;battleUsed=false;loot={g:0,f:0,m:0,i:0};timeLeft=RAID_TIME;battleT=0;state='battle';endT=0;
   tut=m==='tutorial'?{step:0,t:0}:null;result=null;show('menu',false);show('end',false);show('banner',false);refreshCards();
   hqFlag();$('enemyHq').textContent='Enemy HQ '+enemyHq()+(wx!=='day'?' · '+WX[wx].n:'');$('enemyHq').hidden=false;orb.r=clamp(canvasEl.clientWidth<canvasEl.clientHeight?34:24,orb.minR,orb.maxR);
   leaveAt=cancelAt=-1e9;$('menuBtn').textContent='Menu';$('menuBtn').hidden=false;$('cancelBtn').textContent='Cancel raid';$('cancelBtn').hidden=false;$('tray').hidden=false;orb.target.set(1.5,0,1.5);fitRaidCam();
@@ -3382,8 +3395,8 @@ function updWeather(dt){if(rainFx.visible){const a=rainFx.geometry.attributes.po
 function setMap(id){if(MAPT===MAPS[id])return;landSoon();const reshape=!!MAPT.dunes!==!!MAPS[id].dunes||(MAPT.lake||'')!==(MAPS[id].lake||'');const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
   water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
   [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());if(typeof pineTrees!=='undefined')pineTint();puddles.visible=MAPT.mud;if(reshape){const e=MAPE;MAPE=-1;setMapSize(e);}setWeather(wx);
-  $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
-document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent='Loading…';setTimeout(()=>{setMap(b.dataset.map);b.textContent=b.dataset.label;},20);});
+  document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
+document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.classList.add('busy');setTimeout(()=>{setMap(b.dataset.map);b.classList.remove('busy');},30);});
 function begin(m){if(m==='full'&&armyEmpty()){enterBase();baseTab='army';renderBasePanel();prompt('Train an army first: your raid cards are the units you train.',4);return;}
   if(m==='full'&&!raidGo){openRaidPick();return;}if(!AC){try{audioInit();}catch(_){}}if(AC){AC.resume();soundOn=true;}syncSnd();startBattle(m);}
 // Tutorials: the raid tutorial or the base setup one; the steps use the word for how you play here
@@ -3552,7 +3565,7 @@ function mapSync(){if(!palms)return;sweepDuneObs();const lake=MAPT.lake,dunes=!!
     const c=new T.Color().setHSL(.0,0,1).multiplyScalar(.85+rnd()*.3);palms.setColorAt(n,c);n++;}
   palms.count=n;palms.instanceMatrix.needsUpdate=true;if(palms.instanceColor)palms.instanceColor.needsUpdate=true;}
 mapSync();
-window.__tcDebug={get dbg(){return {bridgeG,ROAD,BRIDGE,MAPE,mapDecor};},setMap,land,landBake,gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={get dbg(){return {bridgeG,ROAD,BRIDGE,MAPE,mapDecor,battleT,timeLeft};},setPace(v){PACE=v;},debugAttack:(seed,att)=>debugAttack(seed,att),setMap,land,landBake,gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 {const L=$('loading');L.classList.add('ready');setTimeout(()=>L.classList.add('out'),450);setTimeout(()=>{L.hidden=true;},1100);}
 $('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
 
