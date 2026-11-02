@@ -470,30 +470,42 @@ const BRIDGE={x:riverX(1.05),z:1.05,len:2.8,w:.8};
 const coastZ=x=>MAPE+mix(9.4+Math.sin(x*.9)*.3,5.35+Math.sin(x*.6)*.35+Math.sin(x*1.7)*.1,smooth(-4,-1.2,x));
 const seaAt=(x,z)=>smooth(-.15,.45,z-coastZ(x));
 const MAPS={delta:{name:'Operation Iron Delta',k:[.52,.58,.5],mud:true,water:0x46676a,sea:0x3a5d61,rock:0x4f4a42,shrub:0x2f3a20,boulder:0x3a3630},
-  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358},
+  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,dunes:/[?&]dunes=1/.test(location.search),water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358},
   birch:{name:'Operation Birch Line',k:[.97,.99,1.03],mud:false,snow:1,water:0x8aa6b0,sea:0x3a5560,rock:0x66696c,shrub:0x283729,boulder:0x55595d}};
 let MAPT=MAPS.delta;
+// dunes (Dust Crown): wind-shaped ridges in the north instead of mountains, a long gentle windward face and a short steep slip face,
+// crest heights and spacing varying across the field
+function duneH(x,z){const w=fbm(x*.08+9,z*.08+3,2),s=(z*.95+x*.18)/2.9+w*.6,f=s-Math.floor(s),c=f<.68?f/.68:(1-f)/.32,p=c*c*(3-2*c), // long ridges, gentle windward face, steeper lee
+    big=1+1.2*smooth(.48,.7,fbm(x*.07+70,z*.07+11,2)),
+    // wind erosion: shallow grooves scoured along the wind on the upper slopes, and crests worn lower in places
+    gr=fbm(x*.35+z*.08+3,(z*.95+x*.18)*2.6,3),wear=1-.18*smooth(.45,.8,fbm(x*.11+31,z*.11+5,2));
+  return .1+p*(.62+fbm(x*.08+40,z*.08,2)*.55)*big*wear-(gr-.5)*.16*p;}
+// oasis (dune map): a round pond with a wavy shore where the river runs on the other maps. riverD is the distance the river carving,
+// bank and bed coloring use: from the river's center line, or from the oasis just as if its shore were the river's edge.
+const OASIS={z:3.2,r:1.45};const oasisX=()=>riverX(OASIS.z)-1.2;
+function oasisR(a){return OASIS.r*(1+.16*Math.sin(3*a+1)+.08*Math.sin(5*a+2.3));}
+function riverD(x,z){if(!MAPT.dunes)return Math.abs(x-riverX(z));const dx=x-oasisX(),dz=z-OASIS.z;return Math.max(0,Math.hypot(dx,dz)-oasisR(Math.atan2(dz,dx))+.64);} // crest height changes slowly along each ridge // crest height changes slowly along each ridge
 const MUD=[[-4.3,-1.3,1.3,.8],[-3.3,2.7,1.1,.9],[-.7,-3.3,1.0,.7],[-5.6,4.3,.9,.6],[-.9,1.9,.8,.55]];
 function mudAt(x,z){if(!MAPT.mud)return 0;let m=0;for(const [cx,cz,rx,rz] of MUD){const d=Math.hypot((x-cx)/rx,(z-cz)/rz);m=Math.max(m,1-smooth(.55,1,d+(noise(x*3,z*3)-.5)*.35));}return m;}
 // height above the board: rolling ground, northern mountains, a south-west hill, a carved river; the base and defense line stay flat
 function H(x,z){
   let h=(fbm(x*.5,z*.5,3)-.5)*.14;
-  const zm=z+MAPE,m=smooth(-4.4,-7.2,zm+Math.sin(x*.7)*.6);
-  h+=m*(.3+Math.pow(fbm(x*.33+20,zm*.33,4),1.4)*2.4);
+  const zm=z+MAPE,m=MAPT.dunes?smooth(-1.8,-7.4,zm+Math.sin(x*.4)*.8):smooth(-4.4,-7.2,zm+Math.sin(x*.7)*.6);
+  h+=m*(MAPT.dunes?duneH(x,zm):.3+Math.pow(fbm(x*.33+20,zm*.33,4),1.4)*2.4);
   const d=Math.hypot(x+3.6,z-6.1-MAPE);h+=Math.pow(Math.max(0,1-d/2.7),2)*1.05;
   const flat=smooth(-1.2,-.4,x)*(1-smooth(6.3+MAPE,6.9+MAPE,Math.abs(z)))*(1-smooth(11.1+MAPE,11.6+MAPE,x));
   h*=(1-flat)*smooth(0,.6,12+MAPE-Math.abs(x))*smooth(0,.6,Math.min(z+8+MAPE,12+MAPE-z));
-  const rd=Math.abs(x-riverX(z));h=mix(h,-.17,1-smooth(.32,.85,rd));
+  const rd=riverD(x,z);h=mix(h,-.17,1-smooth(.32,.85,rd));
   h=mix(h,-.2,seaAt(x,z));
   return h;}
-function groundY(x,z){if(Math.abs(x-BRIDGE.x)<BRIDGE.len/2&&Math.abs(z-BRIDGE.z)<BRIDGE.w/2)return G+.1;return G+Math.max(H(x,z),-.07);}
+function groundY(x,z){if(!MAPT.dunes&&Math.abs(x-BRIDGE.x)<BRIDGE.len/2&&Math.abs(z-BRIDGE.z)<BRIDGE.w/2)return G+.1;return G+Math.max(H(x,z),-.07);}
 function terrain(){
   const W=Math.round(32*(24+2*MAPE)),H2=Math.round(32*(20+2*MAPE)),c=canvas(W,H2),b=canvas(W,H2),cx=c.getContext('2d'),bx=b.getContext('2d');
   const im=cx.createImageData(W,H2),bm=bx.createImageData(W,H2),d=im.data,bd=bm.data;
   for(let py=0;py<H2;py++)for(let px=0;px<W;px++){
     const x=px/W*(24+2*MAPE)-12-MAPE,z=py/H2*(20+2*MAPE)-8-MAPE;
     const n1=fbm(x*.32+3,z*.32+7,4),n2=fbm(x*2.1+50,z*2.1+50,3),n3=noise(x*11,z*11);
-    const h=H(x,z),rd=Math.abs(x-riverX(z));
+    const h=H(x,z),rd=riverD(x,z);
     const g=smooth(.3,.8,n1+(n2-.5)*.25);
     let r=mix(182,140,g),gg=mix(162,134,g),bb=mix(118,86,g);
     const k=(n2-.5)*46+(n3-.5)*22;r+=k;gg+=k;bb+=k*.8;
@@ -505,15 +517,17 @@ function terrain(){
     const cz=z-coastZ(x),sx=1,sea=smooth(-.15,.45,cz)*sx,beach=smooth(-.75,-.1,cz)*sx*(1-sea);
     r=mix(r,212+k*.3,beach*.85);gg=mix(gg,195+k*.3,beach*.85);bb=mix(bb,150,beach*.85);r=mix(r,72,sea);gg=mix(gg,96,sea);bb=mix(bb,92,sea);
     // grassy hill, then rock with strata, then snow on the peaks
-    const hill=smooth(.12,.45,h)*(1-smooth(.7,1.1,h));r=mix(r,104+k*.4,hill*.7);gg=mix(gg,112+k*.4,hill*.7);bb=mix(bb,66,hill*.7);
-    const rock=smooth(.55,1.0,h+(n2-.5)*.3),st=(noise(x*1.5,h*22)-.5)*40;r=mix(r,124+st+k*.3,rock);gg=mix(gg,118+st+k*.3,rock);bb=mix(bb,108+st,rock);
-    const snow=smooth(1.45,1.75,h+(n3-.5)*.25);r=mix(r,234,snow);gg=mix(gg,236,snow);bb=mix(bb,238,snow);
+    if(MAPT.dunes){const og=(1-smooth(.64,1.7,rd))*(.75+.5*n3);r=mix(r,82+k*.4,og*.85);gg=mix(gg,106+k*.4,og*.85);bb=mix(bb,52,og*.85);}
+    const dn=MAPT.dunes?smooth(.04,.25,h):0;if(dn){const st=(fbm(x*.35+z*.08+3,(z*.95+x*.18)*2.6,3)-.5)*55*dn;r+=st;gg+=st*.9;bb+=st*.7;}if(dn){const lit=smooth(-.5,.5,H(x+.06,z+.04)-H(x-.06,z-.04)+.02)*.9+.1;r=mix(r,(196+k*.35)*(.76+.34*lit),dn*.9);gg=mix(gg,(168+k*.35)*(.76+.34*lit),dn*.9);bb=mix(bb,(118+k*.25)*(.76+.34*lit),dn*.9);}
+    const hill=MAPT.dunes?0:smooth(.12,.45,h)*(1-smooth(.7,1.1,h));r=mix(r,104+k*.4,hill*.7);gg=mix(gg,112+k*.4,hill*.7);bb=mix(bb,66,hill*.7);
+    const rock=MAPT.dunes?0:smooth(.55,1.0,h+(n2-.5)*.3),st=(noise(x*1.5,h*22)-.5)*40;r=mix(r,124+st+k*.3,rock);gg=mix(gg,118+st+k*.3,rock);bb=mix(bb,108+st,rock);
+    const snow=MAPT.dunes?0:smooth(1.45,1.75,h+(n3-.5)*.25);r=mix(r,234,snow);gg=mix(gg,236,snow);bb=mix(bb,238,snow);
     const md=mudAt(x,z);if(md>0){const w=(n3-.5)*14;r=mix(r,78+w,md);gg=mix(gg,62+w,md);bb=mix(bb,44+w,md);}
     if(MAPT.snow){ // snow everywhere except open water; thinner on the road and in the trodden compound
       let sw=MAPT.snow*clamp(.82+(n2-.5)*.7,0,1)*(1-sea)*(1-bed*.85);sw*=1-(1-smooth(.15,.6,dr))*.7;sw*=1-rock*.55;
       const w=(n3-.5)*14+(n1-.5)*30;r=mix(r,212+w,sw);gg=mix(gg,219+w,sw);bb=mix(bb,230+w,sw);}
     const i=(py*W+px)*4;d[i]=r*MAPT.k[0];d[i+1]=gg*MAPT.k[1];d[i+2]=bb*MAPT.k[2];d[i+3]=255;
-    const hb=(n1*.45+n2*.35+n3*.2)*255;bd[i]=bd[i+1]=bd[i+2]=hb;bd[i+3]=255;
+    const hb=(n1*.45+n2*.35+n3*.2)*255+(MAPT.dunes?(Math.sin((z*.95+x*.18)*30+n2*4)*6+(fbm(x*.35+z*.08+3,(z*.95+x*.18)*2.6,3)-.5)*60)*smooth(.04,.25,h):0);bd[i]=bd[i+1]=bd[i+2]=hb;bd[i+3]=255;
   }
   cx.putImageData(im,0,0);bx.putImageData(bm,0,0);
   return {map:tex(c),bump:tex(b,false)};
@@ -2062,14 +2076,16 @@ function setMapSize(e){if(!mapDecor)initMapDecor();if(e===MAPE&&tableG)return;MA
   const W=24+2*e,D=20+2*e,dens=e?8:10,gg=new T.PlaneGeometry(W,D,Math.round(W*dens),Math.round(D*dens));gg.rotateX(-Math.PI/2);gg.translate(0,0,2);
   {const p=gg.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,H(p.getX(i),p.getZ(i)));gg.computeVertexNormals();}ground.geometry.dispose();ground.geometry=gg;
   const t=terrainFor(e);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
-  {const segs=Math.round(140*D/20),pos=[],uv=[],idx=[];for(let i=0;i<=segs;i++){const z=-8-e+D*i/segs,x=riverX(z),w=.64;pos.push(x-w,0,z,x+w,0,z);uv.push(0,i/segs*12*D/20,1,i/segs*12*D/20);if(i<segs){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
+  if(MAPT.dunes){const N=64,cx=oasisX(),cz=OASIS.z,pos=[cx,0,cz],uv=[cx*.25,cz*.25],idx=[];for(let i=0;i<=N;i++){const a=i/N*Math.PI*2,r=oasisR(a)-.06,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;pos.push(x,0,z);uv.push(x*.25,z*.25);if(i<N)idx.push(0,i+2,i+1);}
+    const wg=new T.BufferGeometry();wg.setAttribute('position',new T.Float32BufferAttribute(pos,3));wg.setAttribute('uv',new T.Float32BufferAttribute(uv,2));wg.setIndex(idx);wg.computeVertexNormals();water.geometry.dispose();water.geometry=wg;}
+  else{const segs=Math.round(140*D/20),pos=[],uv=[],idx=[];for(let i=0;i<=segs;i++){const z=-8-e+D*i/segs,x=riverX(z),w=.64;pos.push(x-w,0,z,x+w,0,z);uv.push(0,i/segs*12*D/20,1,i/segs*12*D/20);if(i<segs){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
     const wg=new T.BufferGeometry();wg.setAttribute('position',new T.Float32BufferAttribute(pos,3));wg.setAttribute('uv',new T.Float32BufferAttribute(uv,2));wg.setIndex(idx);wg.computeVertexNormals();water.geometry.dispose();water.geometry=wg;}
   if(mapDecor.sea){mapDecor.sea.scale.x=W/24;mapDecor.sea.position.z=8.2+e;}
   mapDecor.forEach(d=>{if(d.inst){const m=new T.Matrix4();d.inst.forEach((it,i)=>{const [nx,nz]=shiftPt(it.x,it.z,e);m.copy(it.m);m.setPosition(nx,groundY(nx,nz)+it.dy,nz);d.o.setMatrixAt(i,m);});d.o.instanceMatrix.needsUpdate=true;return;}
     const [nx,nz]=shiftPt(d.x,d.z,e);d.o.position.set(nx,groundY(nx,nz)+d.dy,nz);});
   buildTable(e);buildExtraScatter(e);
   Object.assign(sun.shadow.camera,{left:-16-e,right:16+e,top:15+e,bottom:-15-e});sun.shadow.camera.updateProjectionMatrix();
-  orb.maxR=48+e*3;}
+  orb.maxR=48+e*3;if(typeof mapSync==='function')mapSync();}
 BASE=loadBase();
 
 /* ================= raid game ================= */
@@ -3048,11 +3064,9 @@ function landBake(){let tm=null;scene.traverse(o=>{if(o.material===M.terrain)tm=
   const hq=blds.find(b=>b.hq&&b.alive),sig=MAPT.name+cw+'|'+foot.map(f=>f.x.toFixed(2)+','+f.z.toFixed(2)+','+f.sx.toFixed(1)).join(';');if(sig===landSig)return;landSig=sig;
   // shade: a soft dark footprint, drawn with a blurred shadow so the edge fades out
   xr.shadowColor='rgba(0,0,0,.9)';xr.shadowBlur=PX*.5;xr.fillStyle='rgba(0,0,0,.75)';foot.forEach(f=>{xr.fillRect(f.x-f.sx*.48,f.z-f.sz*.48,f.sx*.96,f.sz*.96);});
-  // worn dirt: scuffed ground around each building, and footpaths from the HQ to every building
+  // worn dirt: scuffed ground around each building
   xg.shadowColor='rgba(0,0,0,.6)';xg.shadowBlur=PX*.6;xg.fillStyle='rgba(0,0,0,.3)';
   foot.forEach(f=>{if(f.wall)return;xg.beginPath();xg.ellipse(f.x,f.z,f.sx*.6+.08,f.sz*.6+.08,0,0,7);xg.fill();});
-  if(hq){xg.strokeStyle='rgba(0,0,0,.5)';xg.lineCap='round';xg.shadowBlur=PX*.25;foot.forEach((f,i)=>{if(f.wall||Math.hypot(f.x-hq.x,f.z-hq.z)<.6)return;xg.lineWidth=.07+(i%3)*.03;
-    xg.beginPath();xg.moveTo(hq.x,hq.z);const mx=(hq.x+f.x)/2+Math.sin(i*2.3)*.4,mz=(hq.z+f.z)/2+Math.cos(i*1.7)*.4;xg.quadraticCurveTo(mx,mz,f.x,f.z);xg.stroke();});}
   // wet ground: land within a short reach of water, found once per map from the terrain heights
   if(!landWet||landWet.w!==cw||landWet.map!==MAPT){const Hs=4,ww=Math.ceil(cw/Hs),wh=Math.ceil(ch/Hs),wat=new Float32Array(ww*wh);
     for(let j=0;j<wh;j++)for(let i=0;i<ww;i++){const x=X0+(i+.5)*Hs/PX,z=Z0+(j+.5)*Hs/PX;wat[j*ww+i]=groundY(x,z)-G<-.066?1:0;}
@@ -3333,9 +3347,9 @@ function updWeather(dt){if(rainFx.visible){const a=rainFx.geometry.attributes.po
   // lightning: the sky and the board flash, then thunder follows a moment later
   if((boltT-=dt)<0){boltT=rand(3,8);hemi.intensity=2.6;if(stage.background)stage.background.setHex(0x8a96a4);setTimeout(()=>{if(wx==='storm'&&stage.background)stage.background.setHex(c.bg);},120);setTimeout(()=>boom(.6),rand(400,1200));}}
 // switching maps regenerates the terrain texture and recolors water, rocks and plants
-function setMap(id){if(MAPT===MAPS[id])return;landSoon();const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
+function setMap(id){if(MAPT===MAPS[id])return;landSoon();const reshape=!!MAPT.dunes!==!!MAPS[id].dunes;const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
   water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
-  [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());if(typeof pineTrees!=='undefined')pineTint();puddles.visible=MAPT.mud;setWeather(wx);
+  [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());if(typeof pineTrees!=='undefined')pineTint();puddles.visible=MAPT.mud;if(reshape){const e=MAPE;MAPE=-1;setMapSize(e);}setWeather(wx);
   $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
 document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent='Loading…';setTimeout(()=>{setMap(b.dataset.map);b.textContent=b.dataset.label;},20);});
 function begin(m){if(m==='full'&&armyEmpty()){enterBase();baseTab='army';renderBasePanel();prompt('Train an army first: your raid cards are the units you train.',4);return;}
@@ -3447,6 +3461,32 @@ function pineTint(){if(!pineTrees)return;const c=new T.Color(),base=new T.Color(
   for(let i=0;i<pineTrees.count;i++){c.copy(base).offsetHSL((Math.random()-.5)*.04,(Math.random()-.5)*.1,(Math.random()-.5)*.06).multiplyScalar(1.5);pineTrees.setColorAt(i,c);}
   if(pineTrees.instanceColor)pineTrees.instanceColor.needsUpdate=true;}
 pineTint();
+var pineTrunks=scene.children.find(o=>o.isInstancedMesh&&o.material===M.woodDark&&o.geometry.type==='CylinderGeometry');
+// palm: a gently curved ringed trunk with a crown of drooping fronds; one shared shape (origin at the foot), colored per tree
+const PALM=(()=>{const parts=[],put=(g,f)=>{const p=g.attributes.position,col=[];for(let k=0;k<p.count;k++)col.push(...f(p.getX(k),p.getY(k),p.getZ(k)));g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();parts.push(g.index?g.toNonIndexed():g);};
+  const top=V(.24,1.02,0),curve=new T.CatmullRomCurve3([V(0,0,0),V(.04,.35,0),V(.12,.7,0),top]);
+  put(new T.TubeGeometry(curve,12,.03,7,false),(x,y)=>{const r=.5+.12*Math.sin(y*90);return [r*.42,r*.3,r*.18];});
+  for(let k=0;k<9;k++){const g=new T.PlaneGeometry(.17,.58,2,8),p=g.attributes.position,a=k/9*Math.PI*2+(k%2)*.2;
+    for(let q=0;q<p.count;q++){const t=p.getY(q)/.58+.5,w=p.getX(q)*(1-t*.75);const L=t*.58;p.setXYZ(q,w,0,0);
+      const d=V(Math.cos(a)*L,-t*t*.32+.06*t,Math.sin(a)*L),side=V(-Math.sin(a),Math.abs(w)*.6,Math.cos(a)).multiplyScalar(w);p.setXYZ(q,top.x+d.x+side.x,top.y+d.y+side.y,top.z+d.z+side.z);}
+    put(g,(x,y)=>{const t=Math.min(1,Math.hypot(x-top.x,0)*2);const c=.75+.25*(y-top.y+.3);return [.09*c,.2*c,.05*c];});}
+  let n=0;parts.forEach(g=>n+=g.attributes.position.count);const P=new Float32Array(n*3),N=new Float32Array(n*3),C=new Float32Array(n*3);let o=0;
+  parts.forEach(g=>{P.set(g.attributes.position.array,o);N.set(g.attributes.normal.array,o);C.set(g.attributes.color.array,o);o+=g.attributes.position.count*3;});
+  const m=new T.BufferGeometry();m.setAttribute('position',new T.BufferAttribute(P,3));m.setAttribute('normal',new T.BufferAttribute(N,3));m.setAttribute('color',new T.BufferAttribute(C,3));return m;})();
+const palmMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.8,side:T.DoubleSide});palmMat.userData.wind=[.02,1.1,1];
+var palms=new T.InstancedMesh(PALM,palmMat,12);palms.castShadow=palms.receiveShadow=true;palms.frustumCulled=false;palms.visible=false;scene.add(palms);
+var bridgeG=scene.children.find(o=>o.isGroup&&Math.abs(o.position.z-BRIDGE.z)<1e-3&&Math.abs(o.rotation.y-Math.atan2(.6,6))<1e-4);
+// called after the board is (re)built: on the dune map the trees go (palms ring the oasis instead), the bridge goes, and no scenery sits in the pond
+function mapSync(){if(!palms)return;const d=!!MAPT.dunes;if(bridgeG)bridgeG.visible=!d;palms.visible=d;if(!d)return;
+  const m=new T.Matrix4(),v=V(),q=new T.Quaternion(),sv=V(),e=new T.Euler();
+  (mapDecor||[]).forEach(dd=>{const im=dd.o;if(!im||!im.isInstancedMesh)return;const tree=im===pineTrees||im===pineTrunks;
+    for(let i=0;i<im.count;i++){im.getMatrixAt(i,m);v.setFromMatrixPosition(m);if(tree||groundY(v.x,v.z)-G<-.03){m.makeScale(1e-4,1e-4,1e-4);m.setPosition(v);im.setMatrixAt(i,m);}}im.instanceMatrix.needsUpdate=true;});
+  let s=11;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,cx=oasisX();let n=0;
+  for(let i=0;i<40&&n<9;i++){const a=rnd()*6.283,r=oasisR(a)+.3+rnd()*.7,x=cx+Math.cos(a)*r,z=OASIS.z+Math.sin(a)*r;if(groundY(x,z)-G>.12||groundY(x,z)-G<-.02)continue;
+    e.set(0,rnd()*6.28,0);q.setFromEuler(e);const sc=.8+rnd()*.45;sv.set(sc,sc*(.9+rnd()*.3),sc);m.compose(V(x,groundY(x,z)-.01,z),q,sv);palms.setMatrixAt(n,m);
+    const c=new T.Color().setHSL(.0,0,1).multiplyScalar(.85+rnd()*.3);palms.setColorAt(n,c);n++;}
+  palms.count=n;palms.instanceMatrix.needsUpdate=true;if(palms.instanceColor)palms.instanceColor.needsUpdate=true;}
+mapSync();
 window.__tcDebug={setMap,land,landBake,gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 $('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
