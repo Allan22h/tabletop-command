@@ -271,7 +271,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     padding:2px 7px;gap:7px;font-size:10.5px;font-weight:600;border-radius:8px;text-shadow:0 1px 2px #000,0 0 3px rgba(0,0,0,.7)}
   #app:has(#basePanel:not([hidden])) .hud .res{gap:3px}#app:has(#basePanel:not([hidden])) .hud .res .dot{width:18px;height:18px;margin:-3px 0;background-size:contain}
   #app:has(#basePanel:not([hidden])) #fsBtn{padding:2px 7px;font-size:15px;background:rgba(10,13,12,.14);border-color:rgba(255,255,255,.12);backdrop-filter:none}}
-.bpanel .arow.pick .pkb{grid-column:3;grid-row:1/span 2;display:flex;align-items:center;gap:6px}.bpanel .arow.pick .pkb .tbtn{grid-row:auto;grid-column:auto;min-width:38px;font-size:18px;line-height:1;padding:6px 0}.bpanel .arow.pick .pkb b{min-width:22px;text-align:center;font-size:15px}.bpanel .arow.pick.off{opacity:.55}
+.bpanel .arow.pick .pkb{grid-column:3;grid-row:1/span 2;display:flex;align-items:center;gap:6px}.bpanel .arow.pick .pkb .tbtn{grid-row:auto;grid-column:auto;min-width:38px;font-size:18px;line-height:1;padding:6px 0}.bpanel .arow.pick .pkb b{min-width:22px;text-align:center;font-size:15px}.bpanel .arow.pick.off{opacity:.55}.bpanel .arow.ic.pick .pkb{grid-row:1/span 3}.bpanel .arow.ic.off{opacity:.55}
 @media (max-width:899px){#app:not(.xr) .bpanel.pickArmy:not(.peek){max-height:64vh}}
 /* base training: a guide card under the top bar, and a glow on the button it points to */
 #coach{position:fixed;left:50%;transform:translateX(-50%);top:calc(64px + env(safe-area-inset-top,0px));z-index:35;width:min(440px,calc(100% - 24px));
@@ -1580,6 +1580,7 @@ function selectAt(x,z){const e=entAt(x,z);sel=e;rowO=null;moving=false;if(e)base
 const costTxt=c=>RES.filter(r=>c[r]).map(r=>`<span class="cost"><i class="dot ${r}"></i>${fmtN(c[r])}</span>`).join(' ');
 const canPay=c=>RES.every(r=>BASE.res[r]>=(c[r]||0));
 function pay(c){RES.forEach(r=>BASE.res[r]-=(c[r]||0));}
+function refund(c){RES.forEach(r=>BASE.res[r]=Math.min(capOf(r),BASE.res[r]+(c[r]||0)));}
 function startUpgrade(o){const to=o.lv+1,c=costOf(o.k,to);if(to>maxLv(o.k,baseHq())||!canPay(c)||busy()>=builders())return;pay(c);o.to=to;o.until=Date.now()+timeOf(o.k,to)*1000;saveBase();refreshBase();}
 // new buildings take a builder and time; barriers and obstacles are placed at once, then dragged where you want them
 // barriers and obstacles: choose one, then tap the map where it goes (press and drag to lay a line of barriers)
@@ -1791,9 +1792,11 @@ function panelBase(hq,free){let h='';
 function panelArmy(){const cap=armyCap(),used=armyUsed();let h=`<span class="muted">Army space ${used} / ${cap}</span><div class="army">`;
   ARMY_ORDER.forEach(k=>{const t=TR[k],have=BASE.army[k]||0,c=trainCost(k),bl=ownLv(t.need),lock=levelLocked({k});
     const why=lock?`Needs commander level ${unlockLv(k)}`:!bl?`Needs a ${BK[t.need].name.toLowerCase()}`:used+t.sp>cap?'No army space':!canPay(c)?'Not enough resources':'';
-    h+=`<div class="arow ic">${ico(k)}<b>${(k==='rifle'?'3× ':'')+NAME(k)}</b><span class="muted">×${have} · ${t.sp} space · Lv ${techOf(k)}</span><span>${costTxt(c)}</span>
-      <button type="button" class="tbtn" data-train="${k}" ${why?'disabled':''}>${why||'Train'}</button></div>`;});
+    if(lock||!bl){h+=`<div class="arow ic off">${ico(k)}<b>${(k==='rifle'?'3× ':'')+NAME(k)}</b><span class="muted">${why}</span></div>`;return;}
+    h+=`<div class="arow ic pick${have?'':' off'}">${ico(k)}<b>${(k==='rifle'?'3× ':'')+NAME(k)}</b><span class="muted">${t.sp} space · Lv ${techOf(k)}${why&&why!=='No army space'?' · '+why:''}</span><span>${costTxt(c)}</span>
+      <span class="pkb"><button type="button" class="tbtn" data-untrain="${k}" ${have?'':'disabled'} aria-label="Remove one">−</button><b>${have}</b><button type="button" class="tbtn" data-train="${k}" ${why?'disabled':''} aria-label="Train one">+</button></span></div>`;});
   h+='</div>';
+  if(used)h+=`<div class="row"><button type="button" class="tbtn" data-act="cleararmy">Remove all units</button></div>`;
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="fillarmy">Fill army to capacity</button></div>`;
   return h;}
 function panelResearch(){const il=ownLv('intel'),test=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="maxres">Max all research</button></div>`;if(!il)return '<span class="muted">Build an intel center (HQ 3) to research upgrades for your units.</span>'+test;
@@ -1840,6 +1843,7 @@ function initBase(){const el=$('basePanel');makeResIcons();sheet(false);
     if(t.dataset.pk){const k=t.dataset.pk;if(raidPick){raidPick[k]=clamp((raidPick[k]||0)+(+t.dataset.d),0,BASE.army[k]||0);renderBasePanel();}return;}
     if(t.dataset.place)return setPlacing(t.dataset.place);
     if(t.dataset.build)return startBuild(t.dataset.build,+t.dataset.n||1);
+    if(t.dataset.untrain){const k=t.dataset.untrain;if(!(BASE.army[k]>0))return;refund(trainCost(k));BASE.army[k]--;saveBase();renderBasePanel();baseHud();return;}
     if(t.dataset.train){const k=t.dataset.train,c=trainCost(k);if(!canPay(c)||armyUsed()+TR[k].sp>armyCap())return;pay(c);BASE.army[k]=(BASE.army[k]||0)+1;chStats().train++;saveBase();renderBasePanel();baseHud();return;}
     if(t.dataset.research){const k=t.dataset.research,to=techOf(k)+1,c=researchCost(k,to);if(!canPay(c)||BASE.research)return;pay(c);BASE.research={k,to,until:Date.now()+researchTime(to)*1000};saveBase();renderBasePanel();baseHud();return;}
     if(t.dataset.replay!=null){watchReplay(+t.dataset.replay);return;}
@@ -1855,6 +1859,7 @@ function initBase(){const el=$('basePanel');makeResIcons();sheet(false);
     if(a==='hire'){const nb=builders();if(nb<BUILDERS_MAX&&spend(BUILDER_COST[nb+1])){BASE.builders=nb+1;saveBase();renderBasePanel();prompt(`Builder ${nb+1} hired.`,2);}return;}
     if(a==='skip'&&sel&&sel.o.until){if(spend(skipCost((sel.o.until-Date.now())/1000))){sel.o.until=1;baseTick(1);}return;}
     if(a==='skipres'&&BASE.research){if(spend(skipCost((BASE.research.until-Date.now())/1000))){BASE.research.until=1;baseTick(1);}return;}
+    if(a==='cleararmy'){ARMY_ORDER.forEach(k=>{const n=BASE.army[k]||0;for(let i=0;i<n;i++)refund(trainCost(k));BASE.army[k]=0;});saveBase();renderBasePanel();baseHud();return;}
     if(a==='fillarmy'){const cap=armyCap();let guard=0,added=true;while(added&&guard++<400){added=false;for(const k of ARMY_ORDER){if(levelLocked({k})||!ownLv(TR[k].need))continue;if(armyUsed()+TR[k].sp>cap)continue;BASE.army[k]=(BASE.army[k]||0)+1;added=true;}}
       saveBase();renderBasePanel();prompt('Army filled (test).',2);return;}
     if(a==='maxres'){const top=ownLv('intel')||baseHq();ARMY_ORDER.forEach(k=>BASE.tech[k]=Math.max(techOf(k),top));BASE.research=null;saveBase();renderBasePanel();prompt('All research at level '+top+' (test).',2);return;}
