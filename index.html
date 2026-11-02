@@ -469,28 +469,39 @@ let MAPE=0;const riverX=z=>-7.2-MAPE+Math.sin(z*.45)*1.1+Math.sin(z*1.3+1)*.25;
 const BRIDGE={x:riverX(1.05),z:1.05,len:2.8,w:.8};
 const coastZ=x=>MAPE+mix(9.4+Math.sin(x*.9)*.3,5.35+Math.sin(x*.6)*.35+Math.sin(x*1.7)*.1,smooth(-4,-1.2,x));
 const seaAt=(x,z)=>smooth(-.15,.45,z-coastZ(x));
+const PREVIEW_NEW=/[?&]dunes=1/.test(location.search); // map look under review: Dust Crown dunes and oasis
 const MAPS={delta:{name:'Operation Iron Delta',k:[.52,.58,.5],mud:true,water:0x46676a,sea:0x3a5d61,rock:0x4f4a42,shrub:0x2f3a20,boulder:0x3a3630},
-  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,dunes:/[?&]dunes=1/.test(location.search),water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358},
-  birch:{name:'Operation Birch Line',k:[.97,.99,1.03],mud:false,snow:1,water:0x8aa6b0,sea:0x3a5560,rock:0x66696c,shrub:0x283729,boulder:0x55595d}};
+  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,dunes:PREVIEW_NEW,lake:PREVIEW_NEW?'oasis':null,water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358},
+  birch:{name:'Operation Birch Line',k:[.97,.99,1.03],mud:false,snow:1,lake:'ice',water:0x8aa6b0,sea:0x3a5560,rock:0x66696c,shrub:0x283729,boulder:0x55595d}};
 let MAPT=MAPS.delta;
-// dunes (Dust Crown): wind-shaped ridges in the north instead of mountains, a long gentle windward face and a short steep slip face,
-// crest heights and spacing varying across the field
-function duneH(x,z){const w=fbm(x*.08+9,z*.08+3,2),s=(z*.95+x*.18)/2.9+w*.6,f=s-Math.floor(s),c=f<.68?f/.68:(1-f)/.32,p=c*c*(3-2*c), // long ridges, gentle windward face, steeper lee
-    big=1+1.2*smooth(.48,.7,fbm(x*.07+70,z*.07+11,2)),
-    // wind erosion: shallow grooves scoured along the wind on the upper slopes, and crests worn lower in places
-    gr=fbm(x*.35+z*.08+3,(z*.95+x*.18)*2.6,3),wear=1-.18*smooth(.45,.8,fbm(x*.11+31,z*.11+5,2));
-  return .1+p*(.62+fbm(x*.08+40,z*.08,2)*.55)*big*wear-(gr-.5)*.16*p;}
+// dunes (Dust Crown), modeled on big desert dune fields: each dune is a sinuous knife-edge crest line with broad, smooth, slightly
+// hollow flanks that fall away from it (the slip face steeper than the windward side) and a long low apron into the plain.
+// A massif along the back with a high central peak, a medium dune and a few small ones in front; they overlap in layers.
+const DUNES=[ // crest points [x,z,height], half-width on the windward (south) and slip (north) side; the west half of the board is open ground
+  {c:[[-12.4,-6.6,.75],[-10.4,-6.0,1.15],[-8.2,-6.7,1.0],[-5.8,-6.2,1.45],[-3.6,-6.9,1.05],[-1.4,-7.2,.6],[3,-7.5,.45],[9,-7.4,.4]],w:3.4,s:2.3},
+  {c:[[-9.8,-1.6,.4],[-8.3,-3.2,.95],[-6.7,-4.6,1.3],[-5.8,-6.2,1.45]],w:2.9,s:2.1},
+  {c:[[-12.8,-3.4,.6],[-11.3,-4.2,1.0],[-9.9,-4.7,.85]],w:2.5,s:1.8},
+  {c:[[-5.6,-2.2,.35],[-3.9,-3.5,.8],[-2.2,-4.6,.55]],w:2.4,s:1.7},
+  {c:[[-12.3,-.5,.3],[-10.8,-1.1,.5],[-9.5,-.7,.3]],w:1.8,s:1.3},
+  {c:[[-6.2,.3,.2],[-4.7,-.6,.35],[-3.3,-1.1,.25]],w:1.7,s:1.2}];
+function duneOne(D,x,z){let best=1e9,hc=0,side=1;const c=D.c;
+  for(let i=0;i<c.length-1;i++){const [ax,az,ah]=c[i],[bx,bz,bh]=c[i+1],dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz;let t=((x-ax)*dx+(z-az)*dz)/L2;t=Math.max(0,Math.min(1,t));
+    const px=ax+dx*t,pz=az+dz*t,d=Math.hypot(x-px,z-pz);if(d<best){best=d;const u=t*t*(3-2*t);hc=ah+(bh-ah)*u;side=(dx*(z-az)-dz*(x-ax))>0?1:-1;}}
+  const w=side>0?D.w:D.s,q=best/w;return hc*(q<1?(1-q*q)*(1-q*q):0)+hc*.12*Math.max(0,1-q/2.6)**2;} // rounded crest, smooth foot
+function duneH(x,z){let h=0;for(const D of DUNES){const v=duneOne(D,x,z);h=Math.max(h,v)+Math.min(h,v)*.25;} // overlapping dunes blend softly
+  return h;}
 // oasis (dune map): a round pond with a wavy shore where the river runs on the other maps. riverD is the distance the river carving,
 // bank and bed coloring use: from the river's center line, or from the oasis just as if its shore were the river's edge.
-const OASIS={z:3.2,r:1.45};const oasisX=()=>riverX(OASIS.z)-1.2;
-function oasisR(a){return OASIS.r*(1+.16*Math.sin(3*a+1)+.08*Math.sin(5*a+2.3));}
-function riverD(x,z){if(!MAPT.dunes)return Math.abs(x-riverX(z));const dx=x-oasisX(),dz=z-OASIS.z;return Math.max(0,Math.hypot(dx,dz)-oasisR(Math.atan2(dz,dx))+.64);} // crest height changes slowly along each ridge // crest height changes slowly along each ridge
+const LAKES={oasis:{z:3.2,dx:-1.2,r:1.45,sz:1},ice:{z:4.9,dx:-1.6,r:2.05,sz:1.38}};const lakeP=()=>LAKES[MAPT.lake]||LAKES.oasis;
+const OASIS={get z(){return lakeP().z;}};const oasisX=()=>riverX(lakeP().z)+lakeP().dx;
+function oasisR(a){return lakeP().r*(1+.16*Math.sin(3*a+1)+.08*Math.sin(5*a+2.3));}
+function riverD(x,z){if(!MAPT.lake)return Math.abs(x-riverX(z));const dx=x-oasisX(),dz=(z-OASIS.z)/lakeP().sz;return Math.max(0,Math.hypot(dx,dz)-oasisR(Math.atan2(dz,dx))+.64);} // crest height changes slowly along each ridge // crest height changes slowly along each ridge
 const MUD=[[-4.3,-1.3,1.3,.8],[-3.3,2.7,1.1,.9],[-.7,-3.3,1.0,.7],[-5.6,4.3,.9,.6],[-.9,1.9,.8,.55]];
 function mudAt(x,z){if(!MAPT.mud)return 0;let m=0;for(const [cx,cz,rx,rz] of MUD){const d=Math.hypot((x-cx)/rx,(z-cz)/rz);m=Math.max(m,1-smooth(.55,1,d+(noise(x*3,z*3)-.5)*.35));}return m;}
 // height above the board: rolling ground, northern mountains, a south-west hill, a carved river; the base and defense line stay flat
 function H(x,z){
   let h=(fbm(x*.5,z*.5,3)-.5)*.14;
-  const zm=z+MAPE,m=MAPT.dunes?smooth(-1.8,-7.4,zm+Math.sin(x*.4)*.8):smooth(-4.4,-7.2,zm+Math.sin(x*.7)*.6);
+  const zm=z+MAPE,m=MAPT.dunes?1:smooth(-4.4,-7.2,zm+Math.sin(x*.7)*.6);
   h+=m*(MAPT.dunes?duneH(x,zm):.3+Math.pow(fbm(x*.33+20,zm*.33,4),1.4)*2.4);
   const d=Math.hypot(x+3.6,z-6.1-MAPE);h+=Math.pow(Math.max(0,1-d/2.7),2)*1.05;
   const flat=smooth(-1.2,-.4,x)*(1-smooth(6.3+MAPE,6.9+MAPE,Math.abs(z)))*(1-smooth(11.1+MAPE,11.6+MAPE,x));
@@ -498,7 +509,7 @@ function H(x,z){
   const rd=riverD(x,z);h=mix(h,-.17,1-smooth(.32,.85,rd));
   h=mix(h,-.2,seaAt(x,z));
   return h;}
-function groundY(x,z){if(!MAPT.dunes&&Math.abs(x-BRIDGE.x)<BRIDGE.len/2&&Math.abs(z-BRIDGE.z)<BRIDGE.w/2)return G+.1;return G+Math.max(H(x,z),-.07);}
+function groundY(x,z){if(!MAPT.lake&&Math.abs(x-BRIDGE.x)<BRIDGE.len/2&&Math.abs(z-BRIDGE.z)<BRIDGE.w/2)return G+.1;return G+Math.max(H(x,z),-.07);}
 function terrain(){
   const W=Math.round(32*(24+2*MAPE)),H2=Math.round(32*(20+2*MAPE)),c=canvas(W,H2),b=canvas(W,H2),cx=c.getContext('2d'),bx=b.getContext('2d');
   const im=cx.createImageData(W,H2),bm=bx.createImageData(W,H2),d=im.data,bd=bm.data;
@@ -512,13 +523,13 @@ function terrain(){
     let dr=1e9;for(let i=0;i<ROAD.length-1;i++)dr=Math.min(dr,segDist(x,z,ROAD[i][0],ROAD[i][1],ROAD[i+1][0],ROAD[i+1][1]));
     if(dr<.6){const m=1-smooth(.38,.6,dr);const rut=(Math.abs(dr-.17)<.045)?-22:0;r=mix(r,140+rut+k*.3,m);gg=mix(gg,113+rut+k*.3,m);bb=mix(bb,82+rut,m);}
     // green, damp banks and a muddy bed
-    const bank=1-smooth(.55,1.4,rd);r=mix(r,92+k*.5,bank*.75);gg=mix(gg,104+k*.5,bank*.75);bb=mix(bb,62,bank*.75);
-    const bed=1-smooth(.35,.7,rd);r=mix(r,84,bed);gg=mix(gg,74,bed);bb=mix(bb,58,bed);
+    const bank=MAPT.lake==='ice'?0:1-smooth(.55,1.4,rd);r=mix(r,92+k*.5,bank*.75);gg=mix(gg,104+k*.5,bank*.75);bb=mix(bb,62,bank*.75);
+    const bed=MAPT.lake==='ice'?0:1-smooth(.35,.7,rd);r=mix(r,84,bed);gg=mix(gg,74,bed);bb=mix(bb,58,bed);
     const cz=z-coastZ(x),sx=1,sea=smooth(-.15,.45,cz)*sx,beach=smooth(-.75,-.1,cz)*sx*(1-sea);
     r=mix(r,212+k*.3,beach*.85);gg=mix(gg,195+k*.3,beach*.85);bb=mix(bb,150,beach*.85);r=mix(r,72,sea);gg=mix(gg,96,sea);bb=mix(bb,92,sea);
     // grassy hill, then rock with strata, then snow on the peaks
-    if(MAPT.dunes){const og=(1-smooth(.64,1.7,rd))*(.75+.5*n3);r=mix(r,82+k*.4,og*.85);gg=mix(gg,106+k*.4,og*.85);bb=mix(bb,52,og*.85);}
-    const dn=MAPT.dunes?smooth(.04,.25,h):0;if(dn){const st=(fbm(x*.35+z*.08+3,(z*.95+x*.18)*2.6,3)-.5)*55*dn;r+=st;gg+=st*.9;bb+=st*.7;}if(dn){const lit=smooth(-.5,.5,H(x+.06,z+.04)-H(x-.06,z-.04)+.02)*.9+.1;r=mix(r,(196+k*.35)*(.76+.34*lit),dn*.9);gg=mix(gg,(168+k*.35)*(.76+.34*lit),dn*.9);bb=mix(bb,(118+k*.25)*(.76+.34*lit),dn*.9);}
+    if(MAPT.lake==='oasis'){const og=(1-smooth(.64,1.7,rd))*(.75+.5*n3);r=mix(r,82+k*.4,og*.85);gg=mix(gg,106+k*.4,og*.85);bb=mix(bb,52,og*.85);}
+    if(MAPT.dunes){r=mix(r,r*1.05+8,.8);gg=mix(gg,gg*.82,.8);bb=mix(bb,bb*.62,.8);}const dn=MAPT.dunes?smooth(.03,.3,h):0;if(dn){const st=(n2-.5)*16*dn;r=mix(r,206+st,dn*.9);gg=mix(gg,122+st*.8,dn*.9);bb=mix(bb,72+st*.6,dn*.9);}if(false){const lit=smooth(-.5,.5,H(x+.06,z+.04)-H(x-.06,z-.04)+.02)*.9+.1;r=mix(r,(196+k*.35)*(.76+.34*lit),dn*.9);gg=mix(gg,(168+k*.35)*(.76+.34*lit),dn*.9);bb=mix(bb,(118+k*.25)*(.76+.34*lit),dn*.9);}
     const hill=MAPT.dunes?0:smooth(.12,.45,h)*(1-smooth(.7,1.1,h));r=mix(r,104+k*.4,hill*.7);gg=mix(gg,112+k*.4,hill*.7);bb=mix(bb,66,hill*.7);
     const rock=MAPT.dunes?0:smooth(.55,1.0,h+(n2-.5)*.3),st=(noise(x*1.5,h*22)-.5)*40;r=mix(r,124+st+k*.3,rock);gg=mix(gg,118+st+k*.3,rock);bb=mix(bb,108+st,rock);
     const snow=MAPT.dunes?0:smooth(1.45,1.75,h+(n3-.5)*.25);r=mix(r,234,snow);gg=mix(gg,236,snow);bb=mix(bb,238,snow);
@@ -527,7 +538,7 @@ function terrain(){
       let sw=MAPT.snow*clamp(.82+(n2-.5)*.7,0,1)*(1-sea)*(1-bed*.85);sw*=1-(1-smooth(.15,.6,dr))*.7;sw*=1-rock*.55;
       const w=(n3-.5)*14+(n1-.5)*30;r=mix(r,212+w,sw);gg=mix(gg,219+w,sw);bb=mix(bb,230+w,sw);}
     const i=(py*W+px)*4;d[i]=r*MAPT.k[0];d[i+1]=gg*MAPT.k[1];d[i+2]=bb*MAPT.k[2];d[i+3]=255;
-    const hb=(n1*.45+n2*.35+n3*.2)*255+(MAPT.dunes?(Math.sin((z*.95+x*.18)*30+n2*4)*6+(fbm(x*.35+z*.08+3,(z*.95+x*.18)*2.6,3)-.5)*60)*smooth(.04,.25,h):0);bd[i]=bd[i+1]=bd[i+2]=hb;bd[i+3]=255;
+    const hb=(n1*.45+n2*.35+n3*.2)*255+(MAPT.dunes?(Math.sin((z*.8+x*.3)*34+n2*5)*7)*(1-smooth(.2,.6,h)):0);bd[i]=bd[i+1]=bd[i+2]=hb;bd[i+3]=255;
   }
   cx.putImageData(im,0,0);bx.putImageData(bm,0,0);
   return {map:tex(c),bump:tex(b,false)};
@@ -1360,7 +1371,7 @@ const PINE=(()=>{let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,parts
   let n=0;parts.forEach(g=>n+=g.attributes.position.count);const P=new Float32Array(n*3),N=new Float32Array(n*3),C=new Float32Array(n*3);let o=0;
   parts.forEach(g=>{P.set(g.attributes.position.array,o);N.set(g.attributes.normal.array,o);C.set(g.attributes.color.array,o);o+=g.attributes.position.count*3;});
   const m=new T.BufferGeometry();m.setAttribute('position',new T.BufferAttribute(P,3));m.setAttribute('normal',new T.BufferAttribute(N,3));m.setAttribute('color',new T.BufferAttribute(C,3));return m;})();
-const pineMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.85,side:T.DoubleSide});pineMat.userData.wind=[.016,1.2,1];
+const pineMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.85,side:T.DoubleSide});pineMat.userData.wind=[.016,1.2,1];pineMat.userData.snowy=1;
 const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0x5f5c55,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());
 function resetItems(){teethL=[];wireL=[];mines=[];itemEnts=[];}
 // an enemy base for an HQ level: every building, barrier and obstacle it allows, levels near the HQ, 20% of its resources up for grabs
@@ -2068,7 +2079,7 @@ function buildTable(e){if(tableG){scene.remove(tableG);tableG.traverse(o=>{if(o.
 function buildExtraScatter(e){if(extraScatter){extraScatter.forEach(m=>{scene.remove(m);m.geometry.dispose();});}extraScatter=[];if(!e)return;
   const rnd=mulberry(7919*e+17),rocks=[],shrubs=[],band=(x,z)=>(x>-4.6-e&&x<-4.6)||(z>-3.8-e&&z<-3.8)||(z>4.6&&z<4.6+e)||x>12;
   const area=2*e*(20+2*e)+e*(24+2*e)*2+e*(20+2*e);for(let i=0;i<area*.2;i++){const x=-12-e+rnd()*(24+2*e),z=-8-e+rnd()*(20+2*e);if(!band(x,z))continue;
-    if(x>-3.6&&x<11.4&&Math.abs(z)<5.6+2.6)continue;const h=H(x,z);if(h<-.03||Math.abs(x-riverX(z))<.8)continue;
+    if(x>-3.6&&x<11.4&&Math.abs(z)<5.6+2.6)continue;const h=H(x,z);if(h<-.03||(MAPT.lake?riverD(x,z)<1:Math.abs(x-riverX(z))<.8)||MAPT.dunes&&h>.05)continue;
     if(fbm(x*.32+3,z*.32+7,4)>.52&&h<.9)continue;rocks.push([x,groundY(x,z)+.02,z,rnd()*6,rnd(),0,.5+rnd()*.7]);}
   const sg=new T.IcosahedronGeometry(.16,0);sg.scale(1,.7,1);const rg=new T.DodecahedronGeometry(.1,0);rg.scale(1.3,.6,1);
   if(shrubs.length)extraScatter.push(instanced(sg,M.shrub,shrubs));if(rocks.length)extraScatter.push(instanced(rg,M.rock,rocks));extraScatter.forEach(m=>m.frustumCulled=false);}
@@ -2076,7 +2087,7 @@ function setMapSize(e){if(!mapDecor)initMapDecor();if(e===MAPE&&tableG)return;MA
   const W=24+2*e,D=20+2*e,dens=e?8:10,gg=new T.PlaneGeometry(W,D,Math.round(W*dens),Math.round(D*dens));gg.rotateX(-Math.PI/2);gg.translate(0,0,2);
   {const p=gg.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,H(p.getX(i),p.getZ(i)));gg.computeVertexNormals();}ground.geometry.dispose();ground.geometry=gg;
   const t=terrainFor(e);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
-  if(MAPT.dunes){const N=64,cx=oasisX(),cz=OASIS.z,pos=[cx,0,cz],uv=[cx*.25,cz*.25],idx=[];for(let i=0;i<=N;i++){const a=i/N*Math.PI*2,r=oasisR(a)-.06,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;pos.push(x,0,z);uv.push(x*.25,z*.25);if(i<N)idx.push(0,i+2,i+1);}
+  if(MAPT.lake){const N=64,cx=oasisX(),cz=OASIS.z,pos=[cx,0,cz],uv=[cx*.25,cz*.25],idx=[];for(let i=0;i<=N;i++){const a=i/N*Math.PI*2,r=oasisR(a)-.1,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r*lakeP().sz;pos.push(x,0,z);uv.push(x*.25,z*.25);if(i<N)idx.push(0,i+2,i+1);}
     const wg=new T.BufferGeometry();wg.setAttribute('position',new T.Float32BufferAttribute(pos,3));wg.setAttribute('uv',new T.Float32BufferAttribute(uv,2));wg.setIndex(idx);wg.computeVertexNormals();water.geometry.dispose();water.geometry=wg;}
   else{const segs=Math.round(140*D/20),pos=[],uv=[],idx=[];for(let i=0;i<=segs;i++){const z=-8-e+D*i/segs,x=riverX(z),w=.64;pos.push(x-w,0,z,x+w,0,z);uv.push(0,i/segs*12*D/20,1,i/segs*12*D/20);if(i<segs){const a=i*2;idx.push(a,a+2,a+1,a+1,a+2,a+3);}}
     const wg=new T.BufferGeometry();wg.setAttribute('position',new T.Float32BufferAttribute(pos,3));wg.setAttribute('uv',new T.Float32BufferAttribute(uv,2));wg.setIndex(idx);wg.computeVertexNormals();water.geometry.dispose();water.geometry=wg;}
@@ -3007,7 +3018,7 @@ rr.shadowMap.enabled=true;rr.shadowMap.type=T.PCFSoftShadowMap;rr.xr.enabled=tru
 // realism pass (preview, ?gfx=hi or __tcDebug.gfx(true)): everything here is set up once and costs a few texture reads per pixel, no extra lights or passes.
 // 1) a soft sky reflection (environment map) so metal, glass and paint pick up sky and ground; 2) dirt and wear that collects near the ground and breaks
 // up flat colors, plus a darker band where buildings meet the earth (cheap stand-in for ambient occlusion); 3) fine grain on the ground up close
-const GFX={land:{value:0},landTex:{value:new T.DataTexture(new Uint8Array(4),1,1)},landR:{value:new T.Vector4(-18,-14,36,32)},t:{value:0},lv:/[?&]gfx=off/.test(location.search)?0:2,on:{value:0},ao:{value:0},tex:{value:null},gy:{value:G},gs:{value:1},env:null,hemi:1};
+const GFX={snow:{value:0},land:{value:0},landTex:{value:new T.DataTexture(new Uint8Array(4),1,1)},landR:{value:new T.Vector4(-18,-14,36,32)},t:{value:0},lv:/[?&]gfx=off/.test(location.search)?0:2,on:{value:0},ao:{value:0},tex:{value:null},gy:{value:G},gs:{value:1},env:null,hemi:1};
 GFX.tex.value=(()=>{const N=256,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d'),im=x.createImageData(N,N),d=im.data;
   const oct=[[4,.5],[8,.25],[16,.15],[32,.1]],g=oct.map(([f])=>Array.from({length:f*f},()=>Math.random()));
   const val=(gr,f,u,v)=>{const X=u*f,Y=v*f,i=Math.floor(X),j=Math.floor(Y),a=X-i,b=Y-j,s=t=>t*t*(3-2*t),at=(p,q)=>gr[((q+f)%f)*f+((p+f)%f)];
@@ -3023,12 +3034,12 @@ function gfxEnv(){if(GFX.env)return GFX.env;const s=new T.Scene(),geo=new T.Sphe
   const pm=new T.PMREMGenerator(rr);GFX.env=pm.fromScene(s,.02).texture;pm.dispose();return GFX.env;}
 // wind: cloth and leaves move in the vertex shader (userData.wind=[size, speed, mode]; mode 1 sways more toward the top, for tree crowns), so merged
 // buildings keep their single draw and nothing runs on the CPU
-T.MeshStandardMaterial.prototype.customProgramCacheKey=function(){return 'gfx'+(this.userData.gfx||1)+(this.userData.wind||'');};
+T.MeshStandardMaterial.prototype.customProgramCacheKey=function(){return 'gfx'+(this.userData.gfx||1)+(this.userData.wind||'')+(this.userData.snowy?'s':'');};
 T.MeshStandardMaterial.prototype.onBeforeCompile=function(sh){const kind=this.userData.gfx||1,wd=this.userData.wind,grime=kind>0&&!(this.transparent&&kind!==2);if(!grime&&!wd)return;
-  Object.assign(sh.uniforms,{gLandOn:GFX.land,gLand:GFX.landTex,gLandR:GFX.landR,gT:GFX.t,gAO:GFX.ao,gOn:GFX.on,gTex:GFX.tex,gY:GFX.gy,gS:GFX.gs});
+  Object.assign(sh.uniforms,{gSnow:GFX.snow,gLandOn:GFX.land,gLand:GFX.landTex,gLandR:GFX.landR,gT:GFX.t,gAO:GFX.ao,gOn:GFX.on,gTex:GFX.tex,gY:GFX.gy,gS:GFX.gs});
   sh.vertexShader='varying vec3 gWP,gWN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvec4 gw=vec4(transformed,1.0);vec3 gn=objectNormal;\n#ifdef USE_INSTANCING\ngw=instanceMatrix*gw;gn=mat3(instanceMatrix)*gn;\n#endif\ngWP=(modelMatrix*gw).xyz;gWN=normalize(mat3(modelMatrix)*gn);'+(wd?`\n{float ph=gT*${wd[1].toFixed(2)}+gWP.x*6.+gWP.z*4.,h=${wd[2]===1?'clamp(transformed.y*.75,0.,1.)':'1.'};transformed+=vec3(sin(ph),.35*cos(ph*1.3),sin(ph*.7+1.))*${wd[0].toFixed(4)}*h;}`:''));
   if(wd)sh.vertexShader='uniform float gT;\n'+sh.vertexShader;if(!grime)return;
-  const head='uniform float gOn,gAO,gY,gS;uniform sampler2D gTex;varying vec3 gWP,gWN;\n';
+  const head='uniform float gSnow;uniform float gOn,gAO,gY,gS;uniform sampler2D gTex;varying vec3 gWP,gWN;\n';
   if(kind===2){ // ground: fine grain and soft patchiness so it does not go blurry up close; with the land layer, also the baked ground map
     // (r: soft shade under buildings and walls, g: worn dirt and footpaths, b: wet ground along the water), fine bumps, and wet shine
     sh.fragmentShader='uniform float gLandOn;uniform sampler2D gLand;uniform vec4 gLandR;\n'+head+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
@@ -3047,7 +3058,8 @@ if(gOn>.5){vec3 w=gWP/gS;gH=w.y-gY/gS;gN=(texture2D(gTex,w.xz*4.).r+texture2D(gT
   float dirt=(.35+.65*smoothstep(.3,.75,gN))*.75*(1.-smoothstep(0.,.22,gH))+smoothstep(.5,.9,gN)*.38+spec*.14;
   vec3 mud=diffuseColor.rgb*vec3(.62,.54,.42);diffuseColor.rgb=mix(diffuseColor.rgb,mud,clamp(dirt,0.,1.));
   diffuseColor.rgb*=mix(.42,1.,smoothstep(0.,.1,gH));
-  if(gAO>.5)diffuseColor.rgb*=1.-.38*smoothstep(.15,-.8,normalize(gWN).y)-.12*(1.-smoothstep(0.,.35,gH))*(1.-abs(normalize(gWN).y));}`).replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nif(gOn>.5)roughnessFactor=clamp(roughnessFactor+(gN-.5)*.35+(1.-smoothstep(0.,.2,gH))*.12,.05,1.);');};
+  if(gAO>.5)diffuseColor.rgb*=1.-.38*smoothstep(.15,-.8,normalize(gWN).y)-.12*(1.-smoothstep(0.,.35,gH))*(1.-abs(normalize(gWN).y));}`+(this.userData.snowy?`
+if(gSnow>.5){float hk=smoothstep(.25,1.15,gH),ny=normalize(gWN).y;float sn=smoothstep(.55-.35*hk,.9-.3*hk,ny)*(.35+.65*texture2D(gTex,gWP.xz/gS*6.).r)*(.15+1.05*hk);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.88,.92,.96),clamp(sn*1.35,0.,.95));}`:'')).replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nif(gOn>.5)roughnessFactor=clamp(roughnessFactor+(gN-.5)*.35+(1.-smoothstep(0.,.2,gH))*.12,.05,1.);');};
 // level 2 adds a warm-sun, cool-shadow grade with blue haze toward the horizon, and shading under overhangs and low on walls
 const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);
 
@@ -3084,7 +3096,7 @@ let landT=0;function landSoon(){if(!GFX.land.value)return;clearTimeout(landT);la
 // the look follows the weather: setWeather sets the base lights, then gfxApply trims the flat fill (the sky reflection replaces it),
 // and on a clear day adds the warm sun, cool sky and haze. Night drops the daylight sky reflection.
 // the sky reflection goes on metal only (guns, masts, wire, vehicles): that is where it shows, and sampling it on every surface doubled the cost
-function gfxApply(){const lv=GFX.lv,on=lv>0,k=on&&wx!=='night',env=k?gfxEnv():null;GFX.on.value=on?1:0;GFX.ao.value=lv>1?1:0;
+function gfxApply(){GFX.snow.value=MAPT.snow&&MAPT.lake?1:0;const lv=GFX.lv,on=lv>0,k=on&&wx!=='night',env=k?gfxEnv():null;GFX.on.value=on?1:0;GFX.ao.value=lv>1?1:0;
   const seen=new Set();stage.traverse(o=>{[].concat(o.material||[]).forEach(m=>{if(!m.isMeshStandardMaterial||seen.has(m))return;seen.add(m);const e=m.metalness>=.5?env:null;if(m.envMap!==e&&(!m.envMap||m.envMap===GFX.env)){m.envMap=e;m.envMapIntensity=2.2;m.needsUpdate=true;}});});
   hemi.groundColor.setHex(lv>1?GFXG.gnd:GFXG.g0);hemi.intensity=WX[wx].h[1]*(k?.85:1);fill.intensity=WX[wx].f*(k?.8:1);sun.intensity=WX[wx].s[1]*(k?1.08:1);
   if(lv>1&&wx==='day'){sun.color.setHex(GFXG.sun);hemi.color.setHex(GFXG.sky);if(stage.background){stage.background.setHex(GFXG.haze);stage.fog.color.setHex(GFXG.haze);stage.fog.near=GFXG.fog[0];stage.fog.far=GFXG.fog[1];}rr.toneMappingExposure=GFXG.ex;}}
@@ -3347,7 +3359,7 @@ function updWeather(dt){if(rainFx.visible){const a=rainFx.geometry.attributes.po
   // lightning: the sky and the board flash, then thunder follows a moment later
   if((boltT-=dt)<0){boltT=rand(3,8);hemi.intensity=2.6;if(stage.background)stage.background.setHex(0x8a96a4);setTimeout(()=>{if(wx==='storm'&&stage.background)stage.background.setHex(c.bg);},120);setTimeout(()=>boom(.6),rand(400,1200));}}
 // switching maps regenerates the terrain texture and recolors water, rocks and plants
-function setMap(id){if(MAPT===MAPS[id])return;landSoon();const reshape=!!MAPT.dunes!==!!MAPS[id].dunes;const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
+function setMap(id){if(MAPT===MAPS[id])return;landSoon();const reshape=!!MAPT.dunes!==!!MAPS[id].dunes||(MAPT.lake||'')!==(MAPS[id].lake||'');const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
   water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
   [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());if(typeof pineTrees!=='undefined')pineTint();puddles.visible=MAPT.mud;if(reshape){const e=MAPE;MAPE=-1;setMapSize(e);}setWeather(wx);
   $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
@@ -3439,7 +3451,7 @@ rr.setAnimationLoop((tm,xf)=>{const now=performance.now();if(now-lastDraw<frameG
   if(xrMode||state==='battle'||defendSim||now-lastInput<1500||++shadowAge>=12){rr.shadowMap.needsUpdate=true;shadowAge=0;}
   const dt=Math.min(.05,(now-last)/1000);last=now;perfTick(now);wallSync();
   const ts=xrMode&&armed!=null&&state==='battle'?.3:1; // precision aid: battle slows while aiming in the headset
-  if(defendSim)defendTick(dt);else step(dt*ts);updSnow(dt);updWeather(dt);updPool(ADD,dt*ts);updPool(SMK,dt*ts);water.material.map.offset.y-=dt*.05;seaMap.offset.x+=dt*.015;flashLights.forEach(l=>l.intensity*=Math.pow(.0005,dt));
+  if(defendSim)defendTick(dt);else step(dt*ts);updSnow(dt);updWeather(dt);updPool(ADD,dt*ts);updPool(SMK,dt*ts);if(water.material.map)water.material.map.offset.y-=dt*.05;seaMap.offset.x+=dt*.015;flashLights.forEach(l=>l.intensity*=Math.pow(.0005,dt));
   hud();
   if(xrMode){xrFrame(dt);roomLightTick(xf);drawXR();rr.render(stage,cam);return;}
   const w=canvasEl.clientWidth,h=canvasEl.clientHeight;if(rr._w!==w||rr._h!==h){rr.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();rr._w=w;rr._h=h;
@@ -3475,14 +3487,30 @@ const PALM=(()=>{const parts=[],put=(g,f)=>{const p=g.attributes.position,col=[]
   const m=new T.BufferGeometry();m.setAttribute('position',new T.BufferAttribute(P,3));m.setAttribute('normal',new T.BufferAttribute(N,3));m.setAttribute('color',new T.BufferAttribute(C,3));return m;})();
 const palmMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.8,side:T.DoubleSide});palmMat.userData.wind=[.02,1.1,1];
 var palms=new T.InstancedMesh(PALM,palmMat,12);palms.castShadow=palms.receiveShadow=true;palms.frustumCulled=false;palms.visible=false;scene.add(palms);
+var lakePines=new T.InstancedMesh(PINE,pineMat,12),lakeTrunks=new T.InstancedMesh(cyl(.03,.045,.4,6),M.woodDark,12);
+[lakePines,lakeTrunks].forEach(o=>{o.castShadow=o.receiveShadow=true;o.frustumCulled=false;o.visible=false;scene.add(o);});
 var bridgeG=scene.children.find(o=>o.isGroup&&Math.abs(o.position.z-BRIDGE.z)<1e-3&&Math.abs(o.rotation.y-Math.atan2(.6,6))<1e-4);
-// called after the board is (re)built: on the dune map the trees go (palms ring the oasis instead), the bridge goes, and no scenery sits in the pond
-function mapSync(){if(!palms)return;const d=!!MAPT.dunes;if(bridgeG)bridgeG.visible=!d;palms.visible=d;if(!d)return;
+// called after the board is (re)built. Lake maps: no bridge, nothing standing in the water; the oasis gets palms, the ice a frozen
+// surface. Dune map: no pines, and no rocks up on the dunes.
+const WATER0={op:water.material.opacity,ro:water.material.roughness,me:water.material.metalness,map:water.material.map};
+function mapSync(){if(!palms)return;const lake=MAPT.lake,dunes=!!MAPT.dunes;if(bridgeG)bridgeG.visible=!lake;palms.visible=lake==='oasis';
+  const wm=water.material,ice=lake==='ice';if(ice){wm.color.setHex(0x9cc8e0).convertSRGBToLinear();wm.opacity=.98;wm.roughness=.12;wm.metalness=.55;}else{wm.opacity=WATER0.op;wm.roughness=WATER0.ro;wm.metalness=WATER0.me;}
+  if((wm.map===null)!==ice){wm.map=ice?null:WATER0.map;wm.needsUpdate=true;}
+  if(!lake&&!dunes)return;
   const m=new T.Matrix4(),v=V(),q=new T.Quaternion(),sv=V(),e=new T.Euler();
   (mapDecor||[]).forEach(dd=>{const im=dd.o;if(!im||!im.isInstancedMesh)return;const tree=im===pineTrees||im===pineTrunks;
-    for(let i=0;i<im.count;i++){im.getMatrixAt(i,m);v.setFromMatrixPosition(m);if(tree||groundY(v.x,v.z)-G<-.03){m.makeScale(1e-4,1e-4,1e-4);m.setPosition(v);im.setMatrixAt(i,m);}}im.instanceMatrix.needsUpdate=true;});
+    for(let i=0;i<im.count;i++){im.getMatrixAt(i,m);v.setFromMatrixPosition(m);const gy=groundY(v.x,v.z)-G;
+      if((dunes&&(tree||gy>.05))||(lake&&(gy<-.03||riverD(v.x,v.z)<.9))){m.makeScale(1e-4,1e-4,1e-4);m.setPosition(v);im.setMatrixAt(i,m);}}im.instanceMatrix.needsUpdate=true;});
+  lakePines.visible=lakeTrunks.visible=lake==='ice';
+  if(lake==='ice'){let s=23;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,cx=oasisX(),base=new T.Color(MAPT.shrub).convertSRGBToLinear(),col=new T.Color();let n=0;
+    for(let i=0;i<60&&n<11;i++){const a=rnd()*6.283,r=oasisR(a)+.35+rnd()*1.1,x=cx+Math.cos(a)*r,z=OASIS.z+Math.sin(a)*r*lakeP().sz,gy=groundY(x,z)-G;
+      if(gy<-.02||gy>.3||x>riverX(z)+.2||Math.abs(z-1.05)<.7)continue; // keep clear of the build area and the road
+      const sc=.7+rnd()*.5;e.set(0,rnd()*6.28,0);q.setFromEuler(e);sv.set(sc,sc*(.95+rnd()*.25),sc);m.compose(V(x,gy+G-.01,z),q,sv);lakePines.setMatrixAt(n,m);
+      m.compose(V(x,gy+G+.2*sc,z),q,V(sc,sc,sc));lakeTrunks.setMatrixAt(n,m);col.copy(base).offsetHSL((rnd()-.5)*.04,0,(rnd()-.5)*.05).multiplyScalar(1.5);lakePines.setColorAt(n,col);n++;}
+    lakePines.count=lakeTrunks.count=n;lakePines.instanceMatrix.needsUpdate=lakeTrunks.instanceMatrix.needsUpdate=true;if(lakePines.instanceColor)lakePines.instanceColor.needsUpdate=true;}
+  if(lake!=='oasis')return;
   let s=11;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,cx=oasisX();let n=0;
-  for(let i=0;i<40&&n<9;i++){const a=rnd()*6.283,r=oasisR(a)+.3+rnd()*.7,x=cx+Math.cos(a)*r,z=OASIS.z+Math.sin(a)*r;if(groundY(x,z)-G>.12||groundY(x,z)-G<-.02)continue;
+  for(let i=0;i<40&&n<9;i++){const a=rnd()*6.283,r=oasisR(a)+.3+rnd()*.7,x=cx+Math.cos(a)*r,z=OASIS.z+Math.sin(a)*r*lakeP().sz;if(groundY(x,z)-G>.12||groundY(x,z)-G<-.02)continue;
     e.set(0,rnd()*6.28,0);q.setFromEuler(e);const sc=.8+rnd()*.45;sv.set(sc,sc*(.9+rnd()*.3),sc);m.compose(V(x,groundY(x,z)-.01,z),q,sv);palms.setMatrixAt(n,m);
     const c=new T.Color().setHSL(.0,0,1).multiplyScalar(.85+rnd()*.3);palms.setColorAt(n,c);n++;}
   palms.count=n;palms.instanceMatrix.needsUpdate=true;if(palms.instanceColor)palms.instanceColor.needsUpdate=true;}
