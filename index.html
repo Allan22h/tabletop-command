@@ -1223,7 +1223,7 @@ function loadBase(){let b=null;try{b=JSON.parse(localStorage.getItem('tc.base'))
   return b;}
 // loaded at the end of this file, once every helper it uses exists
 let BASE=null;
-function saveBase(){try{localStorage.setItem('tc.base',JSON.stringify(BASE));}catch(_){}}
+function saveBase(){landSoon();try{localStorage.setItem('tc.base',JSON.stringify(BASE));}catch(_){}}
 const baseHq=()=>BASE.blds.find(b=>b.k==='hq').lv;
 const capOf=r=>{if(r==='i')return Infinity;let c=5000*baseHq();BASE.blds.forEach(b=>{if(BK[b.k].store===r&&!b.fresh)c+=capFor(r,b.lv);});return c;};
 const busy=()=>BASE.blds.filter(b=>b.until).length;
@@ -2485,7 +2485,7 @@ let ndList=[],ndRect=null,fixedWalls=false;
 const zoneMat=new T.MeshBasicMaterial({color:0xe0503c,transparent:true,opacity:.18,depthWrite:false});
 const zone=new T.Mesh(new T.PlaneGeometry(1,1),zoneMat);zone.rotation.x=-Math.PI/2;zone.visible=false;scene.add(zone);
 const zoneEdge=new T.LineSegments(new T.EdgesGeometry(new T.PlaneGeometry(1,1)),new T.LineBasicMaterial({color:0xe0503c}));zoneEdge.rotation.x=-Math.PI/2;zoneEdge.visible=false;scene.add(zoneEdge);
-function buildLayout(m){wallHq=m==='mine'?baseHq():m==='defend'?defendSim.L.myHq:m==='full'?raidHq:1;setMapSize(mapExt(wallHq));CMP=cmpFor(m==='tutorial'?5:wallHq);resetItems();
+function buildLayout(m){landSoon();wallHq=m==='mine'?baseHq():m==='defend'?defendSim.L.myHq:m==='full'?raidHq:1;setMapSize(mapExt(wallHq));CMP=cmpFor(m==='tutorial'?5:wallHq);resetItems();
   fixedWalls=m==='full'||(m==='defend'&&!defendSim.L.free);
   if(m==='tutorial'){
     addB('outpost',2.2,.4,{r:.75,hp:2400,h:.5,hq:true,loot:{g:2000,f:2000,m:1000}});
@@ -2978,7 +2978,7 @@ rr.shadowMap.enabled=true;rr.shadowMap.type=T.PCFSoftShadowMap;rr.xr.enabled=tru
 // realism pass (preview, ?gfx=hi or __tcDebug.gfx(true)): everything here is set up once and costs a few texture reads per pixel, no extra lights or passes.
 // 1) a soft sky reflection (environment map) so metal, glass and paint pick up sky and ground; 2) dirt and wear that collects near the ground and breaks
 // up flat colors, plus a darker band where buildings meet the earth (cheap stand-in for ambient occlusion); 3) fine grain on the ground up close
-const GFX={t:{value:0},lv:/[?&]gfx=off/.test(location.search)?0:2,on:{value:0},ao:{value:0},tex:{value:null},gy:{value:G},gs:{value:1},env:null,hemi:1};
+const GFX={land:{value:0},landTex:{value:new T.DataTexture(new Uint8Array(4),1,1)},landR:{value:new T.Vector4(-18,-14,36,32)},t:{value:0},lv:/[?&]gfx=off/.test(location.search)?0:2,on:{value:0},ao:{value:0},tex:{value:null},gy:{value:G},gs:{value:1},env:null,hemi:1};
 GFX.tex.value=(()=>{const N=256,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d'),im=x.createImageData(N,N),d=im.data;
   const oct=[[4,.5],[8,.25],[16,.15],[32,.1]],g=oct.map(([f])=>Array.from({length:f*f},()=>Math.random()));
   const val=(gr,f,u,v)=>{const X=u*f,Y=v*f,i=Math.floor(X),j=Math.floor(Y),a=X-i,b=Y-j,s=t=>t*t*(3-2*t),at=(p,q)=>gr[((q+f)%f)*f+((p+f)%f)];
@@ -2996,12 +2996,21 @@ function gfxEnv(){if(GFX.env)return GFX.env;const s=new T.Scene(),geo=new T.Sphe
 // buildings keep their single draw and nothing runs on the CPU
 T.MeshStandardMaterial.prototype.customProgramCacheKey=function(){return 'gfx'+(this.userData.gfx||1)+(this.userData.wind||'');};
 T.MeshStandardMaterial.prototype.onBeforeCompile=function(sh){const kind=this.userData.gfx||1,wd=this.userData.wind,grime=kind>0&&!(this.transparent&&kind!==2);if(!grime&&!wd)return;
-  Object.assign(sh.uniforms,{gT:GFX.t,gAO:GFX.ao,gOn:GFX.on,gTex:GFX.tex,gY:GFX.gy,gS:GFX.gs});
+  Object.assign(sh.uniforms,{gLandOn:GFX.land,gLand:GFX.landTex,gLandR:GFX.landR,gT:GFX.t,gAO:GFX.ao,gOn:GFX.on,gTex:GFX.tex,gY:GFX.gy,gS:GFX.gs});
   sh.vertexShader='varying vec3 gWP,gWN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvec4 gw=vec4(transformed,1.0);vec3 gn=objectNormal;\n#ifdef USE_INSTANCING\ngw=instanceMatrix*gw;gn=mat3(instanceMatrix)*gn;\n#endif\ngWP=(modelMatrix*gw).xyz;gWN=normalize(mat3(modelMatrix)*gn);'+(wd?`\n{float ph=gT*${wd[1].toFixed(2)}+gWP.x*6.+gWP.z*4.,h=${wd[2]===1?'clamp(transformed.y+.45,0.,1.)':'1.'};transformed+=vec3(sin(ph),.35*cos(ph*1.3),sin(ph*.7+1.))*${wd[0].toFixed(4)}*h;}`:''));
   if(wd)sh.vertexShader='uniform float gT;\n'+sh.vertexShader;if(!grime)return;
   const head='uniform float gOn,gAO,gY,gS;uniform sampler2D gTex;varying vec3 gWP,gWN;\n';
-  if(kind===2){ // ground: fine grain and soft patchiness so it does not go blurry up close
-    sh.fragmentShader=head+sh.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\nif(gOn>.5){vec2 q=gWP.xz/gS;float a=texture2D(gTex,q*.35).r,c=texture2D(gTex,q*2.2).r,b=texture2D(gTex,q*14.).g;diffuseColor.rgb*=(.8+.4*a)*(.9+.2*c)*(.9+.2*b);}');return;}
+  if(kind===2){ // ground: fine grain and soft patchiness so it does not go blurry up close; with the land layer, also the baked ground map
+    // (r: soft shade under buildings and walls, g: worn dirt and footpaths, b: wet ground along the water), fine bumps, and wet shine
+    sh.fragmentShader='uniform float gLandOn;uniform sampler2D gLand;uniform vec4 gLandR;\n'+head+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+vec3 gL=vec3(0.);
+if(gOn>.5){vec2 q=gWP.xz/gS;float a=texture2D(gTex,q*.35).r,c=texture2D(gTex,q*2.2).r,b=texture2D(gTex,q*14.).g;diffuseColor.rgb*=(.8+.4*a)*(.9+.2*c)*(.9+.2*b);
+  if(gLandOn>.5){gL=texture2D(gLand,(q-gLandR.xy)/gLandR.zw).rgb;float n=texture2D(gTex,q*3.1).r;
+    diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.105,.078,.05)*(.8+.4*b),clamp(gL.g*(.45+.7*n),0.,.8));
+    diffuseColor.rgb*=1.-.55*gL.r;diffuseColor.rgb*=1.-.42*gL.b;}}`).replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(roughnessFactor,.22,gL.b);')
+      .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+if(gLandOn>.5&&gOn>.5){vec2 q=gWP.xz/gS*1.3;const float e=1./256.;float h0=texture2D(gTex,q).r,hx=texture2D(gTex,q+vec2(e,0.)).r,hz=texture2D(gTex,q+vec2(0.,e)).r;
+  vec3 d=vec3(h0-hx,0.,h0-hz)*22.;normal=normalize(normal+(viewMatrix*vec4(d,0.)).xyz);}`);return;}
   sh.fragmentShader=head+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
 float gN=.5,gH=1.;
 if(gOn>.5){vec3 w=gWP/gS;gH=w.y-gY/gS;gN=(texture2D(gTex,w.xz*4.).r+texture2D(gTex,w.xy*4.+.37).r+texture2D(gTex,w.zy*4.+.71).r)/3.;gN=clamp((gN-.5)*1.8+.5,0.,1.);
@@ -3012,6 +3021,45 @@ if(gOn>.5){vec3 w=gWP/gS;gH=w.y-gY/gS;gN=(texture2D(gTex,w.xz*4.).r+texture2D(gT
   if(gAO>.5)diffuseColor.rgb*=1.-.38*smoothstep(.15,-.8,normalize(gWN).y)-.12*(1.-smoothstep(0.,.35,gH))*(1.-abs(normalize(gWN).y));}`).replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nif(gOn>.5)roughnessFactor=clamp(roughnessFactor+(gN-.5)*.35+(1.-smoothstep(0.,.2,gH))*.12,.05,1.);');};
 // level 2 adds a warm-sun, cool-shadow grade with blue haze toward the horizon, and shading under overhangs and low on walls
 const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);M.shrub.userData.wind=[.025,1.3,1];
+
+// land layer: a ground map painted once from the layout (shade under every building and wall, worn dirt around them and footpaths to the HQ,
+// wet ground along rivers and sea) plus one batch of scattered pebbles. Repainted only when the layout changes, so it costs nothing per frame.
+let landPeb=null,landWet=null;
+function landBake(){let tm=null;scene.traverse(o=>{if(o.material===M.terrain)tm=o;});if(!tm)return;const bb=new T.Box3().setFromObject(tm),X0=bb.min.x,Z0=bb.min.z,LW=bb.max.x-X0,LH=bb.max.z-Z0;
+  const PX=14,cw=Math.round(LW*PX),ch=Math.round(LH*PX);GFX.landR.value.set(X0,Z0,LW,LH);
+  const mk=()=>{const c=document.createElement('canvas');c.width=cw;c.height=ch;const x=c.getContext('2d');x.setTransform(PX,0,0,PX,-X0*PX,-Z0*PX);return [c,x];};
+  const [cr,xr]=mk(),[cg,xg]=mk();
+  const foot=[];battle.children.forEach(g=>{if(!g.isGroup||!g.visible)return;const b=new T.Box3().setFromObject(g);if(!isFinite(b.min.x)||b.max.y-b.min.y<.03)return;const sx=b.max.x-b.min.x,sz=b.max.z-b.min.z;if(sx>6||sz>6)return;
+    foot.push({x:(b.min.x+b.max.x)/2,z:(b.min.z+b.max.z)/2,sx,sz});});
+  walls.forEach(w=>{if(w.alive&&w.m.visible)foot.push({x:w.x,z:w.z,sx:.36,sz:.36,wall:true});});
+  const hq=blds.find(b=>b.hq&&b.alive);
+  // shade: a soft dark footprint, drawn with a blurred shadow so the edge fades out
+  xr.shadowColor='rgba(0,0,0,.9)';xr.shadowBlur=PX*.5;xr.fillStyle='rgba(0,0,0,.75)';foot.forEach(f=>{xr.fillRect(f.x-f.sx*.48,f.z-f.sz*.48,f.sx*.96,f.sz*.96);});
+  // worn dirt: scuffed ground around each building, and footpaths from the HQ to every building
+  xg.shadowColor='rgba(0,0,0,.6)';xg.shadowBlur=PX*.6;xg.fillStyle='rgba(0,0,0,.3)';
+  foot.forEach(f=>{if(f.wall)return;xg.beginPath();xg.ellipse(f.x,f.z,f.sx*.6+.08,f.sz*.6+.08,0,0,7);xg.fill();});
+  if(hq){xg.strokeStyle='rgba(0,0,0,.5)';xg.lineCap='round';xg.shadowBlur=PX*.25;foot.forEach((f,i)=>{if(f.wall||Math.hypot(f.x-hq.x,f.z-hq.z)<.6)return;xg.lineWidth=.07+(i%3)*.03;
+    xg.beginPath();xg.moveTo(hq.x,hq.z);const mx=(hq.x+f.x)/2+Math.sin(i*2.3)*.4,mz=(hq.z+f.z)/2+Math.cos(i*1.7)*.4;xg.quadraticCurveTo(mx,mz,f.x,f.z);xg.stroke();});}
+  // wet ground: land within a short reach of water, found once per map from the terrain heights
+  if(!landWet||landWet.w!==cw||landWet.map!==MAPT){const Hs=4,ww=Math.ceil(cw/Hs),wh=Math.ceil(ch/Hs),wat=new Float32Array(ww*wh);
+    for(let j=0;j<wh;j++)for(let i=0;i<ww;i++){const x=X0+(i+.5)*Hs/PX,z=Z0+(j+.5)*Hs/PX;wat[j*ww+i]=groundY(x,z)-G<-.03?1:0;}
+    let a=wat;for(let k=0;k<3;k++){const b=new Float32Array(ww*wh);for(let j=0;j<wh;j++)for(let i=0;i<ww;i++){let s=0,n=0;for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){const ii=i+di,jj=j+dj;if(ii<0||jj<0||ii>=ww||jj>=wh)continue;s+=a[jj*ww+ii];n++;}b[j*ww+i]=s/n;}a=b;}
+    const wet=new Float32Array(ww*wh);for(let k=0;k<wet.length;k++)wet[k]=wat[k]?0:Math.min(1,a[k]*2.2);landWet={w:cw,map:MAPT,ww,wh,Hs,wet};}
+  const R=xr.getImageData(0,0,cw,ch).data,Gd=xg.getImageData(0,0,cw,ch).data,out=new Uint8Array(cw*ch*4),L=landWet;
+  for(let j=0;j<ch;j++)for(let i=0;i<cw;i++){const k=(j*cw+i)*4;out[k]=R[k+3];out[k+1]=Gd[k+3];out[k+2]=Math.round(255*L.wet[Math.min(L.wh-1,j/L.Hs|0)*L.ww+Math.min(L.ww-1,i/L.Hs|0)]);out[k+3]=255;}
+  const t=new T.DataTexture(out,cw,ch,T.RGBAFormat);t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;if(GFX.landTex.value)GFX.landTex.value.dispose();GFX.landTex.value=t;
+  // pebbles: one instanced batch of small stones, kept off water, buildings and walls, a little thicker on worn ground
+  if(!landPeb){const N=1600,geo=new T.DodecahedronGeometry(1,0),mat=new T.MeshStandardMaterial({color:0xffffff,roughness:.95,flatShading:true});
+    landPeb=new T.InstancedMesh(geo,mat,N);landPeb.receiveShadow=true;landPeb.frustumCulled=false;scene.add(landPeb);}
+  const m4=new T.Matrix4(),q=new T.Quaternion(),e=new T.Euler(),sv=V(),pv=V(),col=new T.Color(),rock=new T.Color(MAPT.rock);let n=0;
+  for(let tries=0;tries<12000&&n<landPeb.count;tries++){const x=X0+Math.random()*LW,z=Z0+Math.random()*LH,i=Math.min(cw-1,(x-X0)*PX|0),j=Math.min(ch-1,(z-Z0)*PX|0),k=(j*cw+i)*4;
+    if(out[k]>60||out[k+2]>40||groundY(x,z)-G<-.02)continue;if(Math.random()>.35+out[k+1]/255*1.2)continue;
+    const r=.012+Math.pow(Math.random(),3)*.05;e.set(Math.random()*6,Math.random()*6,Math.random()*6);q.setFromEuler(e);sv.set(r*(1+Math.random()*.6),r*.6,r);pv.set(x,groundY(x,z)+r*.25,z);
+    m4.compose(pv,q,sv);landPeb.setMatrixAt(n,m4);col.copy(rock).multiplyScalar(.7+Math.random()*.6);landPeb.setColorAt(n,col);n++;}
+  landPeb.count=n;landPeb.instanceMatrix.needsUpdate=true;if(landPeb.instanceColor)landPeb.instanceColor.needsUpdate=true;}
+function land(on){GFX.land.value=on?1:0;if(on)landBake();if(landPeb)landPeb.visible=!!on;}
+// repaint the ground map a moment after the layout changes (a new layout, a building placed, moved or upgraded, another map), never mid-gesture
+let landT=0;function landSoon(){if(!GFX.land.value)return;clearTimeout(landT);landT=setTimeout(landBake,300);}
 // the look follows the weather: setWeather sets the base lights, then gfxApply trims the flat fill (the sky reflection replaces it),
 // and on a clear day adds the warm sun, cool sky and haze. Night drops the daylight sky reflection.
 // the sky reflection goes on metal only (guns, masts, wire, vehicles): that is where it shows, and sampling it on every surface doubled the cost
@@ -3278,7 +3326,7 @@ function updWeather(dt){if(rainFx.visible){const a=rainFx.geometry.attributes.po
   // lightning: the sky and the board flash, then thunder follows a moment later
   if((boltT-=dt)<0){boltT=rand(3,8);hemi.intensity=2.6;if(stage.background)stage.background.setHex(0x8a96a4);setTimeout(()=>{if(wx==='storm'&&stage.background)stage.background.setHex(c.bg);},120);setTimeout(()=>boom(.6),rand(400,1200));}}
 // switching maps regenerates the terrain texture and recolors water, rocks and plants
-function setMap(id){if(MAPT===MAPS[id])return;const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
+function setMap(id){if(MAPT===MAPS[id])return;landSoon();const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
   water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
   [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());puddles.visible=MAPT.mud;setWeather(wx);
   $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
@@ -3378,8 +3426,8 @@ rr.setAnimationLoop((tm,xf)=>{const now=performance.now();if(now-lastDraw<frameG
   if(state==='menu')orb.theta+=dt*.05;
   else if(state==='ended'&&result){orb.theta+=dt*.12;orb.target.lerp(result.focus,Math.min(1,dt*1.5));orb.r=mix(orb.r,Math.max(orb.minR,orb.r*.97),Math.min(1,dt));} // slow victory lap around the HQ
   orb.apply();rr.render(stage,cam);});
-gfxApply();
-window.__tcDebug={gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+gfxApply();land(GFX.lv>0);
+window.__tcDebug={land,landBake,gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 $('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
 
