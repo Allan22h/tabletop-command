@@ -1239,7 +1239,9 @@ const TR={rifle:{sp:2,c:{g:100,m:50},t:12,need:'barracks',br:'g'},mortar:{sp:3,c
   tank:{sp:8,c:{f:600,m:400},t:40,need:'motor',br:'f'},heli:{sp:10,c:{f:900,m:500},t:50,need:'helipad',br:'m'},strike:{sp:12,c:{f:1200,m:800},t:60,need:'airfield',br:'m'}};
 const ARMY_ORDER=['rifle','truck','jlav','tank','mortar','heli','drone','strike'];
 const techOf=k=>(BASE.tech&&BASE.tech[k])||1;
-const techK=k=>1+.08*(techOf(k)-1); // +8% health and damage per research level
+// balance: defense damage and building health per level, and unit health and damage per research level
+var BAL={def:.05,hp:.06,att:.12};
+const techK=k=>1+BAL.att*(techOf(k)-1); // +12% health and damage per research level
 const trainCost=k=>{const c={g:0,f:0,m:0,i:0},m=1+.25*(techOf(k)-1);for(const r in TR[k].c)c[r]=Math.round(TR[k].c[r]*m/10)*10;return c;};
 const researchCost=(k,L)=>({g:0,f:0,m:0,i:0,[TR[k].br]:400*L*L});
 const researchTime=L=>20*L;
@@ -1357,7 +1359,7 @@ function storedFor(k,lv,h){if(k==='hq')return {g:5000*h*rand(.5,.9),f:5000*h*ran
 // a raid can take at most 20% of what the defender owns
 function lootFor(k,lv,h){const s=storedFor(k,lv,h),o={};for(const r in s)o[r]=Math.round(s[r]*.2/10)*10;return o;}
 // health grows with level: +10% a level, the HQ +20% (it also gets sandbags, plating and guns as it grows)
-const hpOf=(k,lv)=>Math.round(BK[k].hp*(1+(k==='hq'?.2:.1)*(lv-1)));
+const hpOf=(k,lv)=>Math.round(BK[k].hp*(1+(k==='hq'?2*BAL.hp:BAL.hp)*(lv-1)));
 function placeB(k,x,z,lv,loot,site){const d=BK[k];
   return addB(site?'site':k,x,z,{r:d.r,hp:hpOf(k,lv),h:d.h,hq:k==='hq',loot,def:site?null:d.def,lv,garrison:site?null:k==='barracks'?'soldiers':k==='motor'?'tanks':k==='hangar'?'drones':k==='comms'?'reinforce':null});}
 let teethL=[],wireL=[],mines=[],itemEnts=[];
@@ -1701,7 +1703,7 @@ function attackPlan(att,h,rng){const c=cmpFor(h),pool=['rifle','rifle','truck','
 function defenseLoot(snap,res,h){const holders={g:[],f:[],m:[],i:[]};snap.forEach((o,ix)=>{const st=BK[o.k].store;if(st&&!o.fresh)holders[st].push([ix,capFor(st,o.lv)]);if(o.k==='hq')['g','f','m'].forEach(r=>holders[r].push([ix,5000*h]));});
   const out={};RES.forEach(r=>{const tot=holders[r].reduce((s,x)=>s+x[1],0);holders[r].forEach(([ix,c])=>{(out[ix]=out[ix]||{})[r]=Math.floor(res[r]*.2*c/Math.max(1,tot));});});return out;}
 function buildDefense(){const L=defendSim.L,lm=defenseLoot(L.snap,L.res,L.myHq);L.snap.forEach((o,ix)=>{if(BK[o.k].item)placeItem(o.k,o.x,o.z,true,L.myHq,wallYaw(o,L.snap),o.lv);else placeB(o.k,o.x,o.z,o.lv,lm[ix]||{},o.fresh);});}
-function setupDefense(L,watch){menuMusic(false);defendSim={L,idx:0,done:false,watch,acc:0,saved:{cur}};cur=L.fac;attOverride=1+.048*(L.hq-1);simRng=mulberry(L.seed);sfxQ=[];
+function setupDefense(L,watch){menuMusic(false);defendSim={L,idx:0,done:false,watch,acc:0,saved:{cur}};cur=L.fac;attOverride=Math.max(1+.048*(L.hq-1),1+BAL.att*(maxLv('intel',L.hq)-1));simRng=mulberry(L.seed);sfxQ=[];
   clearBattle();mode='defend';withSim(()=>buildLayout('defend'));cards=[];armed=null;loot={g:0,f:0,m:0,i:0};timeLeft=RAID_TIME;battleT=0;endT=0;state='battle';tut=null;result=null;}
 function defendStep(dt){const D=defendSim;withSim(()=>{while(D.idx<D.L.plan.length&&D.L.plan[D.idx].t<=battleT){const u=D.L.plan[D.idx++],sp=snapDeploy(u.x,u.z);if(!sp)continue;
       if(u.k==='rifle')for(let i=0;i<3;i++){const a=i/3*6.28+.4;spawnUnit('rifle',sp[0]+Math.cos(a)*.45,sp[1]+Math.sin(a)*.45,'att');}else spawnUnit(u.k,sp[0],sp[1],'att');}
@@ -1795,7 +1797,7 @@ function panelArmy(){const cap=armyCap(),used=armyUsed();let h=`<span class="mut
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="fillarmy">Fill army to capacity</button></div>`;
   return h;}
 function panelResearch(){const il=ownLv('intel'),test=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="maxres">Max all research</button></div>`;if(!il)return '<span class="muted">Build an intel center (HQ 3) to research upgrades for your units.</span>'+test;
-  let h=`<span class="muted">Research up to Lv ${il} · +8% health and damage per level</span><div class="army">`;
+  let h=`<span class="muted">Research up to Lv ${il} · +${Math.round(BAL.att*100)}% health and damage per level</span><div class="army">`;
   ARMY_ORDER.forEach(k=>{const L=techOf(k),to=L+1,c=researchCost(k,to),busyR=!!BASE.research,why=L>=il?'Max for this intel center':busyR?'Lab busy':!canPay(c)?'Not enough resources':'';
     h+=`<div class="arow ic">${ico(k)}<b>${NAME(k)}</b><span class="muted">Level ${L} · +${Math.round((techK(k)-1)*100)}%</span><span>${L<il?costTxt(c)+' · '+fmtT(researchTime(to)):''}</span>
       <button type="button" class="tbtn" data-research="${k}" ${why?'disabled':''}>${why||'Research Lv '+to}</button></div>`;});
@@ -2524,7 +2526,7 @@ function ownCraft(k,len){const f=mode==='mine'?cur:mode==='defend'&&defendSim?de
   const bb=new T.Box3().setFromObject(o),sz=bb.getSize(V()),k2=len/Math.max(sz.x,sz.z,1e-3),w=new T.Group();o.scale.setScalar(k2);o.position.y=-bb.min.y*k2;w.add(o);return w;}
 function addB(kind,x,z,o){const g=new T.Group();g.position.set(x,G,z);battle.add(g);
   const b={kind,x,z,g,r:o.r,hp:o.hp,max:o.hp,loot:o.loot||{},taken:{g:0,f:0,m:0},def:o.def?Object.assign({},DEF[o.def],{type:o.def}):null,cd:rand(.5,1.5),alive:true,hq:!!o.hq,garrison:o.garrison||null,spawned:false,head:null,p:V(x,G+(o.h||.4),z)};
-  b.lv=o.lv||1;if(b.def){b.def.dmg=Math.round(b.def.dmg*(1+.1*(b.lv-1)));b.def.range*=1+.02*(b.lv-1);}
+  b.lv=o.lv||1;if(b.def){b.def.dmg=Math.round(b.def.dmg*(1+BAL.def*(b.lv-1)));b.def.range*=1+.02*(b.lv-1);}
   BUILD[o.build||kind](g,b);g.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});bake(g,keepOf(b));
   b.bar=makeBar(Math.max(.6,o.r*1.3));b.bar.h.position.set(x,G+(o.h||.4)+.55,z);blds.push(b);return b;}
 // perimeter walls get stronger with the HQ: sandbags (HQ 1-2), earth-filled barriers (3-5), double-height barriers (6-8),
@@ -3562,7 +3564,7 @@ function mapSync(){if(!palms)return;sweepDuneObs();const lake=MAPT.lake,dunes=!!
     const c=new T.Color().setHSL(.0,0,1).multiplyScalar(.85+rnd()*.3);palms.setColorAt(n,c);n++;}
   palms.count=n;palms.instanceMatrix.needsUpdate=true;if(palms.instanceColor)palms.instanceColor.needsUpdate=true;}
 mapSync();
-window.__tcDebug={get dbg(){return {bridgeG,ROAD,BRIDGE,MAPE,mapDecor,battleT,timeLeft};},setPace(v){PACE=v;},debugAttack:(seed,att)=>debugAttack(seed,att),setMap,land,landBake,gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
+window.__tcDebug={get dbg(){return {bridgeG,ROAD,BRIDGE,MAPE,mapDecor,battleT,timeLeft};},setPace(v){PACE=v;},BAL,debugAttack:(seed,att)=>debugAttack(seed,att),balance:async(h,n,att)=>{const B=BASE;BASE=maxedBase(h);const out=[];for(let i=1;i<=n;i++)out.push(await debugAttack(i*7919,att||h));BASE=B;return out;},setMap,land,landBake,gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 {const L=$('loading');L.classList.add('ready');setTimeout(()=>L.classList.add('out'),450);setTimeout(()=>{L.hidden=true;},1100);}
 $('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
 
@@ -3570,5 +3572,3 @@ $('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
 setTimeout(()=>{try{main();}catch(err){document.getElementById('loadTxt').textContent='Could not start: '+err.message;console.error(err);}},60);
 })();
 </script>
-
-</body></html>
