@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Tabletop Command</title></head><body>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark only"><title>Tabletop Command</title></head><body>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Tabletop Command Raid</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tabletop Command Raid</title><meta name="color-scheme" content="dark only"><meta name="theme-color" content="#0e1210"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -323,6 +323,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #sideTab::before{content:"\25C0"}#app.sideOff #sideTab::before{content:"\25B6"}
   #app.sideOff:has(#basePanel:not([hidden])) #card{left:50%}}
 @media (max-height:520px) and (orientation:landscape){#app:not(.xr):has(#basePanel:not([hidden])) #sideTab{height:52px}}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark only}}
 </style>
 
 <div id="app">
