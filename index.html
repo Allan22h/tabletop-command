@@ -1142,9 +1142,9 @@ const BK={
   helipad:{name:'Helipad',r:.55,hp:900,res:['f','m'],c:700,zone:'in',desc:'Lets you build attack helicopters.'},
   airfield:{name:'Airfield',r:.6,hp:1100,res:['f','m'],c:900,zone:'in',desc:'Lets you prepare air strikes.'},
   barrier:{name:'Barrier block',r:.18,item:true,zone:'any',cost:h=>({g:100*h}),desc:'A wall block. New blocks are sandbags; upgrade them to earth barriers, double barriers, concrete and razor walls as the HQ allows.'},
-  tree:{name:'Tree',r:.26,item:true,obs:true,zone:'any',cost:h=>({g:50*h+100}),desc:'Clear it for a little gold. Sometimes there is intel underneath.'},
-  rock:{name:'Boulder',r:.3,item:true,obs:true,zone:'any',cost:h=>({g:80*h+150}),desc:'Blast it with dynamite for a little gold. Sometimes there is intel in the rubble.'},
-  bush:{name:'Bush',r:.2,item:true,obs:true,zone:'any',cost:h=>({g:30*h+50}),desc:'Clear it for a little gold. Sometimes there is intel underneath.'},
+  tree:{name:'Tree',r:.26,item:true,obs:true,zone:'any',cost:h=>({g:50*h+100}),desc:'Clear it to free the space. Costs a little gold.'},
+  rock:{name:'Boulder',r:.3,item:true,obs:true,zone:'any',cost:h=>({g:80*h+150}),desc:'Blast it with dynamite to free the space. Costs a little gold.'},
+  bush:{name:'Bush',r:.2,item:true,obs:true,zone:'any',cost:h=>({g:30*h+50}),desc:'Clear it to free the space. Costs a little gold.'},
   ibox:{name:'Intel case',r:.18,item:true,obs:true,zone:'any',cost:()=>({}),desc:'A lost intel case turned up in your base. Open it for 25 intel.'},
   wire:{name:'Concertina wire',r:.5,item:true,zone:'any',cost:()=>({g:300}),desc:'Slows infantry by 60%. Vehicles drive over it.'},
   trench:{name:'Trench section',r:.6,item:true,zone:'any',cost:()=>({g:500,m:200}),desc:'Dug-in soldiers defend from it and take half damage.'},
@@ -1328,12 +1328,25 @@ function placeItem(k,x,z,raid,h,yaw,lv){if(k==='barrier'){addWall(x,z,yaw||0,lv?
     if(raid)for(let i=0;i<(h>=9?2:1);i++){const e=spawnUnit('gsoldier',x+[-.2,.1][i],z+[-.3,.3][i],'def');e.dug=true;e.g.position.y-=.08;}}
   else if(k==='mine'){const m=mesh(cyl(.06,.06,.015,10),raid?mineMat:mineShow,0,groundY(x,z)+.008,0,g);if(!raid)mesh(new T.RingGeometry(.1,.12,20),M.red,0,groundY(x,z)+.02,0,g).rotation.x=-Math.PI/2;mines.push({x,z,m:g,live:true});}
   else if(BK[k].obs){const q=new T.Group();q.position.y=groundY(x,z);q.scale.setScalar(1.5);q.rotation.y=(x*7.3+z*3.1)%6.28;g.add(q); // big enough to spot and tap
-    if(k==='tree'){mesh(cyl(.035,.05,.2,7),M.woodDark,0,.1,0,q);mesh(new T.ConeGeometry(.21,.3,8),OBS_M.leaf,0,.3,0,q);mesh(new T.ConeGeometry(.16,.25,8),OBS_M.leaf,0,.45,0,q);mesh(new T.ConeGeometry(.1,.18,8),OBS_M.leaf,0,.58,0,q);}
+    if(k==='tree'){mesh(cyl(.035,.05,.24,7),M.woodDark,0,.12,0,q);if(!OBS_M.pine){OBS_M.pine=pineMat.clone();OBS_M.pine.color.copy(OBS_M.leaf.color);}mesh(PINE,OBS_M.pine,0,0,0,q).scale.setScalar(.55);}
     else if(k==='rock'){const a=mesh(new T.DodecahedronGeometry(.2,0),OBS_M.rock,0,.08,0,q);a.scale.set(1,.65,.85);a.rotation.y=.6;const c=mesh(new T.DodecahedronGeometry(.11,0),OBS_M.rock,.2,.05,.1,q);c.scale.y=.7;}
     else if(k==='bush'){[[0,0,.12],[.1,.05,.1],[-.09,.04,.09],[.02,-.09,.08]].forEach(([dx,dz,r])=>mesh(new T.SphereGeometry(r,9,7),OBS_M.bush,dx,r*.75,dz,q));}
     else{mesh(box(.24,.12,.17),M.dark,0,.06,0,q);mesh(box(.245,.02,.175),M.metal,0,.1,0,q);mesh(box(.06,.03,.02),M.metal,0,.07,.09,q);
       mesh(new T.SphereGeometry(.035,10,8),OBS_M.glow,0,.15,0,q);mesh(cyl(.006,.006,.16,5),M.metal,.09,.2,-.05,q);}}
   return bake(g);}
+// pine: five ragged tiers of needles, darker inside and underneath and lighter toward the tips, with drooping hems; one shared shape
+// (origin at the foot of the trunk), colored per tree. Wind mode 1 sways it more toward the top.
+const PINE=(()=>{let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,parts=[];
+  for(let i=0;i<5;i++){const r=.36*(1-i/5.4)+.05,h=.34-i*.02,y0=.22+i*.19,g=new T.ConeGeometry(r,h,12,3,true);g.translate(0,y0+h/2,0);
+    const p=g.attributes.position,col=[];
+    for(let k=0;k<p.count;k++){const x=p.getX(k),y=p.getY(k),z=p.getZ(k),d=Math.hypot(x,z);
+      if(d>1e-4){const a=Math.atan2(z,x),j=.84+.3*rnd()*(.6+.4*Math.sin(a*5+i*1.7));p.setX(k,x*j);p.setZ(k,z*j);if(y<y0+.01)p.setY(k,y-.02-.035*rnd());}
+      const t=(y-y0)/h,sh=(.42+.4*Math.min(1,d/r)+.18*t)*(.8+.07*i);col.push(sh*.92,sh,sh*.82);}
+    g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();parts.push(g.toNonIndexed());}
+  let n=0;parts.forEach(g=>n+=g.attributes.position.count);const P=new Float32Array(n*3),N=new Float32Array(n*3),C=new Float32Array(n*3);let o=0;
+  parts.forEach(g=>{P.set(g.attributes.position.array,o);N.set(g.attributes.normal.array,o);C.set(g.attributes.color.array,o);o+=g.attributes.position.count*3;});
+  const m=new T.BufferGeometry();m.setAttribute('position',new T.BufferAttribute(P,3));m.setAttribute('normal',new T.BufferAttribute(N,3));m.setAttribute('color',new T.BufferAttribute(C,3));return m;})();
+const pineMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.85,side:T.DoubleSide});pineMat.userData.wind=[.016,1.2,1];
 const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0x5f5c55,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());
 function resetItems(){teethL=[];wireL=[];mines=[];itemEnts=[];}
 // an enemy base for an HQ level: every building, barrier and obstacle it allows, levels near the HQ, 20% of its resources up for grabs
@@ -1466,7 +1479,7 @@ function moveSel(p){const h=baseHq();moving=false;
     if(!rowO.every(o=>fits('barrier',o.x+dx,o.z+dz,others,h))){prompt('No room there.',1.5);renderBasePanel();return;}rowO.forEach(o=>{o.x=Math.round((o.x+dx)*1000)/1000;o.z=Math.round((o.z+dz)*1000)/1000;});saveBase();refreshBase(true);return;}
   const o=sel&&sel.o;if(!o)return;let x=Math.round(p.x*4)/4,z=Math.round(p.z*4)/4,y=o.y;if(o.k==='barrier'){const sn=snapWall(p.x,p.z,BASE.blds,o,h);x=sn.x;z=sn.z;y=sn.y;}
   if(!fits(o.k,x,z,BASE.blds,h,o)){prompt('No room there.',1.5);renderBasePanel();return;}o.x=x;o.z=z;if(o.k==='barrier'){o.y=y;settleWalls(o,BASE.blds);}saveBase();refreshBase(true);coachEv('move');}
-/* ---------- obstacles: rocks turn up in your base; blasting one with dynamite can turn up intel, and now and then an intel case appears ---------- */
+/* ---------- obstacles: rocks turn up in your base and cost a little gold to blast away; now and then an intel case appears ---------- */
 const OBS_EVERY=6*60000,OBS_MAX=12; // prototype pace: one every few minutes (Clash: about one every 8 hours)
 function spawnObs(n){const h=baseHq(),e=mapExt(h);let made=0;
   for(let t=0;t<n*60&&made<n;t++){if(BASE.blds.filter(o=>BK[o.k].obs&&o.k!=='ibox').length>=OBS_MAX)break;
@@ -1477,9 +1490,9 @@ const DYN_M=new T.MeshStandardMaterial({color:0xb8261c,roughness:.55});DYN_M.col
 // a rock: three sticks of dynamite taped to it, the fuse fizzes for a second and a half, then it blows apart; an intel case just opens
 function clearObs(o){if(o.blast)return;const isBox=o.k==='ibox';if(!isBox){const c=costOf(o.k,1);if(!canPay(c)){prompt('Not enough gold.',2);return;}pay(c);}
   o.blast=1;sel=null;if(selRing)selRing.visible=false;renderBasePanel();const e=ents.find(t=>t.o===o),y=groundY(o.x,o.z);
-  const done=()=>{const got=isBox?25:[0,0,1,2,3,4,5,6][Math.floor(Math.random()*8)];BASE.res.i+=got;if(!isBox)chStats().clear++;BASE.blds=BASE.blds.filter(q=>q!==o);
+  const done=()=>{const got=isBox?25:0;BASE.res.i+=got;if(!isBox)chStats().clear++;BASE.blds=BASE.blds.filter(q=>q!==o);
     const en=ents.find(t=>t.o===o);if(en){battle.remove(en.g);ents.splice(ents.indexOf(en),1);}if(got)popText(V(o.x,y+.8,o.z),'+'+got,RESC.i,'i');
-    saveBase();baseHud();renderBasePanel();haptic();prompt(got?`+${got} intel ${isBox?'from the case.':'found in the rubble.'}`:'Blasted. Nothing in the rubble this time.',2.5);};
+    saveBase();baseHud();renderBasePanel();haptic();prompt(isBox?`+${got} intel from the case.`:o.k==='rock'?'Boulder blasted.':'Cleared.',2.5);};
   if(isBox){for(let i=0;i<5;i++)emit(ADD,V(o.x,y+.25,o.z),{life:.6,s0:.12,s1:.02,vx:rand(-.8,.8),vy:rand(1,2),vz:rand(-.8,.8),g:-3,c:0x8fd0ff});done();return;}
   const dy=new T.Group();dy.position.set(o.x+.08,y+.22,o.z+.2);dy.rotation.set(-.35,.3,0);battle.add(dy);
   for(let i=0;i<3;i++)mesh(cyl(.03,.03,.22,10),DYN_M,(i-1)*.06,0,0,dy);
@@ -2042,7 +2055,7 @@ function buildExtraScatter(e){if(extraScatter){extraScatter.forEach(m=>{scene.re
   const rnd=mulberry(7919*e+17),rocks=[],shrubs=[],band=(x,z)=>(x>-4.6-e&&x<-4.6)||(z>-3.8-e&&z<-3.8)||(z>4.6&&z<4.6+e)||x>12;
   const area=2*e*(20+2*e)+e*(24+2*e)*2+e*(20+2*e);for(let i=0;i<area*.2;i++){const x=-12-e+rnd()*(24+2*e),z=-8-e+rnd()*(20+2*e);if(!band(x,z))continue;
     if(x>-3.6&&x<11.4&&Math.abs(z)<5.6+2.6)continue;const h=H(x,z);if(h<-.03||Math.abs(x-riverX(z))<.8)continue;
-    if(fbm(x*.32+3,z*.32+7,4)>.52&&h<.9)shrubs.push([x,groundY(x,z)+.06,z,rnd()*6,0,0,.7+rnd()*.8]);else rocks.push([x,groundY(x,z)+.02,z,rnd()*6,rnd(),0,.5+rnd()*.7]);}
+    if(fbm(x*.32+3,z*.32+7,4)>.52&&h<.9)continue;rocks.push([x,groundY(x,z)+.02,z,rnd()*6,rnd(),0,.5+rnd()*.7]);}
   const sg=new T.IcosahedronGeometry(.16,0);sg.scale(1,.7,1);const rg=new T.DodecahedronGeometry(.1,0);rg.scale(1.3,.6,1);
   if(shrubs.length)extraScatter.push(instanced(sg,M.shrub,shrubs));if(rocks.length)extraScatter.push(instanced(rg,M.rock,rocks));extraScatter.forEach(m=>m.frustumCulled=false);}
 function setMapSize(e){if(!mapDecor)initMapDecor();if(e===MAPE&&tableG)return;MAPE=e;BRIDGE.x=riverX(1.05);ROAD[0][0]=-12-e;CARRIER.z=9.7+e;
@@ -2997,7 +3010,7 @@ function gfxEnv(){if(GFX.env)return GFX.env;const s=new T.Scene(),geo=new T.Sphe
 T.MeshStandardMaterial.prototype.customProgramCacheKey=function(){return 'gfx'+(this.userData.gfx||1)+(this.userData.wind||'');};
 T.MeshStandardMaterial.prototype.onBeforeCompile=function(sh){const kind=this.userData.gfx||1,wd=this.userData.wind,grime=kind>0&&!(this.transparent&&kind!==2);if(!grime&&!wd)return;
   Object.assign(sh.uniforms,{gLandOn:GFX.land,gLand:GFX.landTex,gLandR:GFX.landR,gT:GFX.t,gAO:GFX.ao,gOn:GFX.on,gTex:GFX.tex,gY:GFX.gy,gS:GFX.gs});
-  sh.vertexShader='varying vec3 gWP,gWN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvec4 gw=vec4(transformed,1.0);vec3 gn=objectNormal;\n#ifdef USE_INSTANCING\ngw=instanceMatrix*gw;gn=mat3(instanceMatrix)*gn;\n#endif\ngWP=(modelMatrix*gw).xyz;gWN=normalize(mat3(modelMatrix)*gn);'+(wd?`\n{float ph=gT*${wd[1].toFixed(2)}+gWP.x*6.+gWP.z*4.,h=${wd[2]===1?'clamp(transformed.y+.45,0.,1.)':'1.'};transformed+=vec3(sin(ph),.35*cos(ph*1.3),sin(ph*.7+1.))*${wd[0].toFixed(4)}*h;}`:''));
+  sh.vertexShader='varying vec3 gWP,gWN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvec4 gw=vec4(transformed,1.0);vec3 gn=objectNormal;\n#ifdef USE_INSTANCING\ngw=instanceMatrix*gw;gn=mat3(instanceMatrix)*gn;\n#endif\ngWP=(modelMatrix*gw).xyz;gWN=normalize(mat3(modelMatrix)*gn);'+(wd?`\n{float ph=gT*${wd[1].toFixed(2)}+gWP.x*6.+gWP.z*4.,h=${wd[2]===1?'clamp(transformed.y*.75,0.,1.)':'1.'};transformed+=vec3(sin(ph),.35*cos(ph*1.3),sin(ph*.7+1.))*${wd[0].toFixed(4)}*h;}`:''));
   if(wd)sh.vertexShader='uniform float gT;\n'+sh.vertexShader;if(!grime)return;
   const head='uniform float gOn,gAO,gY,gS;uniform sampler2D gTex;varying vec3 gWP,gWN;\n';
   if(kind===2){ // ground: fine grain and soft patchiness so it does not go blurry up close; with the land layer, also the baked ground map
@@ -3020,7 +3033,7 @@ if(gOn>.5){vec3 w=gWP/gS;gH=w.y-gY/gS;gN=(texture2D(gTex,w.xz*4.).r+texture2D(gT
   diffuseColor.rgb*=mix(.42,1.,smoothstep(0.,.1,gH));
   if(gAO>.5)diffuseColor.rgb*=1.-.38*smoothstep(.15,-.8,normalize(gWN).y)-.12*(1.-smoothstep(0.,.35,gH))*(1.-abs(normalize(gWN).y));}`).replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nif(gOn>.5)roughnessFactor=clamp(roughnessFactor+(gN-.5)*.35+(1.-smoothstep(0.,.2,gH))*.12,.05,1.);');};
 // level 2 adds a warm-sun, cool-shadow grade with blue haze toward the horizon, and shading under overhangs and low on walls
-const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);M.shrub.userData.wind=[.025,1.3,1];
+const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);
 
 // land layer: a ground map painted once from the layout (shade under every building and wall, worn dirt around them and footpaths to the HQ,
 // wet ground along rivers and sea) plus one batch of scattered pebbles. Repainted only when the layout changes, so it costs nothing per frame.
@@ -3042,7 +3055,7 @@ function landBake(){let tm=null;scene.traverse(o=>{if(o.material===M.terrain)tm=
     xg.beginPath();xg.moveTo(hq.x,hq.z);const mx=(hq.x+f.x)/2+Math.sin(i*2.3)*.4,mz=(hq.z+f.z)/2+Math.cos(i*1.7)*.4;xg.quadraticCurveTo(mx,mz,f.x,f.z);xg.stroke();});}
   // wet ground: land within a short reach of water, found once per map from the terrain heights
   if(!landWet||landWet.w!==cw||landWet.map!==MAPT){const Hs=4,ww=Math.ceil(cw/Hs),wh=Math.ceil(ch/Hs),wat=new Float32Array(ww*wh);
-    for(let j=0;j<wh;j++)for(let i=0;i<ww;i++){const x=X0+(i+.5)*Hs/PX,z=Z0+(j+.5)*Hs/PX;wat[j*ww+i]=groundY(x,z)-G<-.03?1:0;}
+    for(let j=0;j<wh;j++)for(let i=0;i<ww;i++){const x=X0+(i+.5)*Hs/PX,z=Z0+(j+.5)*Hs/PX;wat[j*ww+i]=groundY(x,z)-G<-.066?1:0;}
     let a=wat;for(let k=0;k<3;k++){const b=new Float32Array(ww*wh);for(let j=0;j<wh;j++)for(let i=0;i<ww;i++){let s=0,n=0;for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){const ii=i+di,jj=j+dj;if(ii<0||jj<0||ii>=ww||jj>=wh)continue;s+=a[jj*ww+ii];n++;}b[j*ww+i]=s/n;}a=b;}
     const wet=new Float32Array(ww*wh);for(let k=0;k<wet.length;k++)wet[k]=wat[k]?0:Math.min(1,a[k]*2.2);landWet={w:cw,map:MAPT,ww,wh,Hs,wet};}
   const R=xr.getImageData(0,0,cw,ch).data,Gd=xg.getImageData(0,0,cw,ch).data,out=new Uint8Array(cw*ch*4),L=landWet;
@@ -3328,7 +3341,7 @@ function updWeather(dt){if(rainFx.visible){const a=rainFx.geometry.attributes.po
 // switching maps regenerates the terrain texture and recolors water, rocks and plants
 function setMap(id){if(MAPT===MAPS[id])return;landSoon();const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
   water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
-  [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());puddles.visible=MAPT.mud;setWeather(wx);
+  [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());if(typeof pineTrees!=='undefined')pineTint();puddles.visible=MAPT.mud;setWeather(wx);
   $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
 document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent='Loading…';setTimeout(()=>{setMap(b.dataset.map);b.textContent=b.dataset.label;},20);});
 function begin(m){if(m==='full'&&armyEmpty()){enterBase();baseTab='army';renderBasePanel();prompt('Train an army first: your raid cards are the units you train.',4);return;}
@@ -3427,6 +3440,19 @@ rr.setAnimationLoop((tm,xf)=>{const now=performance.now();if(now-lastDraw<frameG
   else if(state==='ended'&&result){orb.theta+=dt*.12;orb.target.lerp(result.focus,Math.min(1,dt*1.5));orb.r=mix(orb.r,Math.max(orb.minR,orb.r*.97),Math.min(1,dt));} // slow victory lap around the HQ
   orb.apply();rr.render(stage,cam);});
 gfxApply();land(GFX.lv>0);
+// scenery trees: the two cone crowns become one ragged pine per tree, each turned and tinted a little differently; the old green lumps
+// scattered on the open ground are hidden. The board-resize list keeps each tree's place, so the pines follow when the board grows.
+var pineTrees=(()=>{let big=null,small=null;scene.children.forEach(o=>{if(!o.isInstancedMesh||o.material!==M.shrub)return;const g=o.geometry;
+    if(g.type==='ConeGeometry'){if(g.parameters.radius>.25)big=o;else small=o;}else if(g.type==='IcosahedronGeometry')o.visible=false;});
+  if(!big)return null;if(small)small.visible=false;const d=mapDecor&&mapDecor.find(q=>q.o===big),m=new T.Matrix4(),pv=V(),q=new T.Quaternion(),sv=V(),e=new T.Euler();
+  big.geometry=PINE;big.material=pineMat;big.castShadow=true;
+  for(let i=0;i<big.count;i++){big.getMatrixAt(i,m);m.decompose(pv,q,sv);const sc=sv.x;pv.y-=.62*sc;e.set(0,Math.random()*6.28,0);q.setFromEuler(e);sv.set(sc,sc*(.95+Math.random()*.25),sc);
+    m.compose(pv,q,sv);big.setMatrixAt(i,m);if(d&&d.inst[i]){d.inst[i].m=m.clone();d.inst[i].dy-=.62*sc;}}
+  big.instanceMatrix.needsUpdate=true;return big;})();
+function pineTint(){if(!pineTrees)return;const c=new T.Color(),base=new T.Color(MAPT.shrub).convertSRGBToLinear();
+  for(let i=0;i<pineTrees.count;i++){c.copy(base).offsetHSL((Math.random()-.5)*.04,(Math.random()-.5)*.1,(Math.random()-.5)*.06).multiplyScalar(1.5);pineTrees.setColorAt(i,c);}
+  if(pineTrees.instanceColor)pineTrees.instanceColor.needsUpdate=true;}
+pineTint();
 window.__tcDebug={land,landBake,gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 $('loading').hidden=true;
 $('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
