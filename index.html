@@ -469,9 +469,8 @@ let MAPE=0;const riverX=z=>-7.2-MAPE+Math.sin(z*.45)*1.1+Math.sin(z*1.3+1)*.25;
 const BRIDGE={x:riverX(1.05),z:1.05,len:2.8,w:.8};
 const coastZ=x=>MAPE+mix(9.4+Math.sin(x*.9)*.3,5.35+Math.sin(x*.6)*.35+Math.sin(x*1.7)*.1,smooth(-4,-1.2,x));
 const seaAt=(x,z)=>smooth(-.15,.45,z-coastZ(x));
-const PREVIEW_NEW=/[?&]dunes=1/.test(location.search); // map look under review: Dust Crown dunes and oasis
 const MAPS={delta:{name:'Operation Iron Delta',k:[.52,.58,.5],mud:true,water:0x46676a,sea:0x3a5d61,rock:0x4f4a42,shrub:0x2f3a20,boulder:0x3a3630},
-  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,dunes:PREVIEW_NEW,lake:PREVIEW_NEW?'oasis':null,water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358},
+  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,dunes:true,lake:'oasis',water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358},
   birch:{name:'Operation Birch Line',k:[.97,.99,1.03],mud:false,snow:1,lake:'ice',water:0x8aa6b0,sea:0x3a5560,rock:0x66696c,shrub:0x283729,boulder:0x55595d}};
 let MAPT=MAPS.delta;
 // dunes (Dust Crown), modeled on big desert dune fields: each dune is a sinuous knife-edge crest line with broad, smooth, slightly
@@ -483,12 +482,19 @@ const DUNES=[ // crest points [x,z,height], half-width on the windward (south) a
   {c:[[-12.8,-3.4,.6],[-11.3,-4.2,1.0],[-9.9,-4.7,.85]],w:2.5,s:1.8},
   {c:[[-5.6,-2.2,.35],[-3.9,-3.5,.8],[-2.2,-4.6,.55]],w:2.4,s:1.7},
   {c:[[-12.3,-.5,.3],[-10.8,-1.1,.5],[-9.5,-.7,.3]],w:1.8,s:1.3},
-  {c:[[-6.2,.3,.2],[-4.7,-.6,.35],[-3.3,-1.1,.25]],w:1.7,s:1.2}];
+  {c:[[-6.2,.3,.2],[-4.7,-.6,.35],[-3.3,-1.1,.25]],w:1.7,s:1.2},
+  // two small dunes in the open south-west corner, past the oasis toward the coast
+  {sw:1,c:[[-12.2,6.6,.3],[-11.0,7.3,.5],[-9.9,7.6,.35]],w:1.5,s:1.1},
+  {sw:1,c:[[-8.6,8.3,.25],[-7.4,8.6,.4],[-6.4,8.4,.25]],w:1.3,s:.95},
+  // and two in the north-east corner behind the base (ne: rides with that corner)
+  {ne:1,c:[[7.6,-7.2,.6],[9.4,-6.5,1.3],[10.9,-5.6,.9]],w:2.7,s:1.8},
+  {ne:1,c:[[10.4,-7.4,.55],[11.2,-6.8,1.0],[11.5,-5.9,.6]],w:2.0,s:1.4}];
 function duneOne(D,x,z){let best=1e9,hc=0,side=1;const c=D.c;
   for(let i=0;i<c.length-1;i++){const [ax,az,ah]=c[i],[bx,bz,bh]=c[i+1],dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz;let t=((x-ax)*dx+(z-az)*dz)/L2;t=Math.max(0,Math.min(1,t));
     const px=ax+dx*t,pz=az+dz*t,d=Math.hypot(x-px,z-pz);if(d<best){best=d;const u=t*t*(3-2*t);hc=ah+(bh-ah)*u;side=(dx*(z-az)-dz*(x-ax))>0?1:-1;}}
   const w=side>0?D.w:D.s,q=best/w;return hc*(q<1?(1-q*q)*(1-q*q):0)+hc*.12*Math.max(0,1-q/2.6)**2;} // rounded crest, smooth foot
-function duneH(x,z){let h=0;for(const D of DUNES){const v=duneOne(D,x,z);h=Math.max(h,v)+Math.min(h,v)*.25;} // overlapping dunes blend softly
+function duneH(x,z){const e=MAPE;let h=0; // the field sits against the north edge (z+e); corner dunes ride with the south-west corner (x+e, z-e)
+  for(const D of DUNES){const v=D.sw?duneOne(D,x+e,z-e):D.ne?duneOne(D,x-e,z+e):duneOne(D,x,z+e);h=Math.max(h,v)+Math.min(h,v)*.25;} // overlapping dunes blend softly
   return h;}
 // oasis (dune map): a round pond with a wavy shore where the river runs on the other maps. riverD is the distance the river carving,
 // bank and bed coloring use: from the river's center line, or from the oasis just as if its shore were the river's edge.
@@ -502,9 +508,9 @@ function mudAt(x,z){if(!MAPT.mud)return 0;let m=0;for(const [cx,cz,rx,rz] of MUD
 function H(x,z){
   let h=(fbm(x*.5,z*.5,3)-.5)*.14;
   const zm=z+MAPE,m=MAPT.dunes?1:smooth(-4.4,-7.2,zm+Math.sin(x*.7)*.6);
-  h+=m*(MAPT.dunes?duneH(x,zm):.3+Math.pow(fbm(x*.33+20,zm*.33,4),1.4)*2.4);
+  h+=m*(MAPT.dunes?duneH(x,z):.3+Math.pow(fbm(x*.33+20,zm*.33,4),1.4)*2.4);
   const d=Math.hypot(x+3.6,z-6.1-MAPE);h+=Math.pow(Math.max(0,1-d/2.7),2)*1.05;
-  const flat=smooth(-1.2,-.4,x)*(1-smooth(6.3+MAPE,6.9+MAPE,Math.abs(z)))*(1-smooth(11.1+MAPE,11.6+MAPE,x));
+  const flat=smooth(-1.2,-.4,x)*(1-smooth(6.3+MAPE,6.9+MAPE,Math.abs(z)))*(1-smooth(11.1+MAPE,11.6+MAPE,x))*(MAPT.dunes?1-smooth(.3,1.4,Math.hypot(Math.max(0,x-7.4-MAPE),Math.max(0,-z-4.4-MAPE))):1);
   h*=(1-flat)*smooth(0,.6,12+MAPE-Math.abs(x))*smooth(0,.6,Math.min(z+8+MAPE,12+MAPE-z));
   const rd=riverD(x,z);h=mix(h,-.17,1-smooth(.32,.85,rd));
   h=mix(h,-.2,seaAt(x,z));
@@ -3496,6 +3502,9 @@ const WATER0={op:water.material.opacity,ro:water.material.roughness,me:water.mat
 function mapSync(){if(!palms)return;const lake=MAPT.lake,dunes=!!MAPT.dunes;if(bridgeG)bridgeG.visible=!lake;palms.visible=lake==='oasis';
   const wm=water.material,ice=lake==='ice';if(ice){wm.color.setHex(0x9cc8e0).convertSRGBToLinear();wm.opacity=.98;wm.roughness=.12;wm.metalness=.55;}else{wm.opacity=WATER0.op;wm.roughness=WATER0.ro;wm.metalness=WATER0.me;}
   if((wm.map===null)!==ice){wm.map=ice?null:WATER0.map;wm.needsUpdate=true;}
+  // single scenery pieces (boulders, wrecks) follow the same rules: hidden up on the dunes or in the water, shown again on other maps
+  (mapDecor||[]).forEach(dd=>{if(!dd.o||dd.inst||dd.o.isInstancedMesh)return;if(dd._v===undefined)dd._v=dd.o.visible;const p=dd.o.position,gy=groundY(p.x,p.z)-G;
+    dd.o.visible=dd._v&&!(dunes&&gy>.05)&&!(lake&&riverD(p.x,p.z)<.9);});
   if(!lake&&!dunes)return;
   const m=new T.Matrix4(),v=V(),q=new T.Quaternion(),sv=V(),e=new T.Euler();
   (mapDecor||[]).forEach(dd=>{const im=dd.o;if(!im||!im.isInstancedMesh)return;const tree=im===pineTrees||im===pineTrunks;
