@@ -3011,7 +3011,7 @@ if(gOn>.5){vec3 w=gWP/gS;gH=w.y-gY/gS;gN=(texture2D(gTex,w.xz*4.).r+texture2D(gT
   diffuseColor.rgb*=mix(.42,1.,smoothstep(0.,.1,gH));
   if(gAO>.5)diffuseColor.rgb*=1.-.38*smoothstep(.15,-.8,normalize(gWN).y)-.12*(1.-smoothstep(0.,.35,gH))*(1.-abs(normalize(gWN).y));}`).replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nif(gOn>.5)roughnessFactor=clamp(roughnessFactor+(gN-.5)*.35+(1.-smoothstep(0.,.2,gH))*.12,.05,1.);');};
 // level 2 adds a warm-sun, cool-shadow grade with blue haze toward the horizon, and shading under overhangs and low on walls
-const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;netMat.userData.wind=[.012,1.6,0];flagMat.userData.wind=[.012,7,0];laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);M.shrub.userData.wind=[.025,1.3,1];
+const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);M.shrub.userData.wind=[.025,1.3,1];
 // the look follows the weather: setWeather sets the base lights, then gfxApply trims the flat fill (the sky reflection replaces it),
 // and on a clear day adds the warm sun, cool sky and haze. Night drops the daylight sky reflection.
 // the sky reflection goes on metal only (guns, masts, wire, vehicles): that is where it shows, and sampling it on every surface doubled the cost
