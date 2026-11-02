@@ -1203,7 +1203,7 @@ const SLOTS={hq:[[7.2,0]],vault:[[9.1,2.6]],fuel:[[9.1,-2.6]],ammo:[[6.9,-2.8]],
   hangar:[[8.25,-1.75]],intel:[[6.0,-2.0]],comms:[[6.05,2.05]],helipad:[[8.0,2.0]],airfield:[[3.6,-.15]]};
 // how many of each the HQ allows: more defenses, barriers and obstacles as it grows
 const LIMIT={hq:()=>1,vault:()=>1,fuel:()=>1,ammo:()=>1,barracks:()=>1,motor:h=>h>=2?1:0,mg:h=>Math.min(6,2+Math.floor(h/3)),
-  mortarPit:h=>h>=14?3:h>=10?2:1,atgm:h=>h>=13?3:h>=9?2:h>=3?1:0,sam:h=>h>=14?3:h>=11?2:h>=5?1:0,
+  mortarPit:h=>h>=13?3:h>=7?2:1,atgm:h=>h>=12?3:h>=6?2:h>=3?1:0,sam:h=>h>=13?3:h>=8?2:h>=5?1:0,
   hangar:h=>h>=3?1:0,intel:h=>h>=3?1:0,comms:h=>h>=4?1:0,helipad:h=>h>=5?1:0,airfield:h=>h>=7?1:0,
   barrier:h=>barExtra(h)+campWallSpots(h).length,wire:h=>h>=2?2+Math.floor((h-2)/3):0,trench:h=>h>=3?2+Math.floor((h-3)/4):0,teeth:h=>h>=4?3+Math.floor((h-4)/2):0,mine:h=>h>=4?4+(h-4):0,tree:()=>99,rock:()=>99,bush:()=>99,ibox:()=>99};
 // the highest level each building can reach at each HQ level (HQ 1 to 15), in steps like Clash of Clans:
@@ -1240,8 +1240,8 @@ const TR={rifle:{sp:2,c:{g:100,m:50},t:12,need:'barracks',br:'g'},mortar:{sp:3,c
 const ARMY_ORDER=['rifle','truck','jlav','tank','mortar','heli','drone','strike'];
 const techOf=k=>(BASE.tech&&BASE.tech[k])||1;
 // balance: defense damage and building health per level, and unit health and damage per research level
-var BAL={def:.05,hp:.06,att:.12};
-const techK=k=>1+BAL.att*(techOf(k)-1); // +12% health and damage per research level
+var BAL={def:.05,hp:.08,att:.1,dm:1.3,hb:1};
+const techK=k=>1+BAL.att*(techOf(k)-1); // +10% health and damage per research level
 const trainCost=k=>{const c={g:0,f:0,m:0,i:0},m=1+.25*(techOf(k)-1);for(const r in TR[k].c)c[r]=Math.round(TR[k].c[r]*m/10)*10;return c;};
 const researchCost=(k,L)=>({g:0,f:0,m:0,i:0,[TR[k].br]:400*L*L});
 const researchTime=L=>20*L;
@@ -1359,7 +1359,7 @@ function storedFor(k,lv,h){if(k==='hq')return {g:5000*h*rand(.5,.9),f:5000*h*ran
 // a raid can take at most 20% of what the defender owns
 function lootFor(k,lv,h){const s=storedFor(k,lv,h),o={};for(const r in s)o[r]=Math.round(s[r]*.2/10)*10;return o;}
 // health grows with level: +10% a level, the HQ +20% (it also gets sandbags, plating and guns as it grows)
-const hpOf=(k,lv)=>Math.round(BK[k].hp*(1+(k==='hq'?2*BAL.hp:BAL.hp)*(lv-1)));
+const hpOf=(k,lv)=>Math.round(BK[k].hp*BAL.hb*(1+(k==='hq'?2*BAL.hp:BAL.hp)*(lv-1)));
 function placeB(k,x,z,lv,loot,site){const d=BK[k];
   return addB(site?'site':k,x,z,{r:d.r,hp:hpOf(k,lv),h:d.h,hq:k==='hq',loot,def:site?null:d.def,lv,garrison:site?null:k==='barracks'?'soldiers':k==='motor'?'tanks':k==='hangar'?'drones':k==='comms'?'reinforce':null});}
 let teethL=[],wireL=[],mines=[],itemEnts=[];
@@ -2526,7 +2526,7 @@ function ownCraft(k,len){const f=mode==='mine'?cur:mode==='defend'&&defendSim?de
   const bb=new T.Box3().setFromObject(o),sz=bb.getSize(V()),k2=len/Math.max(sz.x,sz.z,1e-3),w=new T.Group();o.scale.setScalar(k2);o.position.y=-bb.min.y*k2;w.add(o);return w;}
 function addB(kind,x,z,o){const g=new T.Group();g.position.set(x,G,z);battle.add(g);
   const b={kind,x,z,g,r:o.r,hp:o.hp,max:o.hp,loot:o.loot||{},taken:{g:0,f:0,m:0},def:o.def?Object.assign({},DEF[o.def],{type:o.def}):null,cd:rand(.5,1.5),alive:true,hq:!!o.hq,garrison:o.garrison||null,spawned:false,head:null,p:V(x,G+(o.h||.4),z)};
-  b.lv=o.lv||1;if(b.def){b.def.dmg=Math.round(b.def.dmg*(1+BAL.def*(b.lv-1)));b.def.range*=1+.02*(b.lv-1);}
+  b.lv=o.lv||1;if(b.def){b.def.dmg=Math.round(b.def.dmg*BAL.dm*(1+BAL.def*(b.lv-1)));b.def.range*=1+.02*(b.lv-1);}
   BUILD[o.build||kind](g,b);g.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});bake(g,keepOf(b));
   b.bar=makeBar(Math.max(.6,o.r*1.3));b.bar.h.position.set(x,G+(o.h||.4)+.55,z);blds.push(b);return b;}
 // perimeter walls get stronger with the HQ: sandbags (HQ 1-2), earth-filled barriers (3-5), double-height barriers (6-8),
@@ -2610,7 +2610,7 @@ const tdist=(e,t)=>{const p=tpos(t);return Math.hypot(p.x-e.g.position.x,p.z-e.g
 function wallAt(x,z,r){for(const w of walls)if(w.alive&&Math.abs(w.x-x)<r&&Math.abs(w.z-z)<r)return w;return null;}
 
 // battle pace: every hit, by attackers and by defenses alike, is scaled by this, so fights last longer without changing who wins
-let PACE=.6;const RAID_TIME=240;
+let PACE=.33;const RAID_TIME=240;
 function dmgBld(b,amt){if(!b.alive)return;amt*=PACE;const before=b.hp;b.hp=Math.max(0,b.hp-amt);
   // tutorial: the outpost holds until the air strike is called
   if(tut&&b.hq&&tut.step<3)b.hp=Math.max(b.hp,b.max*.45);
