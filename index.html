@@ -469,9 +469,9 @@ let MAPE=0;const riverX=z=>-7.2-MAPE+Math.sin(z*.45)*1.1+Math.sin(z*1.3+1)*.25;
 const BRIDGE={x:riverX(1.05),z:1.05,len:2.8,w:.8};
 const coastZ=x=>MAPE+mix(9.4+Math.sin(x*.9)*.3,5.35+Math.sin(x*.6)*.35+Math.sin(x*1.7)*.1,smooth(-4,-1.2,x));
 const seaAt=(x,z)=>smooth(-.15,.45,z-coastZ(x));
-const MAPS={delta:{name:'Operation Iron Delta',k:[.52,.58,.5],mud:true,water:0x46676a,sea:0x3a5d61,rock:0x4f4a42,shrub:0x2f3a20,boulder:0x3a3630},
-  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,dunes:true,lake:'oasis',water:0x4d6f70,sea:0x3f6468,rock:0x8b8170,shrub:0x4e5a33,boulder:0x6a6358},
-  birch:{name:'Operation Birch Line',k:[.97,.99,1.03],mud:false,snow:1,lake:'ice',water:0x8aa6b0,sea:0x3a5560,rock:0x66696c,shrub:0x283729,boulder:0x55595d}};
+const MAPS={delta:{name:'Operation Iron Delta',k:[.52,.58,.5],mud:true,water:0x46676a,sea:0x3a5d61,rock:0x7c7871,shrub:0x2f3a20,boulder:0x6d6963},
+  dust:{name:'Operation Dust Crown',k:[1,1,1],mud:false,dunes:true,lake:'oasis',water:0x4d6f70,sea:0x3f6468,rock:0x948e85,shrub:0x4e5a33,boulder:0x837e76},
+  birch:{name:'Operation Birch Line',k:[.97,.99,1.03],mud:false,snow:1,lake:'ice',water:0x8aa6b0,sea:0x3a5560,rock:0x85888c,shrub:0x283729,boulder:0x76797d}};
 let MAPT=MAPS.delta;
 // dunes (Dust Crown), modeled on big desert dune fields: each dune is a sinuous knife-edge crest line with broad, smooth, slightly
 // hollow flanks that fall away from it (the slip face steeper than the windward side) and a long low apron into the plain.
@@ -1378,7 +1378,7 @@ const PINE=(()=>{let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,parts
   parts.forEach(g=>{P.set(g.attributes.position.array,o);N.set(g.attributes.normal.array,o);C.set(g.attributes.color.array,o);o+=g.attributes.position.count*3;});
   const m=new T.BufferGeometry();m.setAttribute('position',new T.BufferAttribute(P,3));m.setAttribute('normal',new T.BufferAttribute(N,3));m.setAttribute('color',new T.BufferAttribute(C,3));return m;})();
 const pineMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.85,side:T.DoubleSide});pineMat.userData.wind=[.016,1.2,1];pineMat.userData.snowy=1;
-const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0x5f5c55,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());
+const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0x8a867f,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());
 function resetItems(){teethL=[];wireL=[];mines=[];itemEnts=[];}
 // an enemy base for an HQ level: every building, barrier and obstacle it allows, levels near the HQ, 20% of its resources up for grabs
 function genBase(h){resetItems();const list=[];[...BUILD_ORDER,...ITEM_ORDER].forEach(k=>{for(let s=0;s<(k==='barrier'?barExtra(h):LIMIT[k](h));s++)list.push({k,s,lv:k==='hq'?h:clamp(maxLv(k,h)-(Math.random()<.35?1:0),1,maxLv(k,h))});});
@@ -1515,8 +1515,11 @@ const OBS_EVERY=6*60000,OBS_MAX=12; // prototype pace: one every few minutes (Cl
 function spawnObs(n){const h=baseHq(),e=mapExt(h);let made=0;
   for(let t=0;t<n*60&&made<n;t++){if(BASE.blds.filter(o=>BK[o.k].obs&&o.k!=='ibox').length>=OBS_MAX)break;
     const k=Math.random()<.07&&!BASE.blds.some(o=>o.k==='ibox')?'ibox':'rock'; // only rocks grow back (and the odd intel case)
-    const x=Math.round((-1+Math.random()*(13+e))*4)/4,z=Math.round((-7.4-e+Math.random()*(18.8+2*e))*4)/4;if(!fits(k,x,z,BASE.blds,h))continue;BASE.blds.push({k,s:0,lv:1,x,z});made++;}
+    const x=Math.round((-1+Math.random()*(13+e))*4)/4,z=Math.round((-7.4-e+Math.random()*(18.8+2*e))*4)/4;if(!fits(k,x,z,BASE.blds,h)||MAPT.dunes&&groundY(x,z)-G>.05)continue;BASE.blds.push({k,s:0,lv:1,x,z});made++;}
   return made;}
+// on the dune map, obstacles already standing on a dune are cleared away (they would sit on the slope)
+function sweepDuneObs(){if(!MAPT.dunes||typeof BASE==='undefined'||!BASE)return;const gone=BASE.blds.filter(o=>BK[o.k]&&BK[o.k].obs&&o.k!=='ibox'&&groundY(o.x,o.z)-G>.05);if(!gone.length)return;
+  BASE.blds=BASE.blds.filter(o=>!gone.includes(o));gone.forEach(o=>{const en=ents.find(t=>t.o===o);if(en){battle.remove(en.g);ents.splice(ents.indexOf(en),1);}});saveBase();}
 const DYN_M=new T.MeshStandardMaterial({color:0xb8261c,roughness:.55});DYN_M.color.convertSRGBToLinear();
 // a rock: three sticks of dynamite taped to it, the fuse fizzes for a second and a half, then it blows apart; an intel case just opens
 function clearObs(o){if(o.blast)return;const isBox=o.k==='ibox';if(!isBox){const c=costOf(o.k,1);if(!canPay(c)){prompt('Not enough gold.',2);return;}pay(c);}
@@ -3512,7 +3515,7 @@ var bridgeG=scene.children.find(o=>o.isGroup&&Math.abs(o.position.z-BRIDGE.z)<1e
 // called after the board is (re)built. Lake maps: no bridge, nothing standing in the water; the oasis gets palms, the ice a frozen
 // surface. Dune map: no pines, and no rocks up on the dunes.
 const WATER0={op:water.material.opacity,ro:water.material.roughness,me:water.material.metalness,map:water.material.map};
-function mapSync(){if(!palms)return;const lake=MAPT.lake,dunes=!!MAPT.dunes;if(bridgeG)bridgeG.visible=!lake;palms.visible=lake==='oasis';
+function mapSync(){if(!palms)return;sweepDuneObs();const lake=MAPT.lake,dunes=!!MAPT.dunes;if(bridgeG)bridgeG.visible=!lake;palms.visible=lake==='oasis';
   const wm=water.material,ice=lake==='ice';if(ice){wm.color.setHex(0x9cc8e0).convertSRGBToLinear();wm.opacity=.98;wm.roughness=.12;wm.metalness=.55;}else{wm.opacity=WATER0.op;wm.roughness=WATER0.ro;wm.metalness=WATER0.me;}
   if((wm.map===null)!==ice){wm.map=ice?null:WATER0.map;wm.needsUpdate=true;}
   // single scenery pieces (boulders, wrecks) follow the same rules: hidden up on the dunes or in the water, shown again on other maps
