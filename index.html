@@ -311,6 +311,18 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .tutpick small{font-size:12.5px;opacity:.85}
 .tutpick:hover{border-color:var(--gold)}
 #app:has(#tuts:not([hidden])) #fsBtn,#app:has(#tuts:not([hidden])) #xrBtn{display:none}
+/* sideways (phone landscape, wide screens): the command center slides away to the left; the tab on its edge brings it back */
+#sideTab{display:none}
+@media (min-width:900px),(max-height:520px) and (orientation:landscape){
+  #app:not(.xr) .bpanel{transition:transform .25s ease}
+  #app.sideOff:not(.xr) .bpanel{transform:translateX(calc(-100% - 16px));pointer-events:none}
+  #app:not(.xr):has(#basePanel:not([hidden])) #sideTab{display:grid;place-items:center;position:fixed;z-index:21;top:50%;transform:translateY(-50%);width:22px;height:58px;padding:0;
+    left:412px;border:1px solid var(--edge);border-left:0;border-radius:0 12px 12px 0;background:rgba(14,18,16,.86);color:var(--gold);font:700 14px/1 sans-serif;cursor:pointer;transition:left .25s ease;
+    box-shadow:2px 0 10px rgba(0,0,0,.35)}
+  #app.sideOff:not(.xr) #sideTab{left:env(safe-area-inset-left,0px)!important}
+  #sideTab::before{content:"\25C0"}#app.sideOff #sideTab::before{content:"\25B6"}
+  #app.sideOff:has(#basePanel:not([hidden])) #card{left:50%}}
+@media (max-height:520px) and (orientation:landscape){#app:not(.xr):has(#basePanel:not([hidden])) #sideTab{height:52px}}
 </style>
 
 <div id="app">
@@ -343,6 +355,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <div id="coach" hidden role="status" aria-live="polite"><span class="cstep" id="coachStep"></span><span id="coachText"></span><button type="button" id="coachSkip">Skip</button></div>
   <div class="tray" id="tray"></div>
   <div class="bpanel" id="basePanel" hidden></div>
+  <button type="button" id="sideTab" aria-label="Hide the command center" title="Hide the command center"></button>
   <div id="card" hidden></div>
   <div id="daily" hidden></div>
 
@@ -1379,7 +1392,8 @@ function enterBase(keepCam){$('app').classList.remove('raid');if(state!=='base')
   if(!keepCam&&!enterBase.checked){enterBase.checked=true;setTimeout(()=>{if(state==='base')checkAttacks();},600);}
   if(!keepCam){const c=CMP;orb.target.set((c.x0+c.x1)/2-.8,0,0);orb.r=clamp((canvasEl.clientWidth<canvasEl.clientHeight?22:15)*c.z/3.6,orb.minR,orb.maxR);}baseHud();renderBasePanel();xrDirty=true;}
 // Attack! sits just above the bottom sheet on a phone (it follows the sheet up and down), bottom-right when the panel is at the side
-function placeAttack(){const b=$('attackBtn'),p=$('basePanel');if(b.hidden||p.hidden)return;const r=p.getBoundingClientRect(),wide=r.left<=2&&r.right>=innerWidth-2;
+function placeSideTab(){const p=$('basePanel'),t=$('sideTab');if(p&&t&&!p.hidden)t.style.left=(p.offsetLeft+p.offsetWidth-1)+'px';}
+function placeAttack(){placeSideTab();const b=$('attackBtn'),p=$('basePanel');if(b.hidden||p.hidden)return;const r=p.getBoundingClientRect(),wide=r.left<=2&&r.right>=innerWidth-2;
   if(wide){b.style.bottom='auto';b.style.top=Math.max(80,r.top-b.offsetHeight-12)+'px';}else{b.style.top='';b.style.bottom='';}}
 function initAttack(){const A=ATK,pc=v=>(v*100).toFixed(2)+'%',[fx,fy,fw,fh]=A.fireBox,[mx,my]=A.muzzle;
   $('atkIc').innerHTML=`<img class="b" alt="" src="${A.base}"><img class="r" alt="" src="${A.rest}"><img class="f" alt="" src="${A.fire}" style="left:${pc(fx)};top:${pc(fy)};width:${pc(fw)};height:${pc(fh)};transform-origin:${pc((mx-fx)/fw)} ${pc((my-fy)/fh)}"><img class="s" alt="" src="${A.shell}" style="width:${pc(A.shellBox[2])};height:${pc(A.shellBox[3])}"><i class="fx" style="left:${pc(mx)};top:${pc(my)}"></i>`;$('attackBtn').onclick=()=>begin('full');const p=$('basePanel');
@@ -1650,7 +1664,10 @@ function endReplay(){stopDefense();prompt('',0);$('enemyHq').hidden=true;$('menu
 // phone bottom sheet: open shows the menu, closed leaves the title and tabs at the bottom edge. Tap or drag the grab bar;
 // tapping a building opens it, tapping open ground or starting to place something closes it
 let sheetOpen=false;
-function sheet(on){sheetOpen=on;const el=$('basePanel');if(el){el.classList.toggle('peek',!on);if(on)el.scrollTop=0;}setTimeout(placeCard,260);}
+const sideways=()=>matchMedia('(min-width:900px),(max-height:520px) and (orientation:landscape)').matches;
+function sideHide(off){$('app').classList.toggle('sideOff',off);const t=$('sideTab');if(t){const l=off?'Show the command center':'Hide the command center';t.setAttribute('aria-label',l);t.title=l;}
+  try{localStorage.setItem('tc.side',off?'0':'1');}catch(e){}setTimeout(()=>{placeCard();if(typeof placeAttack==='function')placeAttack();},260);}
+function sheet(on){sheetOpen=on;if(on&&sideways()&&$('app').classList.contains('sideOff'))sideHide(false);const el=$('basePanel');if(el){el.classList.toggle('peek',!on);if(on)el.scrollTop=0;}setTimeout(placeCard,260);}
 function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return;const hq=baseHq(),free=builders()-busy(),sl=shieldLeft();let h='<button type="button" class="grab" data-act="sheet" aria-label="Show or hide the menu"></button>';
   const lvR=levelFor(serviceXp,PLAYER_HQ).r;h+=`<div class="row"><h3 class="ihead"><img alt="" style="width:30px;height:30px" src="${insigniaImg(lvR).src}">Command center</h3><span class="muted"><b class="bname"><img alt="" src="${insigniaImg(lvR).src}">${rankAbbr(lvR,cur)} ${baseName()} · </b>HQ ${hq} of ${HQ_MAX} · builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['intel','Intel'+(chReady()?' ●'+chReady():'')],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
@@ -1733,6 +1750,7 @@ function panelReports(){const sl=shieldLeft();let h=`<span class="muted">${sl>0?
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="attack">Simulate an enemy attack</button><button type="button" class="tbtn" data-act="noshield">Remove shield</button></div>`;
   return h;}
 function initBase(){const el=$('basePanel');makeResIcons();sheet(false);
+  $('sideTab').onclick=()=>sideHide(!$('app').classList.contains('sideOff'));try{if(localStorage.getItem('tc.side')==='0')sideHide(true);}catch(e){}
   el.addEventListener('pointerdown',e=>{if(!e.target.closest('.grab')&&(sheetOpen||!matchMedia('(max-width:899px)').matches))return;const y0=e.clientY;el._dragged=false;
     const mv=ev=>{const dy=ev.clientY-y0;if(Math.abs(dy)>24){el._dragged=true;sheet(dy<0);}},up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);};
     addEventListener('pointermove',mv);addEventListener('pointerup',up);});
