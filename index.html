@@ -67,15 +67,6 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .facs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .facs button{background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:10px;padding:9px;font-weight:500}
 .facs button[aria-pressed="true"]{background:var(--gold);color:#2a1e05;border-color:var(--gold)}
-/* choice cards (map, faction): taller tiles with a colour band, same width as before */
-.facs.three{grid-template-columns:repeat(3,minmax(0,1fr))}
-.facs button.card{display:grid;align-content:start;justify-items:start;gap:5px;width:100%;min-width:0;min-height:66px;padding:10px 10px 11px;text-align:left;line-height:1.15}
-.facs .card .sw{width:100%;height:9px;border-radius:4px;background:var(--sw);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
-.facs .card b{font:600 14px/1.15 var(--f-display);letter-spacing:.02em;text-transform:uppercase}
-.facs .card small{font-size:11px;opacity:.72}
-.facs .card.busy b::after{content:' …'}
-/* the main menu has no battle running: no timer or stars in the corner */
-#app:has(#menu:not([hidden])) .hud>.grp:first-child{visibility:hidden}
 .primary:disabled{opacity:.4;cursor:default}
 .primary{background:var(--gold);color:#2a1e05;border:0;border-radius:12px;padding:14px;font:700 20px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em}
 .secondary{background:transparent;border:1px solid var(--edge);border-radius:12px;padding:12px;font-weight:500}
@@ -147,8 +138,13 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .day .dot{width:16px;height:16px}.day.now{outline:2px solid var(--gold)}.day.got{opacity:.5}.day i:not(.dot){position:absolute;top:1px;right:4px;font-style:normal;color:#6fd36a}
 .bpanel .bname{display:none}@media (max-width:899px){#app:not(.xr) .bpanel .bname{display:inline;color:var(--gold)}.bname img{width:18px;height:18px;vertical-align:-4px;margin-right:4px}}
 .bpanel .ihead{display:flex;align-items:center;gap:8px}.bpanel .tbtn.ib{display:inline-flex;align-items:center;gap:6px;padding-left:6px}
-.bpanel .arow.ic{grid-template-columns:44px 1fr auto}.bpanel .arow.ic .ico{grid-column:1;grid-row:1/span 3;width:44px;height:44px}.bpanel .arow.ic .tbtn{grid-column:3;grid-row:1/span 3}
-@media (min-width:900px){.bpanel{right:auto;width:400px;margin:0;top:70px;bottom:12px;max-height:none}}
+.bpanel .arow.ic{grid-template-columns:62px 1fr auto;min-height:74px;padding:9px 10px;column-gap:10px}.bpanel .arow.ic .ico{grid-column:1;grid-row:1/span 3;width:62px;height:62px}
+/* base tab tiles: picture beside a name and its count and cost, two per row at the panel's width */
+.bpanel .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.bpanel .tbtn.tile{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;min-height:62px;padding:7px 9px 7px 7px;text-align:left;border-radius:9px}
+.bpanel .tbtn.tile .ico{width:46px;height:46px}.bpanel .tbtn.tile.plus{grid-template-columns:1fr;justify-items:center;text-align:center}
+.bpanel .tile .tt{display:grid;gap:2px;min-width:0}.bpanel .tile .tt b{font-weight:600;line-height:1.15;overflow-wrap:anywhere}.bpanel .tile .tt small{font-size:11px;opacity:.75;line-height:1.2}.bpanel .tile .tt .cst{opacity:.95;display:flex;flex-wrap:wrap;gap:0 6px}.bpanel .arow.ic .tbtn{grid-column:3;grid-row:1/span 3}
+@media (min-width:900px){.bpanel{right:auto;width:400px;margin:0;top:70px;bottom:12px;max-height:none;align-content:start}}
 /* phone: the base menu is a bottom sheet; closed it shows only the title and tabs so the base stays in view */
 .bpanel .grab{display:none}
 @media (max-width:899px){#app:not(.xr) .bpanel .tabs{flex-wrap:nowrap;gap:4px}#app:not(.xr) .bpanel .tabs .tbtn{padding:6px 7px;font-size:12px}#app:not(.xr) .bpanel{left:0;right:0;bottom:0;max-width:none;border-radius:18px 18px 0 0;border-bottom:0;padding-top:4px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));max-height:36vh;transition:max-height .22s ease;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;-webkit-user-select:none;user-select:none}
@@ -395,24 +391,27 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   </div></div>
   <div class="screen" id="menu">
     <div class="sheet">
+      <span class="lbl">Raid prototype · <span id="mapName">Operation Iron Delta</span></span>
       <h1>Tabletop <span>Command</span></h1>
       <div class="rank" id="rkBadge" role="button" tabindex="0" title="Change your name" aria-label="Your rank and base. Tap to change your name."><span id="rkIns"></span><div class="rk"><b id="rkName">Recruit</b><div class="xp"><i id="rkFill"></i></div><span id="rkSub"></span></div><span class="rkhq">Your HQ<b id="rkHq">3</b></span></div>
+      <p>Deploy units from your cards, break into the compound and destroy the HQ before the 4-minute timer runs out. Loot drops from every building you destroy.</p>
       <div style="display:grid;gap:8px"><span class="lbl">Map</span>
-        <div class="facs three">
-          <button type="button" class="card" data-map="delta" aria-pressed="true"><i class="sw" style="--sw:linear-gradient(100deg,#6f7d3f 0 55%,#3f6466 55% 70%,#5d6a3c 70%)"></i><b>Iron Delta</b><small>Wetlands</small></button>
-          <button type="button" class="card" data-map="dust" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(100deg,#d39a5e 0 40%,#e6bf86 40% 75%,#cf8f52 75%)"></i><b>Dust Crown</b><small>Desert</small></button>
-          <button type="button" class="card" data-map="birch" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(100deg,#eef2f5 0 50%,#9cc8e0 50% 68%,#2f4a33 68%)"></i><b>Birch Line</b><small>Snow</small></button>
+        <div class="facs">
+          <button type="button" data-map="delta" data-label="Iron Delta · wetlands" aria-pressed="true">Iron Delta · wetlands</button>
+          <button type="button" data-map="dust" data-label="Dust Crown · desert" aria-pressed="false">Dust Crown · desert</button>
+          <button type="button" data-map="birch" data-label="Birch Line · snow" aria-pressed="false">Birch Line · snow</button>
         </div></div>
       <div style="display:grid;gap:8px"><span class="lbl">Your faction</span>
         <div class="facs">
-          <button type="button" class="card" data-f="nato" aria-pressed="true"><i class="sw" style="--sw:linear-gradient(90deg,#1f3a7a 0 34%,#f2f2f2 34% 67%,#b22234 67%)"></i><b>USA / NATO</b></button>
-          <button type="button" class="card" data-f="ru" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(90deg,#f2f2f2 0 34%,#1c3f94 34% 67%,#d52b1e 67%)"></i><b>Russia</b></button>
-          <button type="button" class="card" data-f="cn" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(90deg,#de2910 0 70%,#ffde00 70%)"></i><b>China</b></button>
-          <button type="button" class="card" data-f="eu" aria-pressed="false"><i class="sw" style="--sw:linear-gradient(90deg,#003399 0 50%,#ffcc00 50% 62%,#1a7a3c 62%)"></i><b>Europe / Middle East</b></button>
+          <button type="button" data-f="nato" aria-pressed="true">USA / NATO</button>
+          <button type="button" data-f="ru" aria-pressed="false">Russia</button>
+          <button type="button" data-f="cn" aria-pressed="false">China</button>
+          <button type="button" data-f="eu" aria-pressed="false">Europe / Middle East</button>
         </div></div>
       <button type="button" class="primary" id="goBase">My base</button>
       <button type="button" class="secondary" id="goTuts">Tutorials</button>
       <button type="button" class="secondary" id="setBtn">⚙ Settings</button>
+      <p>Phone: tap a card, then tap the map. Drag to rotate, pinch to zoom. Quest: open this page in the Quest browser and press "Enter mixed reality" (top right) to put the board on your table. Squeeze the grip to move it, twist your wrist while squeezing or flick the thumbstick to turn it, squeeze with both hands to turn and resize it.</p>
     </div>
   </div>
 
@@ -1564,8 +1563,8 @@ const loginReward=st=>Math.round(LOGIN[(st-1)%7]*loginTier(st)[1]);
 function loginCheck(){const L=BASE.login=BASE.login||{last:'',streak:0,got:''},today=dayKey(Date.now()),yest=dayKey(Date.now()-86400000);
   if(L.last!==today){L.streak=L.last===yest?L.streak+1:1;L.last=today;saveBase();}return L.got!==today;}
 function claimLogin(){const L=BASE.login;if(!L||L.got===L.last)return;const n=loginReward(L.streak);L.got=L.last;BASE.res.i+=n;saveBase();baseHud();showDaily(false);renderBasePanel();prompt(`Day ${L.streak} in a row: +${n} intel.`,2.5);}
-function dailyHtml(){const L=BASE.login,st=L.streak,w=Math.floor((st-1)/7),d0=w*7,claimed=L.got===L.last;
-  return `<b>Daily intel · ${loginTier(st)[0]}</b><span class="muted">Day ${st} in a row. Missing a day starts the streak over; every full week in a row pays more (Recruit, Veteran ×1.5, Elite ×2, Legend ×3).</span>
+function dailyHtml(short){const L=BASE.login,st=L.streak,w=Math.floor((st-1)/7),d0=w*7,claimed=L.got===L.last;
+  return `<b>Daily intel · ${loginTier(st)[0]}</b><span class="muted">Day ${st} in a row${short?'':'. Missing a day starts the streak over; every full week in a row pays more (Recruit, Veteran ×1.5, Elite ×2, Legend ×3)'}.</span>
     <div class="days">${LOGIN.map((_,i)=>{const day=d0+i+1,got=day<st||(day===st&&claimed);return `<div class="day${got?' got':''}${day===st?' now':''}"><span>Day ${day}</span>${intelBtn(loginReward(day))}${got?'<i>✓</i>':''}</div>`;}).join('')}</div>`;}
 function showDaily(on){const el=$('daily');if(!el)return;if(on)el.innerHTML=`<div class="dbox">${dailyHtml()}<div class="row"><button type="button" class="act" data-act="claimday">Claim ${fmtN(loginReward(BASE.login.streak))} intel</button><button type="button" class="tbtn" data-act="later">Later</button></div></div>`;el.hidden=!on;}
 function renderCard(){const el=$('card');if(!el)return;const A=state==='base'&&!xrMode&&!placing&&(rowO||sel&&sel.o)?cardActs():[];if(!A.length){el.hidden=true;el._html='';return;}
@@ -1747,7 +1746,7 @@ function sideHide(off){$('app').classList.toggle('sideOff',off);const t=$('sideT
   try{localStorage.setItem('tc.side',off?'0':'1');}catch(e){}setTimeout(()=>{placeCard();if(typeof placeAttack==='function')placeAttack();},260);}
 function sheet(on){sheetOpen=on;if(on&&sideways()&&$('app').classList.contains('sideOff'))sideHide(false);const el=$('basePanel');if(el){el.classList.toggle('peek',!on);if(on)el.scrollTop=0;}setTimeout(placeCard,260);}
 function renderBasePanel(){const el=$('basePanel');if(!el||state!=='base')return;const hq=baseHq(),free=builders()-busy(),sl=shieldLeft();let h='<button type="button" class="grab" data-act="sheet" aria-label="Show or hide the menu"></button>';
-  const lvR=levelFor(serviceXp,PLAYER_HQ).r;h+=`<div class="row"><h3 class="ihead"><img alt="" style="width:30px;height:30px" src="${insigniaImg(lvR).src}">Command center</h3><span class="muted"><b class="bname"><img alt="" src="${insigniaImg(lvR).src}">${rankAbbr(lvR,cur)} ${baseName()} · </b>HQ ${hq} of ${HQ_MAX} · builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
+  const lvR=levelFor(serviceXp,PLAYER_HQ).r;h+=`<div class="row"><h3 class="ihead"><img alt="" style="width:30px;height:30px" src="${insigniaImg(lvR).src}">Command center</h3><span class="muted"><b class="bname"><img alt="" src="${insigniaImg(lvR).src}">${rankAbbr(lvR,cur)} ${baseName()} · </b>Builders ${free}/${builders()} free${sl>0?' · <b style="color:#8fc4ff">Shield '+fmtT(sl)+'</b>':''}</span></div>`;
   h+=`<div class="row tabs">${[['base','Base'],['army','Army'],['research','Research'],['intel','Intel'+(chReady()?' ●'+chReady():'')],['reports','Reports']].map(([k,n])=>`<button type="button" class="tbtn${baseTab===k?' on':''}" data-tab="${k}">${n}</button>`).join('')}</div>`;
   if(baseTab==='raid'&&raidPick)h+=panelRaid();else if(baseTab==='base')h+=panelBase(hq,free);else if(baseTab==='army')h+=panelArmy();else if(baseTab==='research')h+=panelResearch();else if(baseTab==='intel')h+=panelIntel();else h+=panelReports();
   if(baseTab==='raid'&&raidPick)h+=`<div class="row"><button type="button" class="act" data-act="raidgo" ${pickCount()?'':'disabled'}>Attack · ${pickCount()} unit${pickCount()===1?'':'s'}</button><button type="button" class="tbtn" data-act="raidback">Back</button></div>`;
@@ -1774,22 +1773,20 @@ function panelBase(hq,free){let h='';
       else if(o.lv>=max){if(o.k!=='hq'||hq>=HQ_MAX)h+=`<span class="muted">${o.k==='hq'?'Top level.':cap(o.k)}</span>`;}
       else h+=`<span class="muted">Upgrade to Lv ${o.lv+1} takes ${fmtT(timeOf(o.k,o.lv+1))} and a builder.</span>`;}
     h+=actRow()+'</div>';}
-  else if(!BASE.blds.some(o=>o.stash))h+=`<span class="muted">${placing?'Tap the map to place it. Tap the glowing button below to stop.':'Tap something to select it, then drag it to move it.'}</span>`;
-  if(!coach&&!sel&&!rowO&&!placing)h+=`<div class="row"><button type="button" class="tbtn" data-act="coach">How to set up your base</button></div>`;
+  else if(placing&&!BASE.blds.some(o=>o.stash))h+=`<span class="muted">Tap the map to place it. Tap the glowing card to stop.</span>`;
   const wait=[...new Set(BASE.blds.filter(o=>o.stash).map(o=>o.k))];
   if(wait.length){h+='<span class="lbl">Waiting to be placed</span><span class="muted">Tap one, then tap the map where it goes. Or let the automatic layout place everything.</span><div class="row"><button type="button" class="tbtn on" data-act="autolay">Automatic layout</button>';
     wait.forEach(k=>{const n=stashLeft(k);h+=`<button type="button" class="tbtn ib${placing===k?' on':''}" data-place="${k}">${ico(k,k==='barrier'?1:hq)}${placing===k?'Placing ':''}${BK[k].name}${n>1?' ×'+n:''}</button>`;});h+='</div>';}
   const can=BUILD_ORDER.filter(k=>BASE.blds.filter(b=>b.k===k).length<LIMIT[k](hq));
-  if(can.length){h+='<span class="lbl">New buildings</span><div class="row">';can.forEach(k=>{const c=costOf(k,1);h+=`<button type="button" class="tbtn ib" data-build="${k}" ${canPay(c)&&free?'':'disabled'}>${ico(k,1)}${BK[k].name} · ${costTxt(c)}</button>`;});h+='</div>';}
+  if(can.length){h+='<span class="lbl">New buildings</span><div class="tiles">';can.forEach(k=>{const c=costOf(k,1);h+=`<button type="button" class="tbtn ib tile" data-build="${k}" ${canPay(c)&&free?'':'disabled'}>${ico(k,1)}<span class="tt"><b>${BK[k].name}</b><small>${costTxt(c)}</small></span></button>`;});h+='</div>';}
   const its=ITEM_ORDER.filter(k=>LIMIT[k](hq)>0);
-  if(its.length){h+='<span class="lbl">Barriers and obstacles</span><div class="row">';its.forEach(k=>{const left=LIMIT[k](hq)-BASE.blds.filter(b=>b.k===k).length,c=costOf(k,1);
-    h+=placing===k?`<button type="button" class="tbtn ib on" data-build="${k}">${ico(k,k==='barrier'?1:hq)}Placing ${BK[k].name.toLowerCase()} · ${left} left · tap to stop</button>`:`<button type="button" class="tbtn ib" data-build="${k}" ${left>0&&canPay(c)?'':'disabled'}>${ico(k,k==='barrier'?1:hq)}${BK[k].name} · ${left} left · ${costTxt(c)}</button>`;if(k==='barrier'&&left>1)h+=`<button type="button" class="tbtn" data-build="${k}" data-n="5" ${canPay(c)?'':'disabled'}>+5</button>`;});h+='</div>';}
+  if(its.length){h+='<span class="lbl">Barriers and obstacles</span><div class="tiles">';its.forEach(k=>{const left=LIMIT[k](hq)-BASE.blds.filter(b=>b.k===k).length,c=costOf(k,1);
+    h+=placing===k?`<button type="button" class="tbtn ib tile on" data-build="${k}">${ico(k,k==='barrier'?1:hq)}<span class="tt"><b>Placing…</b><small>${left} left · tap to stop</small></span></button>`:`<button type="button" class="tbtn ib tile" data-build="${k}" ${left>0&&canPay(c)?'':'disabled'}>${ico(k,k==='barrier'?1:hq)}<span class="tt"><b>${BK[k].name}</b><small>${left} left</small><small class="cst">${costTxt(c)}</small></span></button>`;if(k==='barrier'&&left>1)h+=`<button type="button" class="tbtn tile plus" data-build="${k}" data-n="5" ${canPay(c)?'':'disabled'}><span class="tt"><b>+5 blocks</b><small>in a row</small></span></button>`;});h+='</div>';}
   const nxt=[...BUILD_ORDER,...ITEM_ORDER].filter(k=>LIMIT[k](hq+1)>LIMIT[k](hq));if(hq<HQ_MAX&&nxt.length)h+=`<span class="muted">HQ ${hq+1}: bigger base, more ${nxt.map(k=>BK[k].name.toLowerCase()).join(', ')}</span>`;
-  h+=`<span class="muted">Storage · ${['g','f','m'].map(r=>`${RESN[r]} ${fmtN(BASE.res[r])} / ${fmtN(capOf(r))}`).join(' · ')}</span>`;
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="rich">+100k each</button><button type="button" class="tbtn" data-act="finishall">Finish all now</button>
     <button type="button" class="tbtn" data-act="wx">Next raid: ${WX[nextWx].n}</button><button type="button" class="tbtn" data-act="hqdown">HQ −1</button><button type="button" class="tbtn" data-act="hqup">HQ +1</button><button type="button" class="tbtn" data-act="maxall">Max all for this HQ</button><button type="button" class="tbtn" data-act="spawnobs">Spawn obstacles</button><button type="button" class="tbtn" data-act="layout">Default layout</button><button type="button" class="tbtn" data-act="reset">Reset base</button></div>`;
   return h;}
-function panelArmy(){const cap=armyCap(),used=armyUsed();let h=`<span class="muted">Army space ${used} / ${cap}. Trained units are ready at once. Units you deploy in a raid are used up; the rest come home.</span><div class="army">`;
+function panelArmy(){const cap=armyCap(),used=armyUsed();let h=`<span class="muted">Army space ${used} / ${cap}</span><div class="army">`;
   ARMY_ORDER.forEach(k=>{const t=TR[k],have=BASE.army[k]||0,c=trainCost(k),bl=ownLv(t.need),lock=levelLocked({k});
     const why=lock?`Needs commander level ${unlockLv(k)}`:!bl?`Needs a ${BK[t.need].name.toLowerCase()}`:used+t.sp>cap?'No army space':!canPay(c)?'Not enough resources':'';
     h+=`<div class="arow ic">${ico(k)}<b>${(k==='rifle'?'3× ':'')+NAME(k)}</b><span class="muted">×${have} · ${t.sp} space · Lv ${techOf(k)}</span><span>${costTxt(c)}</span>
@@ -1798,7 +1795,7 @@ function panelArmy(){const cap=armyCap(),used=armyUsed();let h=`<span class="mut
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="fillarmy">Fill army to capacity</button></div>`;
   return h;}
 function panelResearch(){const il=ownLv('intel'),test=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="maxres">Max all research</button></div>`;if(!il)return '<span class="muted">Build an intel center (HQ 3) to research upgrades for your units.</span>'+test;
-  let h=`<span class="muted">Intel center Lv ${il}: units can be researched up to level ${il}. Each level gives +8% health and damage and costs 25% more to train.</span><div class="army">`;
+  let h=`<span class="muted">Research up to Lv ${il} · +8% health and damage per level</span><div class="army">`;
   ARMY_ORDER.forEach(k=>{const L=techOf(k),to=L+1,c=researchCost(k,to),busyR=!!BASE.research,why=L>=il?'Max for this intel center':busyR?'Lab busy':!canPay(c)?'Not enough resources':'';
     h+=`<div class="arow ic">${ico(k)}<b>${NAME(k)}</b><span class="muted">Level ${L} · +${Math.round((techK(k)-1)*100)}%</span><span>${L<il?costTxt(c)+' · '+fmtT(researchTime(to)):''}</span>
       <button type="button" class="tbtn" data-research="${k}" ${why?'disabled':''}>${why||'Research Lv '+to}</button></div>`;});
@@ -1808,8 +1805,8 @@ function panelResearch(){const il=ownLv('intel'),test=`<div class="row testrow">
 // what each challenge shows beside it
 const CH_ICO={hq:()=>['hq',Math.min(HQ_MAX,CH[0].at[Math.min(2,chTier(CH[0]))])],win:()=>['tank'],s3:()=>['strike'],hqk:()=>['hq',12],held:()=>['mg',6],train:()=>['rifle'],tech:()=>['intel',6],clear:()=>['rock'],wall:()=>['barrier',baseHq()]};
 function panelIntel(){const st=chStats(),nb=builders();
-  let h=`<span class="muted">You have <b>${fmtN(BASE.res.i)}</b> intel. No building makes it and raids cannot take it: earn it from challenges, or get a pack.</span>`;
-  if(BASE.login){const L=BASE.login;h+=`<div class="bsel">${dailyHtml()}<div class="row">${L.got!==L.last?`<button type="button" class="act" data-act="claimday">Claim ${fmtN(loginReward(L.streak))} intel</button>`:'<span class="muted">Claimed today. Come back tomorrow.</span>'}</div><div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="nextday">Next day</button></div></div>`;}
+  let h='';
+  if(BASE.login){const L=BASE.login;h+=`<div class="bsel">${dailyHtml(true)}<div class="row">${L.got!==L.last?`<button type="button" class="act" data-act="claimday">Claim ${fmtN(loginReward(L.streak))} intel</button>`:'<span class="muted">Claimed today. Come back tomorrow.</span>'}</div><div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="nextday">Next day</button></div></div>`;}
   h+='<span class="lbl">Challenges</span><div class="army">';
   CH.forEach(c=>{const t=chTier(c),v=c.v(st),done=t>=3,goal=c.at[Math.min(t,2)],ok=!done&&v>=goal;
     const ci=c.id==='gold'?(RES_ICON.g?`<img class="ico" alt="" src="${RES_ICON.g}">`:''):ico(...CH_ICO[c.id]());
@@ -1822,7 +1819,7 @@ function panelIntel(){const st=chStats(),nb=builders();
   h+='</div><span class="lbl">Get intel</span><span class="muted">Payments are not connected in this prototype: a pack is added for free and nothing is charged.</span><div class="row">';
   PACKS.forEach(([n,a,p],ix)=>h+=`<button type="button" class="tbtn" data-pack="${ix}">${n} · ${intelBtn(a)} · $${p}</button>`);
   return h+'</div>';}
-function panelReports(){const sl=shieldLeft();let h=`<span class="muted">${sl>0?`Shield up: no one can attack you for ${fmtT(sl)}. Raiding someone shortens it by 3 hours.`:'No shield. Attackers can hit your base; they can take at most 20% of your resources.'}</span>`;
+function panelReports(){const sl=shieldLeft();let h=`<span class="muted">${sl>0?`Shield · ${fmtT(sl)} left · raiding shortens it by 3h`:'No shield'}</span>`;
   if(!BASE.log.length)h+='<span class="muted">No attacks on your base yet.</span>';
   BASE.log.forEach((l,ix)=>{const ago=(Date.now()-l.t)/1000;h+=`<div class="bsel"><b>${l.by} (HQ ${l.hq}) · ${l.pct}% destroyed · ${'★'.repeat(l.stars)}${'☆'.repeat(3-l.stars)}</b><span class="muted">${fmtT(ago)} ago · lost ${costTxt(l.lost)||'nothing'}${l.sh?' · shield '+l.sh+'h':''}</span>${l.plan?`<div class="row"><button type="button" class="tbtn" data-replay="${ix}">Watch replay</button></div>`:''}</div>`;});
   h+=`<div class="row testrow"><span class="muted">Test:</span><button type="button" class="tbtn" data-act="attack">Simulate an enemy attack</button><button type="button" class="tbtn" data-act="noshield">Remove shield</button></div>`;
@@ -3395,8 +3392,8 @@ function updWeather(dt){if(rainFx.visible){const a=rainFx.geometry.attributes.po
 function setMap(id){if(MAPT===MAPS[id])return;landSoon();const reshape=!!MAPT.dunes!==!!MAPS[id].dunes||(MAPT.lake||'')!==(MAPS[id].lake||'');const old=M.terrain.map,oldB=M.terrain.bumpMap;clearTerrainCache();old.dispose();oldB.dispose();MAPT=MAPS[id];const t=terrainFor(MAPE);M.terrain.map=t.map;M.terrain.bumpMap=t.bump;M.terrain.needsUpdate=true;
   water.material.color.setHex(MAPT.water);seaMat.color.setHex(MAPT.sea);M.rock.color.setHex(MAPT.rock);M.shrub.color.setHex(MAPT.shrub);M.boulder.color.setHex(MAPT.boulder);
   [water.material,seaMat,M.rock,M.shrub,M.boulder].forEach(m=>m.color.convertSRGBToLinear());if(typeof pineTrees!=='undefined')pineTint();puddles.visible=MAPT.mud;if(reshape){const e=MAPE;MAPE=-1;setMapSize(e);}setWeather(wx);
-  document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
-document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.classList.add('busy');setTimeout(()=>{setMap(b.dataset.map);b.classList.remove('busy');},30);});
+  $('mapName').textContent=MAPT.name;document.querySelectorAll('[data-map]').forEach(b=>b.setAttribute('aria-pressed',String(MAPS[b.dataset.map]===MAPT)));}
+document.querySelectorAll('[data-map]').forEach(b=>b.onclick=()=>{b.textContent='Loading…';setTimeout(()=>{setMap(b.dataset.map);b.textContent=b.dataset.label;},20);});
 function begin(m){if(m==='full'&&armyEmpty()){enterBase();baseTab='army';renderBasePanel();prompt('Train an army first: your raid cards are the units you train.',4);return;}
   if(m==='full'&&!raidGo){openRaidPick();return;}if(!AC){try{audioInit();}catch(_){}}if(AC){AC.resume();soundOn=true;}syncSnd();startBattle(m);}
 // Tutorials: the raid tutorial or the base setup one; the steps use the word for how you play here
