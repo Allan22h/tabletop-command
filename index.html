@@ -494,8 +494,8 @@ function terrain(){
     const x=px/W*(24+2*MAPE)-12-MAPE,z=py/H2*(20+2*MAPE)-8-MAPE;
     const n1=fbm(x*.32+3,z*.32+7,4),n2=fbm(x*2.1+50,z*2.1+50,3),n3=noise(x*11,z*11);
     const h=H(x,z),rd=Math.abs(x-riverX(z));
-    const g=smooth(.45,.62,n1);
-    let r=mix(190,118,g),gg=mix(166,118,g),bb=mix(122,76,g);
+    const g=smooth(.3,.8,n1+(n2-.5)*.25);
+    let r=mix(182,140,g),gg=mix(162,134,g),bb=mix(118,86,g);
     const k=(n2-.5)*46+(n3-.5)*22;r+=k;gg+=k;bb+=k*.8;
     let dr=1e9;for(let i=0;i<ROAD.length-1;i++)dr=Math.min(dr,segDist(x,z,ROAD[i][0],ROAD[i][1],ROAD[i+1][0],ROAD[i+1][1]));
     if(dr<.6){const m=1-smooth(.38,.6,dr);const rut=(Math.abs(dr-.17)<.045)?-22:0;r=mix(r,140+rut+k*.3,m);gg=mix(gg,113+rut+k*.3,m);bb=mix(bb,82+rut,m);}
@@ -3017,13 +3017,13 @@ T.MeshStandardMaterial.prototype.onBeforeCompile=function(sh){const kind=this.us
     // (r: soft shade under buildings and walls, g: worn dirt and footpaths, b: wet ground along the water), fine bumps, and wet shine
     sh.fragmentShader='uniform float gLandOn;uniform sampler2D gLand;uniform vec4 gLandR;\n'+head+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
 vec3 gL=vec3(0.);
-if(gOn>.5){vec2 q=gWP.xz/gS;float a=texture2D(gTex,q*.35).r,c=texture2D(gTex,q*2.2).r,b=texture2D(gTex,q*14.).g;diffuseColor.rgb*=(.8+.4*a)*(.9+.2*c)*(.9+.2*b);
+if(gOn>.5){vec2 q=gWP.xz/gS;vec2 qr=mat2(.8,-.6,.6,.8)*q;float a=(texture2D(gTex,q*.11).r+texture2D(gTex,qr*.17+.31).r)*.5,c=(texture2D(gTex,qr*1.9+.57).r+texture2D(gTex,q*1.3).r)*.5,b=texture2D(gTex,q*14.).g;diffuseColor.rgb*=(.88+.24*a)*(.95+.1*c)*(.96+.08*b);
   if(gLandOn>.5){gL=texture2D(gLand,(q-gLandR.xy)/gLandR.zw).rgb;float n=texture2D(gTex,q*3.1).r;
     diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.105,.078,.05)*(.8+.4*b),clamp(gL.g*(.45+.7*n),0.,.8));
     diffuseColor.rgb*=1.-.55*gL.r;diffuseColor.rgb*=1.-.42*gL.b;}}`).replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(roughnessFactor,.22,gL.b);')
       .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
-if(gLandOn>.5&&gOn>.5){vec2 q=gWP.xz/gS*1.3;const float e=1./256.;float h0=texture2D(gTex,q).r,hx=texture2D(gTex,q+vec2(e,0.)).r,hz=texture2D(gTex,q+vec2(0.,e)).r;
-  vec3 d=vec3(h0-hx,0.,h0-hz)*22.;normal=normalize(normal+(viewMatrix*vec4(d,0.)).xyz);}`);return;}
+if(gLandOn>.5&&gOn>.5){vec2 q=mat2(.8,-.6,.6,.8)*gWP.xz/gS*1.1+.23;const float e=1./256.;float h0=texture2D(gTex,q).r,hx=texture2D(gTex,q+vec2(e,0.)).r,hz=texture2D(gTex,q+vec2(0.,e)).r;
+  vec3 d=vec3(h0-hx,0.,h0-hz)*9.;normal=normalize(normal+(viewMatrix*vec4(d,0.)).xyz);}`);return;}
   sh.fragmentShader=head+sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
 float gN=.5,gH=1.;
 if(gOn>.5){vec3 w=gWP/gS;gH=w.y-gY/gS;gN=(texture2D(gTex,w.xz*4.).r+texture2D(gTex,w.xy*4.+.37).r+texture2D(gTex,w.zy*4.+.71).r)/3.;gN=clamp((gN-.5)*1.8+.5,0.,1.);
@@ -3036,8 +3036,8 @@ if(gOn>.5){vec3 w=gWP/gS;gH=w.y-gY/gS;gN=(texture2D(gTex,w.xz*4.).r+texture2D(gT
 const GFXG={sun:0xffdcaa,sky:0xb3c8e4,gnd:0x6e5a40,haze:0xa7b2bc,fog:[38,150],ex:1.12,g0:hemi.groundColor.getHex()};M.terrain.userData.gfx=2;laundry.forEach(m=>m.userData.wind=[.015,3.2,0]);
 
 // land layer: a ground map painted once from the layout (shade under every building and wall, worn dirt around them and footpaths to the HQ,
-// wet ground along rivers and sea) plus one batch of scattered pebbles. Repainted only when the layout changes, so it costs nothing per frame.
-let landPeb=null,landWet=null;
+// wet ground along rivers and sea) repainted only when the layout really changes, so it costs nothing per frame.
+let landWet=null,landSig='';
 function landBake(){let tm=null;scene.traverse(o=>{if(o.material===M.terrain)tm=o;});if(!tm)return;const bb=new T.Box3().setFromObject(tm),X0=bb.min.x,Z0=bb.min.z,LW=bb.max.x-X0,LH=bb.max.z-Z0;
   const PX=14,cw=Math.round(LW*PX),ch=Math.round(LH*PX);GFX.landR.value.set(X0,Z0,LW,LH);
   const mk=()=>{const c=document.createElement('canvas');c.width=cw;c.height=ch;const x=c.getContext('2d');x.setTransform(PX,0,0,PX,-X0*PX,-Z0*PX);return [c,x];};
@@ -3045,7 +3045,7 @@ function landBake(){let tm=null;scene.traverse(o=>{if(o.material===M.terrain)tm=
   const foot=[];battle.children.forEach(g=>{if(!g.isGroup||!g.visible)return;const b=new T.Box3().setFromObject(g);if(!isFinite(b.min.x)||b.max.y-b.min.y<.03)return;const sx=b.max.x-b.min.x,sz=b.max.z-b.min.z;if(sx>6||sz>6)return;
     foot.push({x:(b.min.x+b.max.x)/2,z:(b.min.z+b.max.z)/2,sx,sz});});
   walls.forEach(w=>{if(w.alive&&w.m.visible)foot.push({x:w.x,z:w.z,sx:.36,sz:.36,wall:true});});
-  const hq=blds.find(b=>b.hq&&b.alive);
+  const hq=blds.find(b=>b.hq&&b.alive),sig=MAPT.name+cw+'|'+foot.map(f=>f.x.toFixed(2)+','+f.z.toFixed(2)+','+f.sx.toFixed(1)).join(';');if(sig===landSig)return;landSig=sig;
   // shade: a soft dark footprint, drawn with a blurred shadow so the edge fades out
   xr.shadowColor='rgba(0,0,0,.9)';xr.shadowBlur=PX*.5;xr.fillStyle='rgba(0,0,0,.75)';foot.forEach(f=>{xr.fillRect(f.x-f.sx*.48,f.z-f.sz*.48,f.sx*.96,f.sz*.96);});
   // worn dirt: scuffed ground around each building, and footpaths from the HQ to every building
@@ -3061,16 +3061,8 @@ function landBake(){let tm=null;scene.traverse(o=>{if(o.material===M.terrain)tm=
   const R=xr.getImageData(0,0,cw,ch).data,Gd=xg.getImageData(0,0,cw,ch).data,out=new Uint8Array(cw*ch*4),L=landWet;
   for(let j=0;j<ch;j++)for(let i=0;i<cw;i++){const k=(j*cw+i)*4;out[k]=R[k+3];out[k+1]=Gd[k+3];out[k+2]=Math.round(255*L.wet[Math.min(L.wh-1,j/L.Hs|0)*L.ww+Math.min(L.ww-1,i/L.Hs|0)]);out[k+3]=255;}
   const t=new T.DataTexture(out,cw,ch,T.RGBAFormat);t.magFilter=t.minFilter=T.LinearFilter;t.needsUpdate=true;if(GFX.landTex.value)GFX.landTex.value.dispose();GFX.landTex.value=t;
-  // pebbles: one instanced batch of small stones, kept off water, buildings and walls, a little thicker on worn ground
-  if(!landPeb){const N=1600,geo=new T.DodecahedronGeometry(1,0),mat=new T.MeshStandardMaterial({color:0xffffff,roughness:.95,flatShading:true});
-    landPeb=new T.InstancedMesh(geo,mat,N);landPeb.receiveShadow=true;landPeb.frustumCulled=false;scene.add(landPeb);}
-  const m4=new T.Matrix4(),q=new T.Quaternion(),e=new T.Euler(),sv=V(),pv=V(),col=new T.Color(),rock=new T.Color(MAPT.rock);let n=0;
-  for(let tries=0;tries<12000&&n<landPeb.count;tries++){const x=X0+Math.random()*LW,z=Z0+Math.random()*LH,i=Math.min(cw-1,(x-X0)*PX|0),j=Math.min(ch-1,(z-Z0)*PX|0),k=(j*cw+i)*4;
-    if(out[k]>60||out[k+2]>40||groundY(x,z)-G<-.02)continue;if(Math.random()>.35+out[k+1]/255*1.2)continue;
-    const r=.012+Math.pow(Math.random(),3)*.05;e.set(Math.random()*6,Math.random()*6,Math.random()*6);q.setFromEuler(e);sv.set(r*(1+Math.random()*.6),r*.6,r);pv.set(x,groundY(x,z)+r*.25,z);
-    m4.compose(pv,q,sv);landPeb.setMatrixAt(n,m4);col.copy(rock).multiplyScalar(.7+Math.random()*.6);landPeb.setColorAt(n,col);n++;}
-  landPeb.count=n;landPeb.instanceMatrix.needsUpdate=true;if(landPeb.instanceColor)landPeb.instanceColor.needsUpdate=true;}
-function land(on){GFX.land.value=on?1:0;if(on)landBake();if(landPeb)landPeb.visible=!!on;}
+}
+function land(on){GFX.land.value=on?1:0;landSig='';if(on)landBake();}
 // repaint the ground map a moment after the layout changes (a new layout, a building placed, moved or upgraded, another map), never mid-gesture
 let landT=0;function landSoon(){if(!GFX.land.value)return;clearTimeout(landT);landT=setTimeout(landBake,300);}
 // the look follows the weather: setWeather sets the base lights, then gfxApply trims the flat fill (the sky reflection replaces it),
