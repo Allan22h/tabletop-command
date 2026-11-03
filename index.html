@@ -1189,7 +1189,7 @@ const BK={
   comms:{name:'Comms tower',r:.32,hp:800,res:['g','f'],c:450,h:1.2,zone:'in',desc:'Coalition reinforcements join the defense.'},
   helipad:{name:'Helipad',r:.55,hp:900,res:['f','m'],c:700,zone:'in',desc:'Lets you build attack helicopters.'},
   airfield:{name:'Airfield',r:.6,hp:1100,res:['f','m'],c:900,zone:'in',desc:'Lets you prepare air strikes.'},
-  barrier:{name:'Barrier block',r:.18,item:true,zone:'any',cost:h=>({g:100*h}),desc:'A wall block. New blocks are sandbags; upgrade them to earth barriers, double barriers, concrete, razor and electric walls as the HQ allows. Electric walls shock attackers that hit them.'},
+  barrier:{name:'Barrier block',r:.18,item:true,zone:'any',cost:h=>({g:100*h}),desc:'A wall block. New blocks are sandbags; upgrade them to earth barriers, double barriers, concrete, razor, electric and fortress walls as the HQ allows. Electric and fortress walls shock attackers that hit them.'},
   tree:{name:'Tree',r:.26,item:true,obs:true,zone:'any',cost:h=>({g:50*h+100}),desc:'Clear it to free the space. Costs a little gold.'},
   rock:{name:'Boulder',r:.3,item:true,obs:true,zone:'any',cost:h=>({g:80*h+150}),desc:'Blast it with dynamite to free the space. Costs a little gold.'},
   bush:{name:'Bush',r:.2,item:true,obs:true,zone:'any',cost:h=>({g:30*h+50}),desc:'Clear it to free the space. Costs a little gold.'},
@@ -1213,9 +1213,9 @@ const MAXL={vault:[2,3,4,5,6,7,8,9,10,11,12,13,14,15,15],fuel:[2,3,4,5,6,7,8,9,1
   mg:[2,3,4,5,6,7,8,9,10,11,12,13,14,15,15],mortarPit:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],atgm:[0,0,2,3,4,5,6,7,8,9,10,11,12,13,14],sam:[0,0,0,0,2,3,4,5,6,7,8,9,10,11,12],
   hangar:[0,0,1,2,3,4,5,6,7,8,9,10,10,11,12],intel:[0,0,1,2,3,4,5,6,7,8,9,10,11,12,13],comms:[0,0,0,1,2,2,3,3,4,4,5,5,6,6,7],
   helipad:[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6],airfield:[0,0,0,0,0,0,1,1,2,2,3,3,4,4,5],
-  barrier:[1,1,2,2,2,3,3,3,4,4,5,5,6,6,6]}; // barriers: sandbags, earth-filled, double, concrete, razor-topped, electric fence
-const WALL_UP=[0,0,400,1500,4000,9000,15000]; // gold to raise one block to that level; instant, no builder
-const WALL_N=['Sandbags','Earth barrier','Double barrier','Concrete wall','Razor wall','Electric wall'];
+  barrier:[1,1,2,2,3,3,4,4,5,5,6,6,7,7,7]}; // barriers: sandbags, earth-filled, double, concrete, razor-topped, electric fence, fortress
+const WALL_UP=[0,0,400,1500,4000,9000,15000,25000]; // gold to raise one block to that level; instant, no builder
+const WALL_N=['Sandbags','Earth barrier','Double barrier','Concrete wall','Razor wall','Electric wall','Fortress wall'];
 const maxLv=(k,h)=>k==='hq'?HQ_MAX:MAXL[k]?Math.max(1,MAXL[k][Math.min(HQ_MAX,Math.max(1,h))-1]):1;
 // the next HQ level that raises a building's cap, and to what
 const nextCap=(k,h)=>{for(let n=h+1;n<=HQ_MAX;n++)if(maxLv(k,n)>maxLv(k,h))return [n,maxLv(k,n)];return null;};
@@ -1484,7 +1484,7 @@ function drawRow(){const key=rowO?rowO.map(o=>o.x+','+o.z).join(';'):'';if(key==
   if(rowRings&&rowRings.parent)rowRings.parent.remove(rowRings);rowRings=null;if(!rowO||state!=='base')return;
   rowRings=new T.Group();const geo=new T.RingGeometry(.2,.26,24),m=new T.MeshBasicMaterial({color:0xffc63a,transparent:true,opacity:1,depthWrite:false,depthTest:false,toneMapped:false});
   rowO.forEach(o=>{const r=new T.Mesh(geo,m);r.rotation.x=-Math.PI/2;r.position.set(o.x,G+.03,o.z);r.renderOrder=9;rowRings.add(r);});battle.add(rowRings);}
-const wallUpCost=o=>({g:WALL_UP[Math.min(6,(o.lv||1)+1)]||0});
+const wallUpCost=o=>({g:WALL_UP[Math.min(7,(o.lv||1)+1)]||0});
 const boostCost=o=>5+o.lv;
 const TRAINS=['barracks','motor','hangar','helipad','airfield'];
 function cardActs(){const hq=baseHq(),free=builders()-busy(),now=Date.now(),A=[];
@@ -1687,7 +1687,7 @@ function setHqTest(h){h=clamp(h,1,HQ_MAX);const hq=BASE.blds.find(b=>b.k==='hq')
 
 /* ---------- being attacked: 20% at most, then a shield ---------- */
 function defenseScore(blds,h){let s=0;blds.forEach(o=>{const d=BK[o.k];if(d.def||o.k==='hangar'||o.k==='comms')s+=o.lv;else if(o.k==='barrier')s+=.05*(o.lv||1);else if(d.item)s+={wire:.3,trench:.6,teeth:.5,mine:.3}[o.k]||0;});return s;}
-const wallTierFor=h=>h>=13?5:h>=11?4:h>=9?3:h>=6?2:h>=3?1:0;
+const wallTierFor=h=>h>=13?6:h>=11?5:h>=9?4:h>=7?3:h>=5?2:h>=3?1:0;
 // an enemy attack on your base is a real battle, run with a fixed random seed: the replay runs the same seed and plays out identically
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 const nativeRandom=Math.random;let simRng=null,sfxQ=[],defendSim=null,attOverride=null;
@@ -1771,7 +1771,7 @@ function panelBase(hq,free){let h='';
     if(d.desc)h+=`<span class="muted">${d.desc}</span>`;
     if(d.store)h+=`<span class="muted">Holds up to ${fmtN(capFor(d.store,o.lv))} ${RESN[d.store].toLowerCase()}${o.lv<max?' ('+fmtN(capFor(d.store,o.lv+1))+' at Lv '+(o.lv+1)+')':''} · makes ${fmtN(PROD[d.store]*o.lv*(o.boost>Date.now()?2:1))} per hour${o.boost>Date.now()?' (boosted)':''}</span>`;
     const cap=k=>{const n=nextCap(k,hq);return `Max level for HQ ${hq}. `+(n?`HQ ${n[0]} raises it to Lv ${n[1]}.`:'This is its top level.');};
-    if(o.k==='barrier')h+=`<span class="muted">Level ${wl} of 6${wl>=maxLv('barrier',hq)?' · '+cap('barrier'):''}</span>`;
+    if(o.k==='barrier')h+=`<span class="muted">Level ${wl} of 7${wl>=maxLv('barrier',hq)?' · '+cap('barrier'):''}</span>`;
     else if(!d.item){if(o.until)h+=`<span>${o.fresh?'Under construction':'Upgrading to Lv '+o.to} · ${fmtT((o.until-Date.now())/1000)} left</span>`;
       else if(o.lv>=max){if(o.k!=='hq'||hq>=HQ_MAX)h+=`<span class="muted">${o.k==='hq'?'Top level.':cap(o.k)}</span>`;}
       else h+=`<span class="muted">Upgrade to Lv ${o.lv+1} takes ${fmtT(timeOf(o.k,o.lv+1))} and a builder.</span>`;}
@@ -2534,9 +2534,10 @@ function addB(kind,x,z,o){const g=new T.Group();g.position.set(x,G,z);battle.add
   b.lv=o.lv||1;if(b.def){b.def.dmg=Math.round(b.def.dmg*BAL.dm*(1+BAL.def*(b.lv-1)));b.def.range*=1+.02*(b.lv-1);}
   BUILD[o.build||kind](g,b);g.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});bake(g,keepOf(b));
   b.bar=makeBar(Math.max(.6,o.r*1.3));b.bar.h.position.set(x,G+(o.h||.4)+.55,z);blds.push(b);return b;}
-// perimeter walls get stronger with the HQ: sandbags (HQ 1-2), earth-filled barriers (3-5), double-height barriers (6-8),
-// concrete T-walls (9-10), T-walls topped with a razor-wire coil (11-12), and T-walls with an electric fence on top (13-15)
-let wallHq=4;const wallTier=()=>wallHq>=13?5:wallHq>=11?4:wallHq>=9?3:wallHq>=6?2:wallHq>=3?1:0;
+// perimeter walls get stronger with the HQ, a new level every two HQ levels: sandbags (HQ 1-2), earth-filled barriers (3-4),
+// double-height barriers (5-6), concrete T-walls (7-8), T-walls with a razor-wire coil (9-10), with an electric fence (11-12),
+// and fortress walls (13-15): thicker and taller, a concrete column every two blocks, electric fence on top
+let wallHq=4;const wallTier=()=>wallHq>=13?6:wallHq>=11?5:wallHq>=9?4:wallHq>=7?3:wallHq>=5?2:wallHq>=3?1:0;
 // joins small geometries (positions and normals only) into one, for parts drawn many times
 function joinGeos(list){const P=[],N=[];list.forEach(g=>{const q=g.index?g.toNonIndexed():g;P.push(...q.attributes.position.array);N.push(...q.attributes.normal.array);});
   const o=new T.BufferGeometry();o.setAttribute('position',new T.Float32BufferAttribute(P,3));o.setAttribute('normal',new T.Float32BufferAttribute(N,3));return o;}
@@ -2554,9 +2555,13 @@ const fenceLive=(()=>{const g=[];for(const y of[.76,.82,.88]){const w=cyl(.0038,
 const WALLS=[{hp:300,parts:[[box(.34,.12,.3),'sandbag',.06],[box(.3,.1,.26),'sandbag',.17]]},{hp:500,parts:[[box(.34,.34,.34),'hesco',.17]]},
   {hp:800,parts:[[box(.34,.62,.34),'hesco',.31]]},{hp:1200,parts:[[box(.34,.08,.26),'concrete',.04],[box(.34,.7,.1),'concrete',.35]]},
   {hp:1600,parts:[[box(.34,.08,.26),'concrete',.04],[box(.34,.7,.1),'concrete',.35],[razorGeo,'wire',0],[razorBarbs,'wire',0],[bracketGeo,'metal',0]]},
-  {hp:2000,shock:true,parts:[[box(.34,.08,.26),'concrete',.04],[box(.34,.7,.1),'concrete',.35],[fencePosts,'dark',0],[fenceIns,'insul',0],[fenceLive,'live',0]]}];
+  {hp:2000,shock:true,parts:[[box(.34,.08,.26),'concrete',.04],[box(.34,.7,.1),'concrete',.35],[fencePosts,'dark',0],[fenceIns,'insul',0],[fenceLive,'live',0]]},
+  {hp:2600,shock:true,parts:[[box(.34,.1,.32),'concrete',.05],[box(.34,.8,.16),'concrete',.5],[fencePosts,'dark',.12],[fenceIns,'insul',.12],[fenceLive,'live',.12]],
+    col:[[(()=>{const b=box(.14,1.1,.24);b.translate(.17,.55,0);return b;})(),'concrete',0],[(()=>{const b=box(.18,.05,.28);b.translate(.17,1.12,0);return b;})(),'concrete',0]]}];
 function addWall(x,z,yaw,tier){const W=WALLS[tier!=null?Math.min(WALLS.length-1,tier):wallTier()],m=new T.Group();m.position.set(x,G,z);m.rotation.y=yaw;battle.add(m);
-  W.parts.forEach(([geo,mat,y,ring])=>{const p=new T.Mesh(geo,M[mat]||M.metal);p.position.y=y;if(ring)p.rotation.y=Math.PI/2;p.castShadow=p.receiveShadow=true;m.add(p);});
+  // fortress walls: a column at every second joint along the row
+  const parts=W.col&&Math.round((Math.abs(Math.sin(yaw))>.5?z:x)/.34)%2===0?[...W.parts,...W.col]:W.parts;
+  parts.forEach(([geo,mat,y,ring])=>{const p=new T.Mesh(geo,M[mat]||M.metal);p.position.y=y;if(ring)p.rotation.y=Math.PI/2;p.castShadow=p.receiveShadow=true;m.add(p);});
   walls.push({wall:true,x,z,hp:W.hp,max:W.hp,m,alive:true,r:.2,p:V(x,G+.2,z),shock:!!W.shock});}
 
 // the barrier groups stay as they are for the game logic and base editing (drag, rows, rotate); their parts are hidden
