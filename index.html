@@ -1231,7 +1231,7 @@ const SLOTS={hq:[[7.2,0]],vault:[[9.1,2.6]],fuel:[[9.1,-2.6]],ammo:[[6.9,-2.8]],
   hangar:[[8.25,-1.75]],intel:[[6.0,-2.0]],comms:[[6.05,2.05]],helipad:[[8.0,2.0]],airfield:[[3.6,-.15]]};
 // how many of each the HQ allows: more defenses, barriers and obstacles as it grows
 const LIMIT={hq:()=>1,vault:()=>1,fuel:()=>1,ammo:()=>1,barracks:()=>1,motor:h=>h>=2?1:0,mg:h=>Math.min(6,2+Math.floor(h/3)),
-  mortarPit:h=>h>=13?3:h>=7?2:1,atgm:h=>h>=12?3:h>=6?2:h>=3?1:0,sam:h=>h>=13?3:h>=8?2:h>=5?1:0,
+  mortarPit:h=>h>=15?3:h>=7?2:1,atgm:h=>h>=12?3:h>=6?2:h>=3?1:0,sam:h=>h>=14?3:h>=8?2:h>=5?1:0,
   hangar:h=>h>=3?1:0,intel:h=>h>=3?1:0,comms:h=>h>=4?1:0,helipad:h=>h>=5?1:0,airfield:h=>h>=7?1:0,
   barrier:h=>barExtra(h)+campWallSpots(h).length,wire:h=>h>=2?2+Math.floor((h-2)/3):0,trench:h=>h>=3?2+Math.floor((h-3)/4):0,teeth:h=>h>=4?3+Math.floor((h-4)/2):0,mine:h=>h>=4?4+(h-4):0,tree:()=>99,rock:()=>99,bush:()=>99,ibox:()=>99};
 // the highest level each building can reach at each HQ level (HQ 1 to 15), in steps like Clash of Clans:
