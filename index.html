@@ -1268,7 +1268,7 @@ const TR={rifle:{sp:2,c:{g:100,m:50},t:12,need:'barracks',br:'g'},mortar:{sp:3,c
 const ARMY_ORDER=['rifle','truck','jlav','tank','mortar','heli','drone','strike'];
 const techOf=k=>(BASE.tech&&BASE.tech[k])||1;
 // balance: defense damage and building health per level, and unit health and damage per research level
-var BAL={def:.05,hp:.08,att:.1,dm:1.3,hb:1};
+var BAL={def:.05,hp:.08,att:.1,dm:1.3,hb:1,hq:{1:.55,2:1.08,3:1.04,4:1.38,5:1.21,8:1.08,10:1.19,11:1.08,12:.92,14:.95,15:.83}}; // hq: defense damage fine-tuned per HQ level, so a same-level raid is won about 2 times in 3
 const techK=k=>1+BAL.att*(techOf(k)-1); // +10% health and damage per research level
 const trainCost=k=>{const c={g:0,f:0,m:0,i:0},m=1+.25*(techOf(k)-1);for(const r in TR[k].c)c[r]=Math.round(TR[k].c[r]*m/10)*10;return c;};
 const researchCost=(k,L)=>({g:0,f:0,m:0,i:0,[TR[k].br]:400*L*L});
@@ -1745,10 +1745,11 @@ async function runDefense(L){const prevState=state;setupDefense(L,false);let n=0
   while(!defendSim.done&&n<8000){defendStep(1/30);n++;if(n%300===0)await yieldUI();}
   const s=stats(),lost={};RES.forEach(r=>lost[r]=Math.round(loot[r]||0));stopDefense();clearBattle();state=prevState;$('radio').hidden=true;return {pct:s.pct,stars:s.stars,lost};}
 // testing aid: one simulated raid on your base with a given seed, reporting how long it ran
+let simCamp=false;
 async function debugAttack(seed,att){const h=baseHq();att=att||h;const rng=mulberry(seed^0x5bd1e995);
   const L={t:Date.now(),by:'Test',fac:FACS.filter(f=>f!==cur)[0],hq:att,myHq:h,seed,free:1,snap:BASE.blds.filter(o=>!BK[o.k].obs&&!o.stash).map(o=>({k:o.k,x:o.x,z:o.z,y:o.y,lv:o.lv,fresh:!!o.fresh})),res:Object.assign({},BASE.res),plan:attackPlan(att,h,rng)};
-  const prevState=state;setupDefense(L,false);let n=0;while(!defendSim.done&&n<8000){defendStep(1/30);n++;}const t=battleT,s=stats();const alive=atts.filter(e=>e.alive).length;
-  stopDefense();clearBattle();state=prevState;$('radio').hidden=true;return {t:Math.round(t),pct:s.pct,stars:s.stars,attackersLeft:alive,units:L.plan.length};}
+  const prevState=state;simCamp=true;setupDefense(L,false);let n=0;while(!defendSim.done&&n<8000){defendStep(1/30);n++;}const t=battleT,s=stats();const alive=atts.filter(e=>e.alive).length;
+  simCamp=false;stopDefense();clearBattle();state=prevState;$('radio').hidden=true;return {t:Math.round(t),pct:s.pct,stars:s.stars,attackersLeft:alive,units:L.plan.length};}
 async function simulateAttack(){const h=baseHq(),att=clamp(h+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX),seed=Math.floor(Math.random()*2147483647),rng=mulberry(seed^0x5bd1e995);
   const L={t:Date.now(),by:ATT_NAMES[Math.floor(Math.random()*ATT_NAMES.length)],fac:FACS.filter(f=>f!==cur)[Math.floor(Math.random()*3)],hq:att,myHq:h,seed,
     free:1,snap:(BASE.blds.some(o=>o.stash)?(()=>{const c=BASE.blds.map(o=>{const q=Object.assign({},o);delete q.stash;return q;});autoPlace(c,h);return c;})():BASE.blds).filter(o=>!BK[o.k].obs).map(o=>({k:o.k,x:o.x,z:o.z,y:o.y,lv:o.lv,fresh:!!o.fresh})),res:Object.assign({},BASE.res),plan:attackPlan(att,h,rng)};
@@ -2560,7 +2561,7 @@ function ownCraft(k,len){const f=mode==='mine'?cur:mode==='defend'&&defendSim?de
   const bb=new T.Box3().setFromObject(o),sz=bb.getSize(V()),k2=len/Math.max(sz.x,sz.z,1e-3),w=new T.Group();o.scale.setScalar(k2);o.position.y=-bb.min.y*k2;w.add(o);return w;}
 function addB(kind,x,z,o){const g=new T.Group();g.position.set(x,G,z);battle.add(g);
   const b={kind,x,z,g,r:o.r,hp:o.hp,max:o.hp,loot:o.loot||{},taken:{g:0,f:0,m:0},def:o.def?Object.assign({},DEF[o.def],{type:o.def}):null,cd:rand(.5,1.5),alive:true,hq:!!o.hq,garrison:o.garrison||null,spawned:false,head:null,p:V(x,G+(o.h||.4),z)};
-  b.lv=o.lv||1;if(b.def){b.def.dmg=Math.round(b.def.dmg*BAL.dm*(1+BAL.def*(b.lv-1)));b.def.range*=1+.02*(b.lv-1);}
+  b.lv=o.lv||1;if(b.def){b.def.dmg=Math.round(b.def.dmg*BAL.dm*(BAL.hq[wallHq]||1)*(1+BAL.def*(b.lv-1)));b.def.range*=1+.02*(b.lv-1);}
   BUILD[o.build||kind](g,b);g.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});bake(g,keepOf(b));
   b.bar=makeBar(Math.max(.6,o.r*1.3));b.bar.h.position.set(x,G+(o.h||.4)+.55,z);blds.push(b);return b;}
 // perimeter walls get stronger with the HQ, a new level every two HQ levels: sandbags (HQ 1-2), earth-filled barriers (3-4),
@@ -2768,7 +2769,8 @@ function separate(list){for(let i=0;i<list.length;i++){const a=list[i];if(!a.ali
 // defenders follow the same unlocks as attackers. Your own base (attacks on it and their replays) follows your commander level;
 // a generated enemy camp follows its HQ: drones from HQ 2, light vehicles from 3, anti-armor vehicles from 6, tanks from 10
 const CAMP_UNLOCK={drone:2,truck:3,jlav:6,tank:10};
-function defUnlocked(k){if(mode==='defend')return unlockAll||unlockLv(k)<=levelFor(serviceXp,PLAYER_HQ).L;return mode!=='full'||raidHq>=CAMP_UNLOCK[k];}
+function defUnlocked(k){if(simCamp)return defendSim.L.myHq>=CAMP_UNLOCK[k]; // balance test raids defend like a real enemy camp of that HQ
+  if(mode==='defend')return unlockAll||unlockLv(k)<=levelFor(serviceXp,PLAYER_HQ).L;return mode!=='full'||raidHq>=CAMP_UNLOCK[k];}
 const garrisonVeh=()=>['tank','jlav','truck'].find(defUnlocked)||null;
 const VEH_RADIO={tank:'Enemy armor rolling out of the compound!',jlav:'Enemy anti-armor vehicles rolling out!',truck:'Enemy vehicles rolling out of the compound!'};
 function spawnVeh(v,x,z){spawnUnit(v==='tank'?'gtank':v,x,z,'def');}
