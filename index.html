@@ -2924,7 +2924,7 @@ function endBattle(cancelled){state='ended';armed=null;zone.visible=zoneEdge.vis
   result.unlocked=UNLOCKS.filter(u=>u[1]&&u[0]>before.L&&u[0]<=after.L).map(u=>NAME(u[1]));endXp(x0,before,after);renderBadge();radio(won?`${whoAmI()}, objective taken. ${s.stars} star${s.stars>1?'s':''}.`:`${whoAmI()}, pull back. Mission failed.`,true);
   document.getElementById('endStars').innerHTML='★'.repeat(s.stars)+'<span class="off">'+'★'.repeat(3-s.stars)+'</span>';
   document.getElementById('endTitle').textContent=result.title;
-  document.getElementById('endPct').textContent=s.pct+'% destroyed in '+fmtClock(180-timeLeft);
+  document.getElementById('endPct').textContent=s.pct+'% destroyed in '+fmtClock(Math.max(0,RAID_TIME-timeLeft));
   document.getElementById('endLoot').innerHTML=[['g','Gold'],['f','Fuel'],['m','Munitions']].map(([k,n])=>`<div><i class="dot ${k}"></i>${n}<b>${fmtN(loot[k]||0)}</b></div>`).join('')+(result.banked?`<div class="muted" style="font-size:12px">Stored in your base: ${['g','f','m'].map(r=>fmtN(result.banked[r])+' '+RESN[r].toLowerCase()).join(' · ')}${['g','f','m'].some(r=>result.banked[r]<Math.round(loot[r]))?' (storage full, upgrade your storages)':''}</div>`:'');
   const nb=document.getElementById('endNext');nb.textContent=mode==='tutorial'?'Start full raid':'Raid again';
   $('menuBtn').hidden=$('cancelBtn').hidden=true;$('tray').hidden=true;prompt('',0);celebrate(result);xrDirty=true;}
