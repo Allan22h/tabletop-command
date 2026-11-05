@@ -67,6 +67,17 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .facs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .facs button{background:rgba(255,255,255,.05);border:1px solid var(--edge);border-radius:10px;padding:9px;font-weight:500}
 .facs button[aria-pressed="true"]{background:var(--gold);color:#2a1e05;border-color:var(--gold)}
+/* first start and Settings: faction cards with their vehicles, and the name check */
+.facpick button{display:grid;gap:2px;text-align:left;padding:12px}
+.facpick button small{font-size:12px;opacity:.75}
+.facpick button:disabled{opacity:.35;cursor:not-allowed}
+.facline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.facline small{color:var(--muted);font-size:12px}
+.facwarn{margin:0;padding-left:18px;color:var(--muted);font-size:13px;display:grid;gap:3px}.facwarn[hidden]{display:none}
+#facDlg .sheet,#nameDlg .sheet{max-height:calc(100% - 24px);overflow:auto}
+.namemsg{min-height:18px;font-size:13px;color:var(--muted)}.namemsg.bad{color:#ff8a73}.namemsg.good{color:#8fdc9a}
+.namesugs{display:flex;gap:6px;flex-wrap:wrap}.namesugs:empty{display:none}
+.namesugs button{background:rgba(255,255,255,.06);border:1px solid var(--edge);border-radius:999px;padding:6px 11px;font:600 12.5px inherit;color:var(--ink)}
+@media (max-height:520px) and (orientation:landscape){.facpick{grid-template-columns:repeat(4,minmax(0,1fr))}#facDlg .sheet{gap:10px;padding:16px}#facDlg h1{font-size:26px!important}}
 .primary:disabled{opacity:.4;cursor:default}
 .primary{background:var(--gold);color:#2a1e05;border:0;border-radius:12px;padding:14px;font:700 20px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em}
 .secondary{background:transparent;border:1px solid var(--edge);border-radius:12px;padding:12px;font-weight:500}
@@ -385,12 +396,33 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <div id="card" hidden></div>
   <div id="daily" hidden></div>
 
+  <div class="screen" id="facDlg" hidden style="z-index:32"><div class="sheet">
+    <span class="lbl" id="facLbl">Welcome, commander · step 1 of 2</span>
+    <h1 style="font-size:34px" id="facH">Choose your <span>faction</span></h1>
+    <p style="margin:0;color:var(--muted)" id="facP">You fight for this side on the world map, and you can only raid players from the other factions. Every faction is equally strong: it changes how your vehicles, camo and jets look, not their stats.</p>
+    <div class="facs facpick" id="facPick">
+      <button type="button" data-pick="nato" aria-pressed="false"><b>USA / NATO</b><small>Apache, F-35, Abrams</small></button>
+      <button type="button" data-pick="ru" aria-pressed="false"><b>Russia</b><small>Ka-52, Su-57, T-90</small></button>
+      <button type="button" data-pick="cn" aria-pressed="false"><b>China</b><small>Z-10, J-20, Type 99</small></button>
+      <button type="button" data-pick="eu" aria-pressed="false"><b>Europe / Middle East</b><small>Tiger, Rafale, Leopard</small></button>
+    </div>
+    <ul class="facwarn" id="facWarn" hidden>
+      <li>Your base, army, rank and name stay the same.</li>
+      <li>Your vehicles, camo and jets switch to the new faction's look.</li>
+      <li>You can change again next season (days 1 to 3 of each month).</li>
+    </ul>
+    <button type="button" class="primary" id="facOk" disabled>Continue</button>
+    <button type="button" class="secondary" id="facCancel">Cancel</button>
+  </div></div>
   <div class="screen" id="nameDlg" hidden style="z-index:30"><div class="sheet">
-    <span class="lbl">Commander name</span>
+    <span class="lbl" id="nameLbl">Commander name</span>
     <h1 style="font-size:34px">Who's in <span>command?</span></h1>
     <p style="margin:0;color:var(--muted)">Your name is your base's name, and how command calls you on the radio, with your rank in front.</p>
-    <div style="display:flex;gap:8px"><input id="nameIn" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Your name" style="flex:1;min-width:0;font:600 18px var(--f-mono);padding:12px 14px;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--ink)"><button type="button" class="secondary" id="nameRnd" style="width:auto;padding:0 14px">Random</button></div>
+    <div style="display:flex;gap:8px"><input id="nameIn" maxlength="15" autocomplete="off" spellcheck="false" placeholder="Your name" style="flex:1;min-width:0;font:600 18px var(--f-mono);padding:12px 14px;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--ink)"><button type="button" class="secondary" id="nameRnd" style="width:auto;padding:0 14px">Random</button></div>
+    <span id="nameMsg" class="namemsg"></span>
+    <div class="namesugs" id="nameSugs"></div>
     <span id="namePv" style="font-size:13px;color:var(--muted)"></span>
+    <span id="nameCost" style="font-size:13px;color:var(--muted)"></span>
     <button type="button" class="primary" id="nameOk">Confirm</button>
     <button type="button" class="secondary" id="nameCancel">Cancel</button>
   </div></div>
@@ -406,13 +438,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
           <button type="button" data-map="dust" data-label="Dust Crown · desert" aria-pressed="false">Dust Crown · desert</button>
           <button type="button" data-map="birch" data-label="Birch Line · snow" aria-pressed="false">Birch Line · snow</button>
         </div></div>
-      <div style="display:grid;gap:8px"><span class="lbl">Your faction</span>
-        <div class="facs">
-          <button type="button" data-f="nato" aria-pressed="true">USA / NATO</button>
-          <button type="button" data-f="ru" aria-pressed="false">Russia</button>
-          <button type="button" data-f="cn" aria-pressed="false">China</button>
-          <button type="button" data-f="eu" aria-pressed="false">Europe / Middle East</button>
-        </div></div>
+      <div style="display:grid;gap:4px"><span class="lbl">Your faction</span>
+        <span class="facline"><b id="menuFac">USA / NATO</b><small>Change it in Settings</small></span></div>
       <button type="button" class="primary" id="goBase">My base</button>
       <button type="button" class="secondary" id="goTuts">Tutorials</button>
       <button type="button" class="secondary" id="setBtn">⚙ Settings</button>
@@ -437,8 +464,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     <div class="setgrp"><span class="lbl">Display</span>
       <label class="setrow"><span>Performance stats<small>Frame rate and draw calls on screen and in the headset</small></span><input type="checkbox" id="setPerf"></label></div>
     <div class="setgrp"><span class="lbl">Commander</span>
-      <div class="setrow"><span>Name<small id="setName"></small></span><button type="button" class="tbtn" id="setNameBtn">Change</button></div></div>
+      <div class="setrow"><span id="setName">Name<small></small></span><button type="button" class="tbtn" id="setNameBtn">Change</button></div>
+      <div class="setrow"><span id="setFac">Faction<small></small></span><button type="button" class="tbtn" id="setFacBtn">Change</button></div></div>
+    <div class="setgrp"><span class="lbl">Account</span>
+      <div class="setrow"><span>Save your base online<small>Link Google, Apple or email so you never lose your base. Coming with online play.</small></span><button type="button" class="tbtn" disabled>Soon</button></div></div>
     <div class="setgrp"><span class="lbl">Prototype testing</span>
+      <label class="setrow"><span>Faction change any day<small>Normally only days 1 to 3 of each month, once a month</small></span><input type="checkbox" id="facAny"></label>
       <label class="setrow"><span>Unlock all equipment<small>Also lets your base's defenders use everything</small></span><input type="checkbox" id="unlockAll"></label>
       <div class="setrow"><span>Test profile</span><span style="display:flex;gap:6px"><button type="button" class="tbtn" id="mkGeneral">Make me General</button><button type="button" class="tbtn" id="mkReset">Reset to Recruit</button></span></div></div>
     <button type="button" class="primary" id="setClose">Done</button>
@@ -2937,16 +2968,43 @@ function rankLine(xp,lv){if(lv.pending){const nr=lv.r+1;return `Level ${lv.L} ·
   return `Level ${lv.L} of 200 · ${fmtN(xp-levelXp(lv.L))} / ${fmtN(levelXp(lv.L+1)-levelXp(lv.L))} XP to ${levelName(lv.L+1,cur)}`;}
 /* ---------- the commander's name: chosen on first launch, names the base, and is how the radio addresses you ---------- */
 let playerName='';try{playerName=localStorage.getItem('tc.name')||'';}catch(_){}
-const NAME_OK=/^[\p{L}\p{N} ._-]{3,16}$/u,cleanName=v=>v.replace(/\s+/g,' ').trim();
+const NAME_OK=/^[\p{L}\p{N} ]{3,15}$/u,cleanName=v=>v.replace(/\s+/g,' ').trim(),nameKey=v=>cleanName(v).toLowerCase();
+// names are unique ignoring capitals. Until the server exists this list stands in for names other players already hold
+const TAKEN_NAMES=['ghost','viper','maverick','reaper','iron wolf','alpha','desert fox','shadow','hunter','wolf','falcon','nomad','specter','atlas','rook'];
+const BLOCKED=['nazi','hitler','fuck','shit','bitch','cunt','nigg','fag','rape','whore'];
+// renaming: the first change is free, then each one costs gold and waits a month
+const RENAME_COST=500,RENAME_WAIT=30*864e5;
+let renames=0,renameAt=0;try{renames=+localStorage.getItem('tc.renames')||0;renameAt=+localStorage.getItem('tc.renameAt')||0;}catch(_){}
+const renameDays=()=>renames?Math.max(0,Math.ceil((renameAt+RENAME_WAIT-Date.now())/864e5)):0;
+function checkName(v){const s=cleanName(v),k=s.toLowerCase();
+  if(s.length<3)return{ok:false,m:s?'At least 3 characters':''};
+  if(!NAME_OK.test(s))return{ok:false,m:'Only letters, numbers and spaces, up to 15'};
+  if(BLOCKED.some(w=>k.replace(/ /g,'').includes(w)))return{ok:false,m:'That name is not allowed'};
+  if(playerName&&k===nameKey(playerName))return{ok:false,m:'That is already your name'};
+  if(TAKEN_NAMES.includes(k))return{ok:false,taken:true,m:`“${s}” is taken`};
+  return{ok:true,m:`“${s}” is free`};}
+function nameIdeas(v){const b=cleanName(v),out=[];for(const e of[' '+(10+Math.floor(Math.random()*89)),' Actual',' Six',' One']){const c=(b.slice(0,15-e.length)+e);if(!TAKEN_NAMES.includes(c.toLowerCase())&&!out.includes(c))out.push(c);}return out.slice(0,3);}
 const baseName=()=>playerName?playerName+' Base':'My base';
 const whoAmI=()=>{const lv=levelFor(serviceXp,PLAYER_HQ);return rankName(lv.r,cur)+(playerName?' '+playerName:'');};
 const SUGGEST=['Falcon','Ironside','Nomad','Granite','Vega','Kestrel','Rook','Bastion','Halberd','Specter','Atlas','Wolfram'];
-function nameDlg(first){const el=$('nameDlg'),inp=$('nameIn'),pv=$('namePv'),ok=$('nameOk');el.hidden=false;inp.value=playerName;$('nameCancel').hidden=!!first;
-  const upd=()=>{const v=cleanName(inp.value),good=NAME_OK.test(v);ok.disabled=!good;const lv=levelFor(serviceXp,PLAYER_HQ);
-    pv.innerHTML=good?`Base: <b>${v} Base</b> · Radio: <b>“${rankName(lv.r,cur)} ${v}, objective taken.”</b>`:'3 to 16 letters, numbers, spaces, dots, dashes or underscores.';};
-  inp.oninput=upd;upd();setTimeout(()=>inp.focus(),50);
-  $('nameRnd').onclick=()=>{inp.value=SUGGEST[Math.floor(Math.random()*SUGGEST.length)]+'-'+(10+Math.floor(Math.random()*90));upd();};
-  const done=()=>{const v=cleanName(inp.value);if(!NAME_OK.test(v))return;playerName=v;try{localStorage.setItem('tc.name',v);}catch(_){}el.hidden=true;renderBadge();if(state==='base'){baseHud();renderBasePanel();}xrDirty=true;};
+function nameDlg(first){const el=$('nameDlg'),inp=$('nameIn'),pv=$('namePv'),ok=$('nameOk'),msg=$('nameMsg'),sg=$('nameSugs');
+  // a first name is free; later changes follow the rename rules
+  const wait=first?0:renameDays(),paid=!first&&renames>0;
+  $('nameLbl').textContent=first?(localStorage.getItem('tc.fac')?'Step 2 of 2 · Commander name':'Commander name'):'Change name';
+  el.hidden=false;inp.value=first?'':playerName;$('nameCancel').hidden=!!first;
+  $('nameCost').textContent=first?'Nobody else can use your name.':wait?`You changed your name recently. Next change in ${wait} day${wait>1?'s':''}.`:
+    paid?`This change costs ${fmtN(RENAME_COST)} gold. After it you wait 30 days to change again.`:'Your first change is free. After it, each change costs 500 gold and you wait 30 days.';
+  inp.disabled=!!wait;$('nameRnd').disabled=!!wait;
+  const upd=()=>{const v=cleanName(inp.value),r=checkName(inp.value);ok.disabled=!r.ok||!!wait;const lv=levelFor(serviceXp,PLAYER_HQ);
+    msg.textContent=r.m;msg.className='namemsg'+(r.m?r.ok?' good':' bad':'');
+    sg.innerHTML=r.taken?nameIdeas(v).map(x=>`<button type="button">${x}</button>`).join(''):'';sg.querySelectorAll('button').forEach(b=>b.onclick=()=>{inp.value=b.textContent;upd();});
+    pv.innerHTML=r.ok?`Base: <b>${v} Base</b> · Radio: <b>“${rankName(lv.r,cur)} ${v}, objective taken.”</b>`:'';xrDirty=true;};
+  inp.oninput=upd;upd();if(!wait)setTimeout(()=>inp.focus(),50);
+  $('nameRnd').onclick=()=>{let v;do{v=SUGGEST[Math.floor(Math.random()*SUGGEST.length)]+' '+(10+Math.floor(Math.random()*90));}while(!checkName(v).ok);inp.value=v;upd();};
+  const done=()=>{const v=cleanName(inp.value);if(wait||!checkName(v).ok)return;
+    if(paid){if(BASE.res.g<RENAME_COST){msg.textContent=`You need ${fmtN(RENAME_COST)} gold for this change.`;msg.className='namemsg bad';return;}BASE.res.g-=RENAME_COST;saveBase();if(state==='base')baseHud();}
+    if(!first){renames++;renameAt=Date.now();try{localStorage.setItem('tc.renames',String(renames));localStorage.setItem('tc.renameAt',String(renameAt));}catch(_){}}
+    playerName=v;try{localStorage.setItem('tc.name',v);}catch(_){}el.hidden=true;renderBadge();if(state==='base'){baseHud();renderBasePanel();}xrDirty=true;};
   ok.onclick=done;inp.onkeydown=e=>{if(e.key==='Enter')done();};$('nameCancel').onclick=()=>{el.hidden=true;};}
 function renderBadge(){const lv=levelFor(serviceXp,PLAYER_HQ);$('rkIns').innerHTML=insignia(lv.r,cur,52);$('rkName').innerHTML=`${rankName(lv.r,cur)}${playerName?' '+playerName:''} <small>Lv ${lv.sub}</small>`;
   $('rkSub').textContent=rankLine(serviceXp,lv);$('rkFill').style.width=(lv.pending?100:lvlProgress(serviceXp,lv)*100).toFixed(1)+'%';$('rkFill').classList.toggle('held',lv.pending);$('rkHq').textContent=PLAYER_HQ;}
@@ -3430,8 +3488,24 @@ $('xrBtn').onclick=enterXR;
 const parked=carrier.children.filter(o=>o.isGroup&&Math.abs(o.scale.x-.55)<1e-3).map(o=>{carrier.remove(o);return {p:o.position.clone(),r:o.rotation.clone(),g:null};});
 function parkJets(f){parked.forEach(s=>{if(s.g)carrier.remove(s.g);const j=jetFor(f);j.ab.visible=false;s.g=j.g;carrier.add(j.g);j.g.visible=true;j.g.position.copy(s.p);j.g.rotation.copy(s.r);j.g.scale.setScalar(.4);});}
 function setFaction(f){cur=f;parkJets(f);M.camo.map=camoTex(FACTIONS[f].camo);M.camo.needsUpdate=true;$('rch').textContent=`CH 2 · ${CALL[f]} net`;
-  document.querySelectorAll('[data-f]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.f===f)));refreshCards();renderBadge();}
-document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>setFaction(b.dataset.f));
+  $('menuFac').textContent=FAC_NAME[f];refreshCards();renderBadge();}
+/* ---------- your faction: picked on first start, then changeable in Settings on days 1 to 3 of each month (a season), once a season ---------- */
+const FAC_NAME={nato:'USA / NATO',ru:'Russia',cn:'China',eu:'Europe / Middle East'};
+let savedFac=null;try{savedFac=localStorage.getItem('tc.fac');}catch(_){}if(!FAC_NAME[savedFac])savedFac=null;
+let facAny=false;try{facAny=localStorage.getItem('tc.facAny')==='1';}catch(_){}
+const seasonKey=()=>{const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1);};
+const facChangedNow=()=>{try{return localStorage.getItem('tc.facSeason')===seasonKey();}catch(_){return false;}};
+const facOpen=()=>facAny||(new Date().getDate()<=3&&!facChangedNow());
+function facDlg(first){const el=$('facDlg'),ok=$('facOk');let pick=first?null:null;el.hidden=false;
+  $('facLbl').textContent=first?(playerName?'Welcome back, commander':'Welcome, commander · step 1 of 2'):'Settings';
+  $('facH').innerHTML=first?'Choose your <span>faction</span>':'Change <span>faction</span>';
+  $('facP').hidden=!first;$('facWarn').hidden=!!first;$('facCancel').hidden=!!first;
+  const draw=()=>{document.querySelectorAll('#facPick [data-pick]').forEach(b=>{const k=b.dataset.pick;b.disabled=!first&&k===cur;b.setAttribute('aria-pressed',String(k===pick));});
+    ok.disabled=!pick;ok.textContent=pick?(first?'Continue':'Join '+FAC_NAME[pick]):'Pick a faction';xrDirty=true;};
+  document.querySelectorAll('#facPick [data-pick]').forEach(b=>b.onclick=()=>{pick=b.dataset.pick;draw();});draw();
+  ok.onclick=()=>{if(!pick)return;try{localStorage.setItem('tc.fac',pick);if(!first)localStorage.setItem('tc.facSeason',seasonKey());}catch(_){}
+    savedFac=pick;setFaction(pick);el.hidden=true;xrDirty=true;if(first&&!playerName)nameDlg(true);else if(!first)openSettings(true);};
+  $('facCancel').onclick=()=>{el.hidden=true;openSettings(true);};}
 // falling snow for the winter map: flakes drift down over the board and wrap back to the top
 const snowfall=(()=>{const n=900,p=new Float32Array(n*3);for(let i=0;i<n;i++){p[i*3]=rand(-12,12);p[i*3+1]=rand(0,9);p[i*3+2]=rand(-8,12);}
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(p,3));
@@ -3490,13 +3564,19 @@ function savePrefs(){try{localStorage.setItem('tc.prefs',JSON.stringify(prefs));
 function applyAudio(){if(master)master.gain.value=prefs.sound?.85:0;if(!prefs.sound||!prefs.music)menuMusic(false);else if(state==='menu'||state==='base')menuMusic(true);if(TTS&&(!prefs.sound||!prefs.voice))TTS.cancel();}
 {const _ai=audioInit;audioInit=function(){_ai();applyAudio();};}
 function syncSettings(){$('setSound').checked=prefs.sound;$('setMusic').checked=prefs.music;$('setVoice').checked=prefs.voice;$('setMusic').disabled=$('setVoice').disabled=!prefs.sound;
-  $('setPerf').checked=perfOn;$('unlockAll').checked=unlockAll;$('setName').textContent=playerName||'Not set';}
+  $('setPerf').checked=perfOn;$('unlockAll').checked=unlockAll;$('facAny').checked=facAny;
+  const w=renameDays();$('setName').innerHTML=`${playerName||'Name not set'}<small>${!renames?'First change is free':w?`Next change in ${w} day${w>1?'s':''}`:`Next change costs ${fmtN(RENAME_COST)} gold`}</small>`;
+  $('setNameBtn').disabled=!!w;
+  $('setFac').innerHTML=`${FAC_NAME[cur]}<small>${facAny?'Testing: you can change it any day':facOpen()?'Open now, until day 3 of this month':facChangedNow()?'Changed this season. Next chance: day 1 to 3 of next month':'Can be changed on day 1 to 3 of each month'}</small>`;
+  $('setFacBtn').disabled=!facOpen();}
 function openSettings(on){$('settings').hidden=!on;if(on)syncSettings();}
 $('setBtn').onclick=()=>openSettings(true);$('setClose').onclick=()=>openSettings(false);
 $('settings').addEventListener('click',e=>{if(e.target.id==='settings')openSettings(false);});
 [['setSound','sound'],['setMusic','music'],['setVoice','voice']].forEach(([id,k])=>$(id).onchange=e=>{prefs[k]=e.target.checked;savePrefs();applyAudio();syncSettings();});
 $('setPerf').onchange=e=>setPerf(e.target.checked);
 $('setNameBtn').onclick=()=>{openSettings(false);nameDlg(false);};
+$('setFacBtn').onclick=()=>{if(!facOpen())return;openSettings(false);facDlg(false);};
+$('facAny').onchange=e=>{facAny=e.target.checked;try{localStorage.setItem('tc.facAny',facAny?'1':'0');}catch(_){}syncSettings();};
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('settings').hidden)openSettings(false);});
 // full screen on phones: browsers that allow it (Android, iPad, desktop) get a button; iPhone Safari does not offer it to pages
 {const de=document.documentElement,req=de.requestFullscreen||de.webkitRequestFullscreen,fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement,
@@ -3514,7 +3594,7 @@ function wakeAudio(){if(!AC){try{audioInit();}catch(_){return;}}if(AC.state!=='r
 // try right away: where the browser allows sound without a tap (a site you play often, the installed app, some headsets) the menu music starts on load;
 // elsewhere the context stays paused with the first bars queued, and the first tap releases them
 wakeAudio();
-initBase();setFaction('nato');buildLayout('mine');
+initBase();setFaction(savedFac||'nato');buildLayout('mine');
 // hex colors are written in sRGB, but the renderer outputs sRGB from linear values: convert every solid color once so it isn't washed out
 function linearize(m){if(!m||m._lin)return;m._lin=true;if(m.color)m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();}
 scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(linearize);});Object.values(M).forEach(m=>[].concat(m).forEach(linearize));
@@ -3635,7 +3715,7 @@ function mapSync(){if(!palms)return;sweepDuneObs();const lake=MAPT.lake,dunes=!!
 mapSync();
 window.__tcDebug={get dbg(){return {bridgeG,ROAD,BRIDGE,MAPE,mapDecor,battleT,timeLeft};},setPace(v){PACE=v;},BAL,debugAttack:(seed,att)=>debugAttack(seed,att),balance:async(h,n,att)=>{const B=BASE;BASE=maxedBase(h);const out=[];for(let i=1;i<=n;i++)out.push(await debugAttack(i*7919,att||h));BASE=B;return out;},setMap,land,landBake,gfx,GFX,iconFor:(k,l)=>iconFor(k,l),setWeather,get wx(){return wx;},runDefense:L=>runDefense(L),get base(){return BASE;},M,scene,cam,orb,fire,tankFor,truckFor,ifvFor,makeStingerTeam,soldier,heliFor,jetFor,makeLancet,makeQuad,setFaction,get NAMES(){return NAMES;},get strikes(){return strikes;},callStrike,goMenu,get xp(){return serviceXp;},set xp(v){serviceXp=v;saveXp();renderBadge();},turnBoard,PIV,xrFrame,ctrls,xrSim(on){xrMode=on;if(state==='base')renderBasePanel();xrUI.visible=on;xrDirty=true;uiYaw=null;$('app').classList.toggle('xr',on);},get xrPanel(){return xrPanel;},xpSelect,xrBaseSelect,xrDraw(){xrMode=true;xrDirty=true;drawXR();xrMode=false;},snow:snowfall,get xrUI(){return xrUI;},get result(){return result;},endBattle,get atts(){return atts;},get defs(){return defs;},get blds(){return blds;},get state(){return state;},get tut(){return tut;},run(sec){for(let i=0;i<sec*30;i++){step(1/30);updPool(ADD,1/30);updPool(SMK,1/30);}hud();},deployAt(x,z){return onGroundTap(x,z);},arm:armCard};
 {const L=$('loading');L.classList.add('ready');setTimeout(()=>L.classList.add('out'),450);setTimeout(()=>{L.hidden=true;},1100);}
-$('rkBadge').onclick=()=>nameDlg(false);if(!playerName)nameDlg(true);
+$('rkBadge').onclick=()=>nameDlg(false);if(!savedFac)facDlg(true);else if(!playerName)nameDlg(true);
 
 }
 setTimeout(()=>{try{main();}catch(err){document.getElementById('loadTxt').textContent='Could not start: '+err.message;console.error(err);}},60);
