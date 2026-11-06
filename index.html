@@ -3586,7 +3586,7 @@ try{const q=new URLSearchParams(location.search).get('rank');if(q==='general')se
 $('unlockAll').checked=unlockAll;$('unlockAll').onchange=e=>{unlockAll=e.target.checked;try{localStorage.setItem('tc.unlockAll',unlockAll?'1':'0');}catch(_){}};
 $('banner').onclick=finishCelebrate;
 $('menuBtn').onclick=()=>{if(defendSim&&defendSim.watch){endReplay();return;}if(state!=='battle')return;leaveArmed()?goMenu():armLeave();};
-$('spdBtn').onclick=()=>{if(state==='battle')setRaidSpeed(raidSpeed>1?1:2);};
+$('spdBtn').onclick=()=>{if(state==='battle')setRaidSpeed(raidSpeed>=4?1:raidSpeed*2);};
 $('cancelBtn').onclick=()=>{if(defendSim&&defendSim.watch){defendSim.speed=defendSim.speed>=4?1:defendSim.speed*2;$('cancelBtn').textContent='Speed ×'+defendSim.speed;return;}if(state!=='battle')return;cancelArmed()?cancelRaid():armCancel();};
 // sound is always on and the device volume controls it. Browsers only allow audio after a tap or key press,
 // so the first one starts it (and any later one wakes it if the device paused it); the menu music follows
