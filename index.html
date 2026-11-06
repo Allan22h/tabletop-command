@@ -3629,7 +3629,8 @@ let last=performance.now();
 // 20 once your base has sat untouched a few seconds) and redraw shadows only when something can have moved. The headset always runs at full rate.
 let lastDraw=0,lastInput=-1e9,shadowAge=0;
 ['pointerdown','pointermove','wheel','keydown','touchstart'].forEach(ev=>addEventListener(ev,()=>{lastInput=performance.now();},{passive:true,capture:true}));
-function frameGap(now){if(xrMode)return 0;const busy=state==='battle'||!!defendSim||now-lastInput<1500;return busy?1000/60:state==='base'&&now-lastInput>6000?1000/20:1000/30;}
+function frameGap(now){if(xrMode)return 0;if(mapFrame&&!mapFrame.hidden)return 1e9; // the world map covers the board: draw nothing until it closes
+  const busy=state==='battle'||!!defendSim||now-lastInput<1500;return busy?1000/60:(state==='base'||state==='menu')&&now-lastInput>6000?1000/20:1000/30;}
 // scenery built at startup: loose trees become one mesh per material; ships, the bridge and puddles merge their own parts
 // (sub-groups such as a ship's gun stay separate). Groups with unlit parts are skipped, since those are effects and markers.
 // Loose trees become one instanced mesh per part (trunk, crown, top crown) instead of being merged: the board grows with the HQ and
