@@ -2702,8 +2702,10 @@ function spawnUnit(kind,x,z,side){const st=side==='att'?Object.assign({},STATS[k
   const e=Object.assign({kind,side,st,hp:st.hp,g,turret,tipX,wheels,heading:side==='att'?0:Math.PI,cd:rand(.3,1.2),tgt:null,retarget:0,air:!!st.air,alive:true,pitch:0,kick:0,bar:makeBar(st.bar)},extra);
   (side==='att'?atts:defs).push(e);return e;}
 const aliveT=t=>t&&t.alive;
-function nearestBld(p,pref){let best=null,bd=1e9;for(const b of blds){if(!b.alive||(pref==='def'&&!b.def))continue;const d=Math.hypot(b.x-p.x,b.z-p.z)-b.r;if(d<bd){bd=d;best=b;}}
-  return best||(pref?nearestBld(p,null):null);}
+// pref 'def': guns first (towers, mortar pits, anti-tank, air defense), then the buildings that send out defenders
+// (barracks, motor pool, drone hangar, comms tower), then anything left
+function nearestBld(p,pref){let best=null,bd=1e9;for(const b of blds){if(!b.alive||(pref==='def'&&!b.def)||(pref==='garrison'&&!b.garrison))continue;const d=Math.hypot(b.x-p.x,b.z-p.z)-b.r;if(d<bd){bd=d;best=b;}}
+  return best||(pref==='def'?nearestBld(p,'garrison'):pref?nearestBld(p,null):null);}
 function nearestUnit(list,p,maxD,filter){let best=null,bd=maxD;for(const u of list){if(!u.alive||(filter&&!filter(u)))continue;const d=Math.hypot(u.g.position.x-p.x,u.g.position.z-p.z);if(d<bd){bd=d;best=u;}}return best;}
 const tpos=t=>t.g&&!t.wall&&t.st?t.g.position:t.p;
 const tdist=(e,t)=>{const p=tpos(t);return Math.hypot(p.x-e.g.position.x,p.z-e.g.position.z)-(t.r||.2);};
