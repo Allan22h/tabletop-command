@@ -2663,7 +2663,7 @@ function buildLayout(m){landSoon();wallHq=m==='mine'?baseHq():m==='defend'?defen
   }else{
     if(m==='mine')buildMine();else if(m==='defend')buildDefense();else genBase(raidHq);
     // only generated enemy camps (and replays from before free building) have a fixed wall
-    if(fixedWalls){const X0=CMP.x0,X1=CMP.x1,Z0=-CMP.z,Z1=CMP.z,s=.36,put=(x,z,yaw)=>addWall(x,z,yaw);
+    if(fixedWalls){const X0=CMP.x0,X1=CMP.x1,Z0=-CMP.z,Z1=CMP.z,s=.36,put=(x,z,yaw)=>{addWall(x,z,yaw);walls[walls.length-1].perim=true;};
     alongLine(X0,Z0,X1,Z0,s,put);alongLine(X0,Z1,X1,Z1,s,put);alongLine(X1,Z0+s,X1,Z1-s,s,put);alongLine(X0,Z0+s,X0,-.9,s,put);alongLine(X0,.9,X0,Z1-s,s,put);}
   }
   // no deploying close to anything the defender built, nor inside a fixed camp wall
@@ -2710,6 +2710,32 @@ function nearestUnit(list,p,maxD,filter){let best=null,bd=maxD;for(const u of li
 const tpos=t=>t.g&&!t.wall&&t.st?t.g.position:t.p;
 const tdist=(e,t)=>{const p=tpos(t);return Math.hypot(p.x-e.g.position.x,p.z-e.g.position.z)-(t.r||.2);};
 function wallAt(x,z,r){for(const w of walls)if(w.alive&&Math.abs(w.x-x)<r&&Math.abs(w.z-z)<r)return w;return null;}
+/* ---------- getting into the camp: an attacker outside the wall whose target is out of reach inside picks the quicker way in,
+   through an opening (the gate or a stretch already blown open, driving round the corners if it is on the far side) or straight
+   through the wall in its way. Checked about once a second, so a fresh gap is used as soon as it opens ---------- */
+const segHits=(ax,az,bx,bz,inside)=>{const L=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(L/.15));for(let i=1;i<n;i++){if(inside(ax+(bx-ax)*i/n,az+(bz-az)*i/n))return true;}return false;};
+function wallHpOnLine(ax,az,bx,bz){let hp=0;const seen=new Set(),L=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(L/.1));
+  for(let i=1;i<=n;i++){const w=wallAt(ax+(bx-ax)*i/n,az+(bz-az)*i/n,.2);if(w&&!seen.has(w)){seen.add(w);hp+=w.hp;}}return hp;}
+// the openings: the gate and every wall block destroyed in this raid, each with a spot just outside and just inside
+function openings(){const out=[],X0=CMP.x0,X1=CMP.x1,Z=CMP.z,side=(x,z)=>{const d=[[Math.abs(x-X0),-1,0],[Math.abs(x-X1),1,0],[Math.abs(z+Z),0,-1],[Math.abs(z-Z),0,1]].sort((a,b)=>a[0]-b[0])[0];return [d[1],d[2]];};
+  out.push({x:X0,z:0,n:[-1,0]});walls.forEach(w=>{if(!w.alive&&w.perim)out.push({x:w.x,z:w.z,n:side(w.x,w.z)});});
+  return out.map(o=>({o,out:[o.x+o.n[0]*.5,o.z+o.n[1]*.5],in:[o.x-o.n[0]*.5,o.z-o.n[1]*.5]}));}
+// shortest way from a to b outside the camp: straight, or round one to three corners
+function aroundCamp(a,b){const m=.3,inR=(x,z)=>x>CMP.x0-m&&x<CMP.x1+m&&z>-CMP.z-m&&z<CMP.z+m;
+  if(!segHits(a[0],a[1],b[0],b[1],inR))return {pts:[b],len:Math.hypot(b[0]-a[0],b[1]-a[1])};
+  const k=.75,C=[[CMP.x0-k,-CMP.z-k],[CMP.x1+k,-CMP.z-k],[CMP.x1+k,CMP.z+k],[CMP.x0-k,CMP.z+k]];let best=null;
+  for(let i=0;i<4;i++)for(const dir of[1,-1])for(let n=1;n<=3;n++){const pts=[];for(let j=0;j<n;j++)pts.push(C[(i+dir*j+8)%4]);pts.push(b);
+    let ok=true,len=0,q=a;for(const r of pts){if(segHits(q[0],q[1],r[0],r[1],inR)){ok=false;break;}len+=Math.hypot(r[0]-q[0],r[1]-q[1]);q=r;}
+    if(ok&&(!best||len<best.len))best={pts,len};}
+  return best;}
+function planEntry(e,tx,tz){const p=e.g.position,st=e.st,sp=st.speed||.5,reach=Math.max(0,st.range||0);
+  const dd=Math.hypot(tx-p.x,tz-p.z),k=Math.max(0,(dd-reach)/dd),ex=p.x+(tx-p.x)*k,ez=p.z+(tz-p.z)*k; // where it would stop to fire, driving straight
+  const hp=wallHpOnLine(p.x,p.z,ex,ez);if(!hp)return null; // nothing in the way: drive straight
+  const dps=(st.dmg||1)*PACE/(st.rof||1),breach=(dd-reach)/sp+hp/dps;let best=null,bt=breach;
+  for(const op of openings()){const r=aroundCamp([p.x,p.z],op.out);if(!r)continue;const inside=Math.max(0,Math.hypot(tx-op.in[0],tz-op.in[1])-reach);
+    const f=inside/(Math.hypot(tx-op.in[0],tz-op.in[1])||1),ix=op.in[0]+(tx-op.in[0])*f,iz=op.in[1]+(tz-op.in[1])*f; // barriers inside, between the opening and where it would fire from
+    const tm=(r.len+1+inside)/sp+wallHpOnLine(op.in[0],op.in[1],ix,iz)/dps;if(tm<bt){bt=tm;best=[...r.pts,op.in];}}
+  return best;}
 
 // battle pace: every hit, by attackers and by defenses alike, is scaled by this, so fights last longer without changing who wins
 let PACE=.33;const RAID_TIME=240;let raidSpeed=1;
@@ -2722,7 +2748,8 @@ function dmgBld(b,amt){if(!b.alive)return;amt*=PACE;const before=b.hp;b.hp=Math.
   if(!b.wall&&Object.keys(b.loot).length)lootFx(b,got);
   if(b.wall&&b.shock&&b.hp>0&&battleT-(b.zap||-9)>1){let best=null,bd=.9;for(const e of atts){if(!e.alive||e.st.air)continue;const d=Math.hypot(e.g.position.x-b.x,e.g.position.z-b.z);if(d<bd){bd=d;best=e;}}
     if(best){b.zap=battleT;const a=V(b.x,G+.82,b.z),c=best.g.position.clone();c.y+=.15;for(let i=0;i<7;i++){const q=a.clone().lerp(c,i/6);q.x+=rand(-.04,.04);q.y+=rand(-.04,.04);emit(ADD,q,{life:rand(.12,.22),s0:.07,s1:.02,c:0x9fd8ff});}dmgUnit(best,60);}}
-  if(b.wall){if(b.hp<=0){b.alive=false;battle.remove(b.m);explode(b.p.clone(),.5);}return;}
+  if(b.wall){if(!b.bar){b.bar=makeBar(.32);const bb=new T.Box3().setFromObject(b.m);b.bar.h.position.set(b.x,bb.max.y+.12,b.z);}setBar(b.bar,b.hp/b.max);
+    if(b.hp<=0){b.alive=false;battle.remove(b.m);b.bar.h.visible=false;explode(b.p.clone(),.5);}return;}
   setBar(b.bar,b.hp/b.max);if(b.hp<=0)destroyBld(b);}
 function destroyBld(b){b.alive=false;b.bar.h.visible=false;const rest={};for(const k in b.loot){rest[k]=b.loot[k]-b.taken[k];loot[k]+=rest[k];b.taken[k]=b.loot[k];}destroyFx(b,rest);
   explode(b.p.clone(),1.2);b.g.children.forEach(c=>c.visible=false);
@@ -2768,7 +2795,13 @@ function moveGround(e,tx,tz,dt,ignoreWalls){const p=e.g.position;
     if(!e.bypassS)e.bypassS=1.5;if(!ok&&battleT>(e.flipT||0)){e.bypassS=-e.bypassS;e.flipT=battleT+1.5;}e.bypassT=battleT+2.5;
     e.teethT=(e.teethT||0)+dt;if(!ok){const h2=e.heading+Math.PI;nx=p.x+Math.cos(h2)*st*.5;nz=p.z-Math.sin(h2)*st*.5;if(tBlk(nx,nz))return null;}}
   else e.teethT=Math.max(0,(e.teethT||0)-dt*.5);
-  if(!ignoreWalls){const w=wallAt(nx,nz,.3);if(w)return w;}
+  // threading a one-block gap, only the blocks themselves stop you
+  // a wall stops you only when you move into it, not when you brush past or move away; with room beside it you step round it
+  // for up to about 1.5 s, then you break through instead
+  if(!ignoreWalls){const wr=e.thread&&battleT<e.thread?.19:.3,into=(x,z)=>{const w=wallAt(x,z,wr);return w&&Math.hypot(x-w.x,z-w.z)<Math.hypot(p.x-w.x,p.z-w.z)?w:null;};
+    const w=into(nx,nz);if(w){let ok=false;if(e.side==='att'&&(e.slideT||0)<1.5)for(const a of[.6,-.6,1.2,-1.2]){const h2=e.heading+a,x2=p.x+Math.cos(h2)*st,z2=p.z-Math.sin(h2)*st;
+        if(!into(x2,z2)&&!(teethIn(x2,z2)>0&&(e.wheels.length||e.kind==='tank'))){nx=x2;nz=z2;ok=true;break;}}
+      if(!ok){e.slideT=0;return w;}e.slideT=(e.slideT||0)+dt;}else e.slideT=Math.max(0,(e.slideT||0)-dt*.5);}
   p.x=nx;p.z=nz;const gy=groundY(nx,nz);
   if(e.wheels.length){e.wheels.forEach(w=>w.rotation.y-=st*8);const hc=Math.cos(e.heading)*.35,hs=Math.sin(e.heading)*.35;e.pitch=mix(e.pitch,Math.atan2(groundY(nx+hc,nz-hs)-groundY(nx-hc,nz+hs),.7),Math.min(1,dt*6));p.y=gy;}
   else{p.y=gy+Math.abs(Math.sin(e.walkPh||0))*.012;e.walkPh=(e.walkPh==null?e.cd*9:e.walkPh)+st*30;e.walkT=battleT;}
@@ -2802,9 +2835,12 @@ function updateUnit(e,dt){const st=e.st,p=e.g.position;e.kick*=Math.pow(.02,dt);
     const stp=Math.min(L,st.speed*dt);p.x+=dx/L*stp;p.z+=dz/L*stp;p.y=mix(p.y,groundY(p.x,p.z)+st.alt,dt*2);}
   else if(st.minR&&d<st.minR){const tp=tpos(t);moveGround(e,p.x-(tp.x-p.x),p.z-(tp.z-p.z),dt,e.side==='def');}
   else{let tx=tpos(t).x,tz=tpos(t).z;
-    // infantry and trucks use the gate; tanks drive straight and breach walls
-    if(e.side==='att'&&e.kind!=='tank'&&inCompound(tx,tz)&&!inCompound(p.x,p.z)){if(p.x<CMP.x0-.85||Math.abs(p.z)>.75){tx=CMP.x0-.8;tz=clamp(p.z*.3,-.4,.4);}else{tx=CMP.x0+.4;tz=clamp(p.z,-.4,.4);}}
-    const blocked=moveGround(e,tx,tz,dt,e.side==='def');if(blocked)e.wallTgt=blocked;}
+    if(e.side==='att'&&!e.wallTgt&&fixedWalls&&!inCompound(p.x,p.z)&&inCompound(tx,tz)){
+      if(battleT>=(e.routeT||0)||e.routeTgt!==t){e.routeT=battleT+1;e.routeTgt=t;e.route=planEntry(e,tx,tz);}
+      const R=e.route;while(R&&R.length&&Math.hypot(R[0][0]-p.x,R[0][1]-p.z)<.2)R.shift();
+      if(R&&R.length){tx=R[0][0];tz=R[0][1];if(R.length<=2)e.thread=battleT+1.5;}}
+    else e.route=null;
+    const blocked=moveGround(e,tx,tz,dt,e.side==='def');if(blocked){e.wallTgt=blocked;e.route=null;}}
   finishPose(e,dt);}
 function finishPose(e,dt){const p=e.g.position;
   if(e.kind==='heli'){e.rot.rotation.y+=dt*38;e.tr.rotation.z+=dt*60;e.g.rotation.set(0,e.heading,-.1+Math.sin(battleT*1.3)*.04);}
