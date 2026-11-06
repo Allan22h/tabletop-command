@@ -2702,10 +2702,11 @@ function spawnUnit(kind,x,z,side){const st=side==='att'?Object.assign({},STATS[k
   const e=Object.assign({kind,side,st,hp:st.hp,g,turret,tipX,wheels,heading:side==='att'?0:Math.PI,cd:rand(.3,1.2),tgt:null,retarget:0,air:!!st.air,alive:true,pitch:0,kick:0,bar:makeBar(st.bar)},extra);
   (side==='att'?atts:defs).push(e);return e;}
 const aliveT=t=>t&&t.alive;
-// pref 'def': guns first (towers, mortar pits, anti-tank, air defense), then the buildings that send out defenders
-// (barracks, motor pool, drone hangar, comms tower), then anything left
-function nearestBld(p,pref){let best=null,bd=1e9;for(const b of blds){if(!b.alive||(pref==='def'&&!b.def)||(pref==='garrison'&&!b.garrison))continue;const d=Math.hypot(b.x-p.x,b.z-p.z)-b.r;if(d<bd){bd=d;best=b;}}
-  return best||(pref==='def'?nearestBld(p,'garrison'):pref?nearestBld(p,null):null);}
+function nearestBld(p,pref){let best=null,bd=1e9;for(const b of blds){if(!b.alive||(pref==='def'&&!b.def))continue;const d=Math.hypot(b.x-p.x,b.z-p.z)-b.r;if(d<bd){bd=d;best=b;}}
+  return best||(pref?nearestBld(p,null):null);}
+// tanks: the closest gun defense or enemy ground troop, however far; buildings only when neither is left
+function tankTarget(p){let best=null,bd=1e9;for(const b of blds){if(!b.alive||!b.def)continue;const d=Math.hypot(b.x-p.x,b.z-p.z)-b.r;if(d<bd){bd=d;best=b;}}
+  const u=nearestUnit(defs,p,bd,u=>!u.air);return u||best||nearestBld(p,null);}
 function nearestUnit(list,p,maxD,filter){let best=null,bd=maxD;for(const u of list){if(!u.alive||(filter&&!filter(u)))continue;const d=Math.hypot(u.g.position.x-p.x,u.g.position.z-p.z);if(d<bd){bd=d;best=u;}}return best;}
 const tpos=t=>t.g&&!t.wall&&t.st?t.g.position:t.p;
 const tdist=(e,t)=>{const p=tpos(t);return Math.hypot(p.x-e.g.position.x,p.z-e.g.position.z)-(t.r||.2);};
@@ -2782,10 +2783,11 @@ function walkPose(e,dt){const L=e.g.userData.legs;if(!L)return;const mv=battleT-
   const s=Math.sin(e.walkPh||0)*.65*e.walkA;L[0].rotation.z=s;L[1].rotation.z=-s;const A=e.g.userData.arms;if(A){A[0].rotation.y=s*.25;A[1].rotation.y=-s*.25;}}
 function updateUnit(e,dt){const st=e.st,p=e.g.position;e.kick*=Math.pow(.02,dt);e.retarget-=dt;walkPose(e,dt);
   const enemies=e.side==='att'?defs:atts;
-  if(e.retarget<=0||!aliveT(e.tgt)){e.retarget=1;
-    // tanks are Clash Giants: always the nearest defense however far away, never troops or other buildings on the way (walls in the path still get breached)
-    if(e.side==='att'){const g=st.kamikaze||e.kind==='tank'?null:nearestUnit(defs,p,3.2,u=>!u.air);e.tgt=g||nearestBld(p,st.pref);
-      if(!g&&e.kind!=='tank'&&e.teethT>1&&e.tgt&&tdist(e,e.tgt)>st.range){const n=nearestBld(p);if(n&&tdist(e,n)<=st.range)e.tgt=n;}}
+  // tanks lock on like Clash Giants: they keep their target until it is destroyed, then take the closest defense or enemy troop (walls in the path still get breached)
+  if(e.side==='att'&&e.kind==='tank'){if(!aliveT(e.tgt))e.tgt=tankTarget(p);}
+  else if(e.retarget<=0||!aliveT(e.tgt)){e.retarget=1;
+    if(e.side==='att'){const g=st.kamikaze?null:nearestUnit(defs,p,3.2,u=>!u.air);e.tgt=g||nearestBld(p,st.pref);
+      if(!g&&e.teethT>1&&e.tgt&&tdist(e,e.tgt)>st.range){const n=nearestBld(p);if(n&&tdist(e,n)<=st.range)e.tgt=n;}}
     else e.tgt=nearestUnit(atts,p,40,u=>e.kind==='gtank'?!u.air:true);}
   if(e.wallTgt&&!e.wallTgt.alive)e.wallTgt=null;
   const t=e.wallTgt||e.tgt;
