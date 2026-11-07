@@ -1475,7 +1475,10 @@ function resetItems(){teethL=[];wireL=[];mines=[];itemEnts=[];}
 // No two camps are laid out alike, the way different commanders build: the plan may be mirrored, the HQ and the wall around it sit
 // in a different spot with the opening on a different side, buildings of the same role trade places, the inner barrier lines
 // change and the obstacles in front of the gate are spread differently. The outer camp wall and its west gate stay.
-function genBase(h){resetItems();const list=[];[...BUILD_ORDER,...ITEM_ORDER].forEach(k=>{for(let s=0;s<(k==='barrier'?barExtra(h):LIMIT[k](h));s++)list.push({k,s,lv:k==='hq'?h:clamp(maxLv(k,h)-(Math.random()<.35?1:0),1,maxLv(k,h))});});
+// levels: like a real player part way through upgrading, some buildings are maxed for the HQ and the rest a level or a few behind.
+// Each camp has its own pace: one commander keeps almost everything maxed, another has more upgrades still to go
+function robotLv(k,h,pace){const mx=maxLv(k,h);if(k==='hq'||BK[k].item||Math.random()<pace)return k==='hq'?h:mx;const r=Math.random();return clamp(mx-(r<.7?1:r<.95?2:3),1,mx);}
+function genBase(h){resetItems();const list=[],pace=rand(.45,.85);[...BUILD_ORDER,...ITEM_ORDER].forEach(k=>{for(let s=0;s<(k==='barrier'?barExtra(h):LIMIT[k](h));s++)list.push({k,s,lv:robotLv(k,h,pace)});});
   const c=cmpFor(h),fz=Math.random()<.5?-1:1,j=d=>rand(-d,d),mix=a=>{for(let i=a.length-1;i>0;i--){const k=Math.floor(Math.random()*(i+1));[a[i],a[k]]=[a[k],a[i]];}return a;};
   const hx=rand(6.3,Math.min(8.1,c.x1-2)),hz=j(Math.max(0,Math.min(1,c.z-2.6)));
   // buildings of one role swap their spots: defenses with defenses, storages with storages, the rest among themselves
