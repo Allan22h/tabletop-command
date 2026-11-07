@@ -1996,7 +1996,9 @@ function armyCards(){raidArmy={};ARMY_ORDER.forEach(k=>{const have=BASE.army[k]|
 function consumeArmy(){if(!raidArmy)return;ARMY_ORDER.forEach(k=>{const c=cards.find(c=>c.k===k);BASE.army[k]=Math.max(0,(BASE.army[k]||0)-(raidArmy[k]||0))+(c?c.n:0);});raidArmy=null;saveBase();}
 // before a raid, like Clash of Clans: the army you are bringing, each unit with − and +. It lives in the base menu so it works in the headset too
 let raidPick=null,raidGo=false;
-function openRaidPick(keep){if(state!=='base')enterBase();if(!(keep&&raidPick)){raidPick={};ARMY_ORDER.forEach(k=>raidPick[k]=BASE.army[k]||0);}placing=null;baseTab='raid';sheet(true);renderBasePanel();}
+// reopened for the same target it keeps what you left behind, and brings along anything trained or removed since
+function openRaidPick(keep){if(state!=='base')enterBase();const old=keep&&raidPick,had=old&&raidPick._had||{};raidPick={_had:{}};
+  ARMY_ORDER.forEach(k=>{const n=BASE.army[k]||0;raidPick._had[k]=n;raidPick[k]=old?clamp((old[k]||0)+n-(had[k]||0),0,n):n;});placing=null;baseTab='raid';sheet(true);renderBasePanel();}
 const pickCount=()=>ARMY_ORDER.reduce((s,k)=>s+(raidPick&&raidPick[k]||0),0);
 function panelRaid(){let h=`<span class="lbl">Your army for this raid</span><span class="muted">Tap − or + to choose what you bring. Units you leave behind stay at home for the next raid.</span><div class="army">`;
   const ks=ARMY_ORDER.filter(k=>(BASE.army[k]||0)>0);
