@@ -3195,13 +3195,13 @@ function cardLocked(i){return levelLocked(cards[i])||(tut&&((tut.step<2&&cards[i
 function armCard(i){if(state!=='battle'||!cards[i]||cards[i].n<=0||cardLocked(i))return;armed=armed===i?null:i;zone.visible=zoneEdge.visible=armed!=null&&cards[armed].k!=='strike';refreshCards();haptic();}
 // unit pictures for the cards: each model is rendered once per faction on a small separate canvas and kept as an image
 let thumbR=null;const thumbs={},thumbScene=new T.Scene(),thumbCam=new T.PerspectiveCamera(28,1.6,.01,100);
-thumbScene.add(new T.HemisphereLight(0xfff4e0,0x3a4430,1.15));{const l=new T.DirectionalLight(0xffffff,1.7);l.position.set(2,4,3);thumbScene.add(l);}
+thumbScene.add(new T.HemisphereLight(0xfff4e0,0x3a4430,.62));{const l=new T.DirectionalLight(0xfff2e0,1.0);l.position.set(2,4,3);thumbScene.add(l);}
 function unitModel(k){if(k==='tank')return tankFor(cur).g;if(k==='truck'||k==='jlav')return truckFor(cur,k==='jlav').g;if(k==='heli')return heliFor(cur).g;
   if(k==='strike'){const j=jetFor(cur);j.ab.visible=false;return j.g;}if(k==='drone')return cur==='ru'?makeLancet():makeQuad();if(k==='mortar')return makeMortarTeam(0,0).g;
   const g=new T.Group();[[0,0,0],[-.13,.1,.25],[-.12,-.11,-.2]].forEach(([x,z,y])=>soldier(x,z,0,y,M.camo,g));return g;}
 function thumb(k){const key=cur+k;if(thumbs[key])return thumbs[key];
   try{if(!thumbR){thumbR=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});thumbR.setSize(192,120);thumbR.setClearColor(0,0);
-      thumbR.outputEncoding=T.sRGBEncoding;thumbR.toneMapping=T.ACESFilmicToneMapping;}
+      thumbR.outputEncoding=T.sRGBEncoding;thumbR.toneMapping=T.ACESFilmicToneMapping;thumbR.toneMappingExposure=.95;}
     const g=unitModel(k);if(g.parent)g.parent.remove(g);thumbScene.add(g);g.position.set(0,0,0);g.rotation.set(0,0,0);g.visible=true;g.updateMatrixWorld(true);
     const bx=new T.Box3().setFromObject(g),c=bx.getCenter(V()),sz=bx.getSize(V()),r=Math.max(sz.x*.5,sz.y*.8,sz.z*.42)*(k==='heli'?.62:1);
     thumbCam.position.copy(c).add(V(.42,.5,.76).normalize().multiplyScalar(r*3.1));thumbCam.lookAt(c);thumbR.render(thumbScene,thumbCam);
