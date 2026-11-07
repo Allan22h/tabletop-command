@@ -1953,7 +1953,7 @@ function initBase(){const el=$('basePanel');makeResIcons();sheet(false);
     else if(a==='wx'){nextWx=WX_ORDER[(WX_ORDER.indexOf(nextWx)+1)%WX_ORDER.length];renderBasePanel();}
     else if(a==='raid'){begin('full');}
     else if(a==='pickall'||a==='picknone'){ARMY_ORDER.forEach(k=>raidPick[k]=a==='pickall'?BASE.army[k]||0:0);renderBasePanel();}
-    else if(a==='raidback'){raidPick=null;baseTab='army';renderBasePanel();if(mapTarget){mapTarget=null;openMap();}}
+    else if(a==='raidback'){raidPick=null;baseTab='army';renderBasePanel();if(mapTarget){mapTarget=null;xrMode?openGlobe():openMap();}}
     else if(a==='raidgo'){if(!pickCount())return;baseTab='army';raidGo=true;try{begin('full');}finally{raidGo=false;}}else if(a==='menu'){show('basePanel',false);goMenu();}};
   $('card').onclick=e=>{const t=e.target.closest('button');if(t)doAct(t.dataset.c);};
   $('daily').onclick=e=>{const t=e.target.closest('button');if(!t)return;if(t.dataset.act==='claimday')claimLogin();else if(t.dataset.act==='later')showDaily(false);};
@@ -3457,7 +3457,7 @@ function gazePoint(){const c=headCam();_o.setFromMatrixPosition(c.matrixWorld);_
   const y=boardY();if(_d.y<-.05){const t=(y-_o.y)/_d.y;if(t>0&&t<20)return _o.clone().addScaledVector(_d,t);}scene.updateMatrixWorld();return scene.localToWorld(PIV.clone());}
 function turnBoard(a){scene.updateMatrixWorld();const p=scene.localToWorld(PIV.clone());scene.position.copy(rotY(scene.position.clone().sub(p),a).add(p));scene.rotation.y+=a;}
 const sticks=[0,0];
-function xrFrame(dt){
+function xrFrame(dt){if(globeOn){globeFrame(dt);return;}
   if(grab2){const [a,b]=ctrls.map(o=>o.position),mid=a.clone().add(b).multiplyScalar(.5),d=wrap(Math.atan2(b.x-a.x,b.z-a.z)-grab2.ang0);
     const s=clamp(grab2.s0*a.distanceTo(b)/grab2.d0,XS_MIN,XS_MAX),k=s/grab2.s0;
     const off=rotY(grab2.pos0.clone().sub(grab2.mid0),d).multiplyScalar(k);scene.position.set(mid.x+off.x,grab2.pos0.y+G*(grab2.s0-s)+(mid.y-grab2.mid0.y),mid.z+off.z);
@@ -3492,8 +3492,10 @@ function xrFrame(dt){
     const p=scene.worldToLocal(h.point.clone());const ok=cards[armed].k==='strike'||!!snapDeploy(p.x,p.z);const s=cards[armed].k==='strike'?[p.x,p.z]:(snapDeploy(p.x,p.z)||[p.x,p.z]);
     reticle.position.set(s[0],groundY(s[0],s[1])+.05,s[1]);reticle.material.color.setHex(ok?0x6fd36a:0xe0503c);reticle.visible=true;break;}}
 function xrSelect(c){ctrlRay(c);if(xrExit.visible&&ray.intersectObject(xrExit,false).length){haptic();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});return;}
+  if(globeOn){globeSelect(c);return;}
   if(xrCoachSelect(c)||xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersectObjects([...xrCards,...xrBtns].filter(m=>m.visible),false)[0];
   if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='tuts'||u.mode==='back'){haptic();xrTutPick=u.mode==='tuts';xrDirty=true;return;}if(u.mode==='coach'){haptic();xrTutPick=false;coachStart();return;}xrTutPick=false;if(u.mode==='base'){haptic();enterBase();return;}if(u.mode==='menu'){haptic();goMenu();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});}
+    else if(u.mode==='full'&&state==='base'&&mapOn&&!mapTarget)openGlobe(); // Attack! opens the world map as a globe
     else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();begin(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
 function setShadow(k){Object.assign(sun.shadow.camera,{left:-(16+MAPE)*k,right:(16+MAPE)*k,top:(15+MAPE)*k,bottom:-(15+MAPE)*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
@@ -3529,10 +3531,104 @@ async function enterXR(){try{const quest=/OculusBrowser|Quest/i.test(navigator.u
     $('app').classList.add('xr');s.addEventListener('end',exitXR);roomLight=null;if(s.requestLightProbe)s.requestLightProbe().then(p=>{roomLight={p,t:0};}).catch(()=>{});
     if(s.domOverlayState){xtEl.hidden=false;setTimeout(()=>prompt('Drag to move the board, pinch to zoom, twist with two fingers to turn it.',5),600);}}
   catch(err){prompt('Mixed reality could not start here. Open this page in the Meta Quest browser from its own address.',5);}}
-function exitXR(){xrMode=false;roomLight=null;sun.position.set(-9,20,9);if(state==='base')renderBasePanel();M.terrain.bumpScale=TERRAIN_BUMP;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);setWeather(wx);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
+function exitXR(){if(globeOn)closeGlobe();xrMode=false;roomLight=null;sun.position.set(-9,20,9);if(state==='base')renderBasePanel();M.terrain.bumpScale=TERRAIN_BUMP;grab=grab2=null;stage.background=new T.Color(BG);stage.fog=new T.Fog(BG,60,170);setWeather(wx);scene.scale.setScalar(1);scene.rotation.y=0;scene.position.set(0,0,0);
   setShadow(1);xrUI.visible=false;reticle.visible=false;$('app').classList.remove('xr');xtEl.hidden=true;xt=null;}
 if(navigator.xr&&navigator.xr.isSessionSupported){navigator.xr.isSessionSupported('immersive-ar').then(ok=>{if(ok)$('xrBtn').hidden=false;}).catch(()=>{});}
 $('xrBtn').onclick=enterXR;
+/* ---------- the world map in the headset: a globe floating over the table. The flat map runs unseen in its frame and keeps the world
+   (bases, shields, regions); the globe shows its picture and bases. Point at a base and pinch it, then Attack opens your army as on a phone.
+   Right stick or a squeeze-and-drag spins it ---------- */
+var globeOn=false;let GL=null,glSel=null,glHover=null,glSpin=0,glSpinTo=null,glGrab=null,glQ=[];
+const GL_R=.22,GL_FN={nato:'USA / NATO',ru:'Russia',cn:'China',eu:'Europe / Middle East'},GL_FC={nato:'#4f86d9',ru:'#d0533f',cn:'#e0b23a',eu:'#4fae7a'};
+function glTex(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;return {c,x:c.getContext('2d'),t};}
+// the map's frame, made if needed and kept out of sight; waits until its world is ready
+function mapWorld(cb){if(!mapFrame){mapFrame=document.createElement('iframe');mapFrame.id='worldMap';mapFrame.title='World map';mapFrame.srcdoc=MAP_HTML;$('app').appendChild(mapFrame);}
+  mapFrame.hidden=false;mapFrame.style.visibility='hidden';
+  const ready=()=>{try{const w=mapFrame.contentWindow;return w&&w.eval&&w.eval("typeof cells!=='undefined'&&!!boardImg.getAttribute('href')")?w:null;}catch(_){return null;}};
+  let n=0;const tick=()=>{const w=ready();if(w){try{w.tcMapShow&&w.tcMapShow();}catch(_){}cb(w);}else if(++n<100)setTimeout(tick,100);};tick();}
+function openGlobe(){if(globeOn)return;haptic();prompt('Opening the world map…',2);
+  mapWorld(w=>{if(!xrMode)return;buildGlobe(w);globeOn=true;scene.visible=false;xrUI.visible=false;grab=grab2=null;glSel=null;glDrawCard();});}
+function closeGlobe(){if(!globeOn)return;globeOn=false;if(GL)stage.remove(GL.holder);scene.visible=true;xrUI.visible=xrMode;xrDirty=true;glGrab=null;
+  if(mapFrame){mapFrame.hidden=true;mapFrame.style.visibility='';}}
+function buildGlobe(w){if(GL){stage.remove(GL.holder);GL.holder.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose();}});}
+  const info=JSON.parse(w.eval(`JSON.stringify({W:+boardImg.getAttribute('width'),H:+boardImg.getAttribute('height'),img:boardImg.getAttribute('href'),
+    marks:cells.map((c,i)=>c.mark&&markVisible(c.mark)?{i,x:c.x,y:c.y,t:c.mark.t,f:c.mark.fac||c.fac,n:c.mark.name,hq:c.mark.hq,sh:c.mark.shield||0,rank:c.mark.rank||'',
+      loot:c.mark.loot||null,reg:seeds[c.rg]?seeds[c.rg].name:''}:null).filter(Boolean)})`));
+  const holder=new T.Group(),tilt=new T.Group(),spin=new T.Group();holder.add(tilt);tilt.add(spin);tilt.rotation.x=-.5;stage.add(holder);
+  holder.add(new T.AmbientLight(0xbfcbe0,.55));const dl=new T.DirectionalLight(0xffeedd,.9);dl.position.set(.6,1,.8);holder.add(dl);
+  // where: over the middle of the board, a little above eye-to-table height, facing you
+  scene.updateMatrixWorld();const pw=scene.localToWorld(PIV.clone()),hp=V().setFromMatrixPosition(headCam().matrixWorld);
+  holder.position.set(pw.x,Math.max(pw.y+.32,Math.min(hp.y-.25,pw.y+.5)),pw.z);holder.rotation.y=Math.atan2(hp.x-pw.x,hp.z-pw.z);
+  const R=GL_R,PH=Math.PI*.95,TH=PH*info.H/info.W*1.15,P0=Math.PI/2-PH/2,T0=Math.PI/2-TH/2;
+  spin.add(new T.Mesh(new T.SphereGeometry(R,64,48),new T.MeshStandardMaterial({color:0x0b1a24,roughness:.6})));
+  spin.add(new T.Mesh(new T.SphereGeometry(R*1.001,36,18),new T.MeshBasicMaterial({color:0x3a6f8f,wireframe:true,transparent:true,opacity:.12})));
+  const tx=new T.TextureLoader().load(info.img);tx.encoding=T.sRGBEncoding;tx.anisotropy=8;
+  spin.add(new T.Mesh(new T.SphereGeometry(R*1.002,96,72,P0,PH,T0,TH),new T.MeshStandardMaterial({map:tx,roughness:.8})));
+  const glow=new T.Mesh(new T.SphereGeometry(R*1.08,48,32),new T.ShaderMaterial({transparent:true,side:T.BackSide,depthWrite:false,
+    vertexShader:'varying vec3 n;void main(){n=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:'varying vec3 n;void main(){float a=pow(.75-dot(n,vec3(0,0,1.)),3.);gl_FragColor=vec4(.35,.7,1.,a*.55);}'}));holder.add(glow);
+  const brass=new T.MeshStandardMaterial({color:0xa07a3c,metalness:.75,roughness:.35}),ring=new T.Mesh(new T.TorusGeometry(R*.82,.005,10,72),brass);ring.rotation.x=Math.PI/2;ring.position.y=-R*.6;holder.add(ring);
+  const onG=(x,y,h=0)=>{const ph=P0+x/info.W*PH,th=T0+y/info.H*TH,r=R*(1.004+h);return V(-Math.cos(ph)*Math.sin(th)*r,Math.cos(th)*r,Math.sin(ph)*Math.sin(th)*r);};
+  const up=V(0,1,0),pins=[],hits=[],hitM=new T.MeshBasicMaterial({visible:false}),k=R/.36;
+  for(const m of info.marks){const p=onG(m.x,m.y);
+    if(m.t==='res'){const d=new T.Mesh(new T.OctahedronGeometry(.006*k),new T.MeshStandardMaterial({color:0x9ad1ff,emissive:0x2a6aa0,emissiveIntensity:.7}));d.position.copy(onG(m.x,m.y,.03));spin.add(d);continue;}
+    const col=m.t==='me'?'#ffd27a':GL_FC[m.f]||'#ccc',g=new T.Group();g.position.copy(p);g.quaternion.setFromUnitVectors(up,p.clone().normalize());g.scale.setScalar(k);spin.add(g);
+    g.add(new T.Mesh(new T.CylinderGeometry(.011,.012,.004,16),new T.MeshStandardMaterial({color:col,roughness:.5})));
+    const blk=new T.Mesh(new T.BoxGeometry(.01,.009,.01),new T.MeshStandardMaterial({color:0x6b6d62,roughness:.8}));blk.position.y=.007;g.add(blk);
+    const pole=new T.Mesh(new T.CylinderGeometry(.0009,.0009,.034,5),new T.MeshStandardMaterial({color:0xdddddd}));pole.position.set(.004,.022,0);g.add(pole);
+    const flag=new T.Mesh(new T.PlaneGeometry(.015,.01),new T.MeshStandardMaterial({color:col,side:T.DoubleSide,emissive:col,emissiveIntensity:.3}));flag.position.set(.0115,.034,0);g.add(flag);
+    const L=m.t==='me'?glTex(300,80):glTex(128,128),x=L.x;
+    if(m.t==='me'){x.fillStyle='rgba(13,16,14,.88)';rrect(x,4,8,292,64,16);x.fill();x.strokeStyle=col;x.lineWidth=4;x.stroke();x.fillStyle='#fff';x.font='800 34px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('★ YOU · HQ '+PLAYER_HQ,150,41);}
+    else{x.fillStyle=col;x.beginPath();x.arc(64,64,56,0,7);x.fill();x.lineWidth=8;x.strokeStyle='#101310';x.stroke();x.fillStyle='#fff';x.font='800 64px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(m.hq,64,68);}
+    const lab=new T.Sprite(new T.SpriteMaterial({map:L.t}));lab.scale.set(m.t==='me'?.075:.022,m.t==='me'?.02:.022,1);lab.position.y=.055;g.add(lab);
+    const hit=new T.Mesh(new T.SphereGeometry(.024,8,6),hitM);hit.position.y=.03;g.add(hit);
+    const pin={g,m,hit,ally:m.t==='me'||m.f===cur};hit.userData.pin=pin;pins.push(pin);hits.push(hit);}
+  const sel=new T.Mesh(new T.RingGeometry(.016,.02,32),new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,side:T.DoubleSide}));sel.rotation.x=-Math.PI/2;sel.position.y=.003;sel.visible=false;
+  // the card beside the globe and the button strip under it
+  const card=glTex(900,560),cardM=new T.Mesh(new T.PlaneGeometry(.3,.187),new T.MeshBasicMaterial({map:card.t,transparent:true,depthTest:false}));cardM.renderOrder=12;cardM.position.set(R+.2,.06,.05);holder.add(cardM);
+  const strip=glTex(1000,150),stripM=new T.Mesh(new T.PlaneGeometry(.4,.06),new T.MeshBasicMaterial({map:strip.t,transparent:true,depthTest:false}));stripM.renderOrder=12;stripM.position.set(0,-R-.1,.12);holder.add(stripM);
+  {const x=strip.x;[['‹ Base',10,300,0],['Find a match',330,660,1]].forEach(([t,a,b,hi])=>{x.fillStyle=hi?'#f2c46b':'rgba(20,24,21,.92)';rrect(x,a,20,b-a,110,26);x.fill();
+    x.fillStyle=hi?'#1a1408':'#fff';x.font='800 46px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(t,(a+b)/2,76);});strip.t.needsUpdate=true;}
+  GL={holder,tilt,spin,pins,hits,sel,card,cardM,stripM,R};glSpin=0;glSpinTo=null;glQ=[];spin.rotation.y=0;}
+const glBtns={card:[],strip:[[10,300,'base'],[330,660,'match']]};
+function glDrawCard(){if(!GL)return;const {x,c,t}=GL.card;x.clearRect(0,0,c.width,c.height);GL.cardM.visible=true;glBtns.card=[];
+  x.fillStyle='rgba(16,20,17,.94)';rrect(x,6,6,888,548,34);x.fill();x.strokeStyle='rgba(255,255,255,.14)';x.lineWidth=3;x.stroke();x.textBaseline='middle';
+  const btn=(X,w,label,hi,act)=>{x.fillStyle=hi?'#f2c46b':'rgba(255,255,255,.09)';rrect(x,X,420,w,100,22);x.fill();x.fillStyle=hi?'#1a1408':'#fff';x.font='800 36px sans-serif';x.textAlign='center';x.fillText(label,X+w/2,472);x.textAlign='left';glBtns.card.push([X,X+w,act]);};
+  if(!glSel){x.fillStyle='#ffd27a';x.font='800 50px sans-serif';x.fillText('WORLD MAP',44,90);x.fillStyle='#d8dccf';x.font='500 32px sans-serif';
+    [Verb()+' an enemy base on the globe to see it.','Find a match picks one near your HQ level.','Right stick or squeeze and drag to spin.'].forEach((s,i)=>x.fillText(s,44,180+i*58));
+    btn(44,380,'Find a match',1,'match');t.needsUpdate=true;return;}
+  const m=glSel.m,col=m.t==='me'?'#ffd27a':GL_FC[m.f];x.fillStyle=col;rrect(x,44,44,96,96,20);x.fill();x.fillStyle='#fff';x.font='800 46px sans-serif';x.textAlign='center';x.fillText(m.t==='me'?'★':m.hq,92,94);x.textAlign='left';
+  let fs=52;x.font=`800 ${fs}px sans-serif`;const nm=m.t==='me'?'Your base':m.n;while(x.measureText(nm).width>620&&fs>28){fs-=2;x.font=`800 ${fs}px sans-serif`;}x.fillText(nm,168,80);
+  x.fillStyle='#b9c0b5';x.font='500 28px sans-serif';x.fillText(m.t==='me'?'HQ '+PLAYER_HQ+' · '+GL_FN[cur]:(m.rank?m.rank+' · ':'')+'HQ '+m.hq+' · '+GL_FN[m.f],168,126);
+  const box=(X,a,b)=>{x.fillStyle='rgba(255,255,255,.06)';rrect(x,X,170,390,110,18);x.fill();x.fillStyle='#9aa396';x.font='500 26px sans-serif';x.fillText(a,X+24,204);x.fillStyle='#fff';x.font='700 32px sans-serif';x.fillText(b,X+24,248);};
+  const L=m.loot;box(44,'Loot available',L&&!glSel.ally?`${fmtN(L.g)} · ${fmtN(L.f)} · ${fmtN(L.m)}`:'—');box(462,'Region',(m.reg||'—').slice(0,20));
+  x.fillStyle='#c9d1c4';x.font='500 28px sans-serif';
+  x.fillText(m.t==='me'?'Your own base.':glSel.ally?'An ally in your faction. You can only raid other factions.':m.sh?`🛡 Shielded for ${m.sh}h. You can't attack it yet.`:'Win here to take loot and move this region\'s control bar.',44,340);
+  if(glSel.ally||m.sh){btn(44,390,'Next target',0,'next');btn(462,390,'Close',0,'close');}else{btn(44,250,'Attack',1,'attack');btn(318,250,'Next',0,'next');btn(592,262,'Close',0,'close');}
+  t.needsUpdate=true;}
+function glSelect(pin,turn){if(!GL)return;glSel=pin;if(pin){pin.g.add(GL.sel);GL.sel.visible=true;if(turn){const p=pin.g.position;glSpinTo=Math.atan2(-p.x,p.z);}}else GL.sel.visible=false;
+  GL.pins.forEach(p=>p.g.scale.setScalar((p===pin?1.4:1)*GL_R/.36));glDrawCard();haptic();}
+function glMatch(){if(!GL)return;if(!glQ.length)glQ=GL.pins.filter(p=>!p.ally&&!p.m.sh&&p.m.t==='player'&&Math.abs(p.m.hq-PLAYER_HQ)<=1).sort(()=>Math.random()-.5);
+  if(!glQ.length)glQ=GL.pins.filter(p=>!p.ally&&!p.m.sh&&p.m.t==='player').sort((a,b)=>Math.abs(a.m.hq-PLAYER_HQ)-Math.abs(b.m.hq-PLAYER_HQ)).slice(0,5);
+  const p=glQ.shift();if(!p){prompt('Everyone nearby is shielded. Try again later.',3);return;}glSelect(p,true);}
+function glAttack(){const m=glSel&&glSel.m;if(!m)return;const w=mapFrame&&mapFrame.contentWindow;closeGlobe();
+  try{w.eval(`startRaid(cells[${m.i}],cells[${m.i}].rg)`);}catch(e){console.error(e);begin('full');}}
+function glUV(hit,obj,list,W,H){const u=hit.uv;if(!u)return null;const px=u.x*W,py=(1-u.y)*H;for(const [a,b,act] of list)if(px>=a&&px<=b&&py>=(obj==='card'?420:20)&&py<=(obj==='card'?520:130))return act;return null;}
+function globeSelect(c){if(!GL)return;ctrlRay(c);
+  const ui=ray.intersectObjects([GL.cardM,GL.stripM],false)[0];
+  if(ui){const card=ui.object===GL.cardM,act=glUV(ui,card?'card':'strip',card?glBtns.card:glBtns.strip,card?900:1000,card?560:150);
+    if(act==='base'){haptic();closeGlobe();}else if(act==='match')glMatch();else if(act==='next'){glMatch();}else if(act==='close')glSelect(null);else if(act==='attack'){haptic();glAttack();}return;}
+  const h=ray.intersectObjects(GL.hits,false)[0];if(h)glSelect(h.object.userData.pin,false);}
+function globeFrame(dt){if(!GL)return;const hp=V().setFromMatrixPosition(headCam().matrixWorld);
+  // spin: the right stick, a squeeze-and-drag, or easing toward a picked base
+  ctrls.forEach(c=>{const src=c.userData.src,gp=src&&src.gamepad;if(!gp)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0);if(Math.abs(ax)>.2){glSpin+=ax*dt*1.6;glSpinTo=null;}});
+  const sq=ctrls.find(c=>c.userData.sq);if(sq){const lp=GL.holder.worldToLocal(sq.position.clone());if(glGrab&&glGrab.c===sq){glSpin+=(lp.x-glGrab.x)*7;glSpinTo=null;}glGrab={c:sq,x:lp.x};}else glGrab=null;
+  if(glSpinTo!=null){const d=wrap(glSpinTo-glSpin);glSpin+=d*Math.min(1,dt*4);if(Math.abs(d)<.002)glSpinTo=null;}
+  GL.spin.rotation.y=glSpin;GL.cardM.lookAt(hp);GL.stripM.lookAt(hp);
+  if(GL.sel.visible)GL.sel.scale.setScalar(1+.15*Math.sin(performance.now()/250));
+  // the base under the laser grows a little
+  let hov=null;for(const c of ctrls){if(!c.userData.src)continue;ctrlRay(c);const h=ray.intersectObjects(GL.hits,false)[0];if(h){hov=h.object.userData.pin;break;}}
+  if(hov!==glHover){if(glHover&&glHover!==glSel)glHover.g.scale.setScalar(GL_R/.36);glHover=hov;if(hov&&hov!==glSel)hov.g.scale.setScalar(1.25*GL_R/.36);}}
 
 
 /* ---------- menu + buttons ---------- */
@@ -3598,7 +3694,7 @@ function begin(m){if(m==='full'&&armyEmpty()){enterBase();baseTab='army';renderB
 let mapOn=true;try{mapOn=localStorage.getItem('tc.mapOn')!=='0';}catch(_){}
 let mapTarget=null,mapPending=null,mapFrame=null;
 function attackPressed(){if(mapTarget&&state==='base'){if(raidPick&&pickCount()){raidGo=true;try{begin('full');}finally{raidGo=false;}}else openRaidPick();return;}
-  if(mapOn&&!xrMode)openMap();else begin('full');}
+  if(mapOn)xrMode?openGlobe():openMap();else begin('full');}
 function openMap(){if(!mapFrame){mapFrame=document.createElement('iframe');mapFrame.id='worldMap';mapFrame.title='World map';mapFrame.srcdoc=MAP_HTML;$('app').appendChild(mapFrame);}
   else{mapFrame.hidden=false;try{mapFrame.contentWindow.tcMapShow&&mapFrame.contentWindow.tcMapShow();}catch(_){}}
   mapFrame.hidden=false;$('app').classList.add('mapOpen');}
