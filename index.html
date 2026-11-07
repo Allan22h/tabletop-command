@@ -221,16 +221,16 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* unit cards, like a Clash troop bar: just the picture and the count, small so the base stays in view */
 .card{width:66px;height:66px;min-height:0;padding:3px;gap:0;border-radius:11px;display:grid;place-items:center;text-align:center;
   background:rgba(18,22,18,.82);border-color:rgba(255,255,255,.16);backdrop-filter:blur(4px)}
-.card .ci{width:100%;height:50px;margin:0;object-fit:cover}
+.card .ci{position:absolute;top:3px;left:3px;width:calc(100% - 6px);height:calc(100% - 6px);margin:0;object-fit:cover;border-radius:8px} /* the picture fills the card, leaving the same edge all round */
 .card .cn,.card .ck{display:none}
 .card .cc{position:absolute;top:2px;left:5px;font:700 13px/1 var(--f-display);color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000}
 .card.on{background:rgba(255,210,122,.32);border:2px solid var(--gold);box-shadow:0 0 12px rgba(255,210,122,.55)}.card.on .cc{color:#fff}
-.card.locked .cc{position:static;font-size:10px;color:var(--muted);text-shadow:none}
+.card.locked .cc{top:auto;bottom:4px;left:0;right:0;font-size:10px}
 .tray{gap:6px;padding-top:6px;background:linear-gradient(0deg,rgba(8,10,9,.5),rgba(8,10,9,0))}
 /* raid screen on phones, upright or sideways (Clash attack style): loot top left, timer and stars top right, End bottom left,
    no enemy info or Menu label, everything small and without panels */
 @media (max-width:899px),(max-height:520px){
-  .card{width:54px;height:54px}.card .ci{height:40px}.card .cc{font-size:12px}
+  .card{width:54px;height:54px}.card .ci{border-radius:7px}.card .cc{font-size:12px}
   #app.raid .hud{display:block}
   #app.raid .hud>.grp{position:absolute;top:calc(6px + env(safe-area-inset-top,0px));gap:4px}
   #app.raid .hud>.grp:first-child{right:max(8px,env(safe-area-inset-right,0px));flex-direction:column;align-items:flex-end}
