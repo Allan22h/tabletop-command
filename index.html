@@ -3179,7 +3179,7 @@ function radioVoice(text){if(!TTS||!prefs.voice)return radioSfx(text);const fx=R
   const st=noiseSrc(t,12),stf=filt('bandpass',1700,.5),stg=AC.createGain();st.connect(stf).connect(stg).connect(bus);stg.gain.setValueAtTime(0,t);stg.gain.linearRampToValueAtTime(fx.hiss*.7,t+.1);
   TTS.cancel();const u=new SpeechSynthesisUtterance(text),v=ttsVoice();if(v){u.voice=v;u.lang=v.lang;}else u.lang=cur==='eu'?'en-GB':'en-US';
   u.rate=1.02;u.pitch=(v&&v._male?1:.72)*(cur==='ru'?.9:1);u.volume=1;let done=false;
-  const end=()=>{if(done)return;done=true;const te=AC.currentTime+.02;stg.gain.cancelScheduledValues(te);stg.gain.setValueAtTime(fx.hiss*.7,te);stg.gain.linearRampToValueAtTime(0,te+.05);try{st.stop(te+.3);}catch(e){}
+  const end=()=>{if(done)return;done=true;reviveAudio();const te=AC.currentTime+.02;stg.gain.cancelScheduledValues(te);stg.gain.setValueAtTime(fx.hiss*.7,te);stg.gain.linearRampToValueAtTime(0,te+.05);try{st.stop(te+.3);}catch(e){}
     const tl=noiseSrc(te,.18),tf=filt('bandpass',2600,.5),tg=AC.createGain();tl.connect(tf).connect(tg).connect(bus);env(tg,te,.16,.8,.003,.12); // squelch tail + end beep
     if(fx.beep){const bp=AC.createOscillator(),bg=AC.createGain();bp.type='sine';bp.frequency.setValueAtTime(fx.beep,te+.17);if(fx.chirp)bp.frequency.linearRampToValueAtTime(fx.beep*1.6,te+.26);
       bp.connect(bg).connect(bus);env(bg,te+.17,.09,.5,.003,.02);bp.start(te+.17);bp.stop(te+.3);}};
@@ -3631,7 +3631,7 @@ function syncSnd(){}
 const prefs={sound:true,music:true,voice:true};try{Object.assign(prefs,JSON.parse(localStorage.getItem('tc.prefs')||'{}'));}catch(_){}
 function savePrefs(){try{localStorage.setItem('tc.prefs',JSON.stringify(prefs));}catch(_){}}
 function applyAudio(){if(master)master.gain.value=prefs.sound?.85:0;if(!prefs.sound||!prefs.music)menuMusic(false);else if(state==='menu'||state==='base')menuMusic(true);if(TTS&&(!prefs.sound||!prefs.voice))TTS.cancel();}
-{const _ai=audioInit;audioInit=function(){_ai();applyAudio();};}
+{const _ai=audioInit;audioInit=function(){_ai();applyAudio();AC.onstatechange=()=>{if(AC.state!=='running')setTimeout(reviveAudio,150);};};}
 function syncSettings(){$('setSound').checked=prefs.sound;$('setMusic').checked=prefs.music;$('setVoice').checked=prefs.voice;$('setMusic').disabled=$('setVoice').disabled=!prefs.sound;
   $('setPerf').checked=perfOn;$('unlockAll').checked=unlockAll;$('facAny').checked=facAny;$('mapOnSet').checked=mapOn;
   const w=renameDays();$('setName').innerHTML=`${playerName||'Name not set'}<small>${!renames?'First change is free':w?`Next change in ${w} day${w>1?'s':''}`:`Next change costs ${fmtN(RENAME_COST)} gold`}</small>`;
@@ -3662,6 +3662,9 @@ soundOn=true;
 // the browser hidden (tab switched, window minimized, phone app in the background): sound stops and the game holds still until you come back
 document.addEventListener('visibilitychange',()=>{if(xrMode)return;if(document.hidden){if(AC&&AC.state==='running')AC.suspend();if(TTS)TTS.cancel();}
   else{last=performance.now();if(AC&&soundOn)AC.resume();}});
+function audioWanted(){return AC&&soundOn&&prefs.sound&&!document.hidden&&!xrMode;}
+function reviveAudio(){if(audioWanted()&&AC.state!=='running'&&AC.state!=='closed')AC.resume().catch(()=>{});}
+setInterval(reviveAudio,700);
 function wakeAudio(){if(!AC){try{audioInit();}catch(_){return;}}if(AC.state!=='running')AC.resume();setTimeout(()=>{if(state==='menu'||state==='base')menuMusic(true);},60);}
 ['pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,wakeAudio,{capture:true,passive:true}));
 // try right away: where the browser allows sound without a tap (a site you play often, the installed app, some headsets) the menu music starts on load;
