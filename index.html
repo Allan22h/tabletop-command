@@ -1471,9 +1471,37 @@ const PINE=(()=>{let s=7;const rnd=()=>(s=(s*16807)%2147483647)/2147483647,parts
 const pineMat=new T.MeshStandardMaterial({vertexColors:true,roughness:.85,side:T.DoubleSide});pineMat.userData.wind=[.016,1.2,1];pineMat.userData.snowy=1;
 const OBS_M={leaf:new T.MeshStandardMaterial({color:0x2e5524,roughness:.9}),bush:new T.MeshStandardMaterial({color:0x557f30,roughness:.9}),rock:new T.MeshStandardMaterial({color:0xa29e96,roughness:.95,flatShading:true}),glow:new T.MeshBasicMaterial({color:0x6fc3ff})};['leaf','bush','rock'].forEach(k=>OBS_M[k].color.convertSRGBToLinear());OBS_M.rock.userData.gfx=-1; // rocks keep their own gray: no ground-contact darkening
 function resetItems(){teethL=[];wireL=[];mines=[];itemEnts=[];}
-// an enemy base for an HQ level: every building, barrier and obstacle it allows, levels near the HQ, 20% of its resources up for grabs
+// an enemy base for an HQ level: every building, barrier and obstacle it allows, levels near the HQ, 20% of its resources up for grabs.
+// No two camps are laid out alike, the way different commanders build: the plan may be mirrored, the HQ and the wall around it sit
+// in a different spot with the opening on a different side, buildings of the same role trade places, the inner barrier lines
+// change and the obstacles in front of the gate are spread differently. The outer camp wall and its west gate stay.
 function genBase(h){resetItems();const list=[];[...BUILD_ORDER,...ITEM_ORDER].forEach(k=>{for(let s=0;s<(k==='barrier'?barExtra(h):LIMIT[k](h));s++)list.push({k,s,lv:k==='hq'?h:clamp(maxLv(k,h)-(Math.random()<.35?1:0),1,maxLv(k,h))});});
-  walledFit=true;autoPlace(list,h);walledFit=false;list.forEach(o=>{if(BK[o.k].item)placeItem(o.k,o.x,o.z,true,h,wallYaw(o,list),o.lv);else placeB(o.k,o.x,o.z,o.lv,lootFor(o.k,o.lv,h));});}
+  const c=cmpFor(h),fz=Math.random()<.5?-1:1,j=d=>rand(-d,d),mix=a=>{for(let i=a.length-1;i>0;i--){const k=Math.floor(Math.random()*(i+1));[a[i],a[k]]=[a[k],a[i]];}return a;};
+  const hx=rand(6.3,Math.min(8.1,c.x1-2)),hz=j(Math.max(0,Math.min(1,c.z-2.6)));
+  // buildings of one role swap their spots: defenses with defenses, storages with storages, the rest among themselves
+  const ROLE=[['mg','mortarPit','atgm','sam'],['vault','fuel','ammo'],['barracks','motor','hangar','intel','comms','helipad','airfield']],spot=new Map();
+  ROLE.forEach(g=>{const os=list.filter(o=>g.includes(o.k)),pool=mix(os.map(o=>anchorOf(o.k,o.s,h)));os.forEach((o,i)=>spot.set(o,pool[i]));});
+  walledFit=true;const hqO=list.find(o=>o.k==='hq');hqO.x=hx;hqO.z=hz;
+  // barrier lines go in right after the HQ: a wall around it with an opening, then some of the rows along the inside of the camp wall
+  const pts=[],line=(x1,z1,x2,z2,gap)=>{const L=Math.hypot(x2-x1,z2-z1),n=Math.max(1,Math.round(L/BLOCK));for(let i=0;i<n;i++){const t=(i+.5)/n,x=x1+(x2-x1)*t,z=z1+(z2-z1)*t;if(!gap||!gap(x,z))pts.push([x,z]);}};
+  const wx=rand(1.1,1.6),wz=rand(1.3,1.9),open=['w','w','n','s','e'][Math.floor(Math.random()*5)],og=rand(.5,.75);
+  line(hx-wx,hz-wz,hx+wx,hz-wz,open==='n'?(x=>Math.abs(x-hx)<og):null);line(hx-wx,hz+wz,hx+wx,hz+wz,open==='s'?(x=>Math.abs(x-hx)<og):null);
+  line(hx-wx,hz-wz,hx-wx,hz+wz,open==='w'?((x,z)=>Math.abs(z-hz)<og):null);line(hx+wx,hz-wz,hx+wx,hz+wz,open==='e'?((x,z)=>Math.abs(z-hz)<og):null);
+  const gw=rand(1.1,1.6);if(Math.random()<.8)line(c.x0+.45,-(c.z-.45),c.x0+.45,c.z-.45,(x,z)=>Math.abs(z)<gw);
+  if(Math.random()<.6)line(c.x0+.85,-(c.z-.45),c.x1-.6,-(c.z-.45));if(Math.random()<.6)line(c.x0+.85,c.z-.45,c.x1-.6,c.z-.45);
+  if(Math.random()<.45){const dx=rand(c.x0+1.4,hx-wx-.7),dg=rand(.6,1.2),dz=j(1.2);line(dx,-(c.z-.9),dx,c.z-.9,(x,z)=>Math.abs(z-dz)<dg);}
+  const bars=list.filter(o=>o.k==='barrier');let bi=0;
+  pts.forEach(([x,z])=>{if(bi>=bars.length)return;x=Math.round(x*1000)/1000;z=Math.round(z*1000)/1000;if(fits('barrier',x,z,list,h,bars[bi])){bars[bi].x=x;bars[bi].z=z;bi++;}});
+  // then the buildings, each near its spot and clear of the walls
+  list.forEach(o=>{if(BK[o.k].item||o.k==='hq')return;let [ax,az]=spot.get(o)||anchorOf(o.k,o.s,h);ax+=j(.35);az=az*fz+j(.35);
+    const sp=spotNear(o.k,ax,az,list,h,o)||[ax,az];o.x=sp[0];o.z=sp[1];});
+  walledFit=false;
+  // obstacles in front of the gate: the same rows, spread a little differently; mines anywhere in the approach
+  list.forEach(o=>{if(!BK[o.k].item||o.k==='barrier')return;let ax,az;
+    if(o.k==='mine'){ax=rand(c.x0-3.3,c.x0-.5);az=rand(-1,1)*(c.z+.8);}else{[ax,az]=anchorOf(o.k,o.s,h);ax+=j(.4);az=az*fz+j(.45);}
+    const sp=spotNear(o.k,ax,az,list,h,o);if(sp){o.x=sp[0];o.z=sp[1];}});
+  const keep=list.filter(o=>o.x!=null);
+  keep.forEach(o=>{if(BK[o.k].item)placeItem(o.k,o.x,o.z,true,h,wallYaw(o,keep),o.lv);else placeB(o.k,o.x,o.z,o.lv,lootFor(o.k,o.lv,h));});}
 let ents=[];
 function buildMine(){resetItems();ents=[];const h=baseHq();BASE.blds.forEach(o=>{if(o.stash)return;if(BK[o.k].item){ents.push({o,g:placeItem(o.k,o.x,o.z,false,h,wallYaw(o,BASE.blds),o.lv),r:BK[o.k].r});return;}
   const b=placeB(o.k,o.x,o.z,o.lv,{},o.fresh);b.own=o;ents.push({o,g:b.g,r:b.r,b});});}
@@ -1965,7 +1993,7 @@ function armyCards(){raidArmy={};ARMY_ORDER.forEach(k=>{const have=BASE.army[k]|
 function consumeArmy(){if(!raidArmy)return;ARMY_ORDER.forEach(k=>{const c=cards.find(c=>c.k===k);BASE.army[k]=Math.max(0,(BASE.army[k]||0)-(raidArmy[k]||0))+(c?c.n:0);});raidArmy=null;saveBase();}
 // before a raid, like Clash of Clans: the army you are bringing, each unit with − and +. It lives in the base menu so it works in the headset too
 let raidPick=null,raidGo=false;
-function openRaidPick(){if(state!=='base')enterBase();raidPick={};ARMY_ORDER.forEach(k=>raidPick[k]=BASE.army[k]||0);placing=null;baseTab='raid';sheet(true);renderBasePanel();}
+function openRaidPick(keep){if(state!=='base')enterBase();if(!(keep&&raidPick)){raidPick={};ARMY_ORDER.forEach(k=>raidPick[k]=BASE.army[k]||0);}placing=null;baseTab='raid';sheet(true);renderBasePanel();}
 const pickCount=()=>ARMY_ORDER.reduce((s,k)=>s+(raidPick&&raidPick[k]||0),0);
 function panelRaid(){let h=`<span class="lbl">Your army for this raid</span><span class="muted">Tap − or + to choose what you bring. Units you leave behind stay at home for the next raid.</span><div class="army">`;
   const ks=ARMY_ORDER.filter(k=>(BASE.army[k]||0)>0);
@@ -2948,7 +2976,7 @@ function clearBattle(){battle.traverse(o=>{if(o.geometry&&o.geometry.userData.ba
 function fitRaidCam(){const w=canvasEl.clientWidth,h=canvasEl.clientHeight;if((w>=h&&Math.min(w,h)>520)||!blds.length)return;let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;
   blds.forEach(o=>{const p=o.g.position;x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);z0=Math.min(z0,p.z);z1=Math.max(z1,p.z);});
   orb.target.set((x0+x1)/2-.4,0,(z0+z1)/2);orb.r=clamp(Math.max(x1-x0,z1-z0)*(w<h?2.45:1.2)+5,11,32);}
-function startBattle(m){drum('raid');$('app').classList.add('raid');menuMusic(false);clearBattle();mode=m;setWeather(m==='full'?(mapTarget&&WX[mapTarget.wx]?mapTarget.wx:nextWx):'day');if(m==='full')nextWx=rollWx();if(m==='full')raidHq=mapTarget?clamp(mapTarget.hq,1,HQ_MAX):clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
+function startBattle(m){drum('raid');$('app').classList.add('raid');menuMusic(false);clearBattle();mode=m;setWeather(m==='full'?(mapTarget?mapWx(mapTarget.wx):nextWx):'day');if(m==='full')nextWx=rollWx();if(m==='full')raidHq=mapTarget?clamp(mapTarget.hq,1,HQ_MAX):clamp(PLAYER_HQ+[-1,0,0,1][Math.floor(Math.random()*4)],1,HQ_MAX);show('basePanel',false);buildLayout(m);
   cards=m==='tutorial'?TUT_CARDS.map(c=>Object.assign({},c)):armyCards();if(m!=='full')raidArmy=null;
   if(m==='full'&&shieldLeft()>0){BASE.shield=Math.max(0,BASE.shield-3*3600000);saveBase();}
   armed=null;battleUsed=false;loot={g:0,f:0,m:0,i:0};timeLeft=RAID_TIME;battleT=0;state='battle';endT=0;
@@ -3668,8 +3696,10 @@ const WX={day:{n:'Clear day',h:[0xe6edf2,.62],s:[0xfff0d8,2.1],f:.35,bg:BG,fog:[
   storm:{n:'Storm',h:[0x6c7680,.3],s:[0xa8b4c0,.28],f:.1,bg:0x2c3238,fog:[22,90],ex:1.15}};
 const WX_ORDER=['day','night','rain','storm'],WX_RADIO={night:'Night op, go dark.',rain:'Heavy rain over the objective.',storm:'Storm overhead, watch the lightning.'};
 let wx='day',boltT=4;
-// 70% of raids are clear day; the other 30% split evenly between night, rain and storm
-function rollWx(){return Math.random()<.7?'day':['night','rain','storm'][Math.floor(Math.random()*3)];}
+// 80% of raids are clear day, 5% night, the rest rain or storm
+function rollWx(){const r=Math.random();return r<.8?'day':r<.85?'night':r<.925?'rain':'storm';}
+// a map region's weather is its usual sky: a night region is dark only one raid in four
+function mapWx(w){return w==='night'?(Math.random()<.25?'night':'day'):WX[w]?w:'day';}
 let nextWx=rollWx();
 const rainFx=(()=>{const n=2200,p=new Float32Array(n*6);for(let i=0;i<n;i++){const x=rand(-16,16),y=rand(0,9),z=rand(-12,16);p.set([x,y,z,x-.06,y-.4,z],i*6);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(p,3));const l=new T.LineSegments(g,new T.LineBasicMaterial({color:0xb8c6d0,transparent:true,opacity:.4,depthWrite:false}));l.visible=false;l.frustumCulled=false;scene.add(l);return l;})();
@@ -3693,7 +3723,7 @@ function begin(m){if(m==='full'&&armyEmpty()){enterBase();baseTab='army';renderB
    It runs in its own frame (MAP_HTML), keeps its state on this device, and can be switched off in Settings ---------- */
 let mapOn=true;try{mapOn=localStorage.getItem('tc.mapOn')!=='0';}catch(_){}
 let mapTarget=null,mapPending=null,mapFrame=null;
-function attackPressed(){if(mapTarget&&state==='base'){if(raidPick&&pickCount()){raidGo=true;try{begin('full');}finally{raidGo=false;}}else openRaidPick();return;}
+function attackPressed(){if(mapTarget&&state==='base'){openRaidPick(true);return;} // a map target is already picked: show the army screen again, its Attack starts the fight
   if(mapOn)xrMode?openGlobe():openMap();else begin('full');}
 function openMap(){if(!mapFrame){mapFrame=document.createElement('iframe');mapFrame.id='worldMap';mapFrame.title='World map';mapFrame.srcdoc=MAP_HTML;$('app').appendChild(mapFrame);}
   else{mapFrame.hidden=false;try{mapFrame.contentWindow.tcMapShow&&mapFrame.contentWindow.tcMapShow();}catch(_){}}
