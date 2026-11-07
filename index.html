@@ -125,7 +125,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .banner .pn{font:700 clamp(42px,10vw,88px)/1 var(--f-display);text-transform:uppercase;color:var(--gold);padding:0 16px;text-shadow:0 0 30px rgba(255,200,90,.6);animation:slam .6s .5s cubic-bezier(.2,1.5,.4,1) both}
 @media (prefers-reduced-motion: reduce){.banner .pins svg,.banner .pl,.banner .pn{animation:none}.xp i{transition:none}}
 #rkName small{font:600 13px var(--f-mono);color:var(--gold);letter-spacing:.04em;margin-left:4px}
-.card .ci{display:block;width:100%;height:44px;object-fit:contain;margin:-3px 0 -2px;pointer-events:none}
+.card .ci{display:block;width:100%;height:44px;object-fit:cover;margin:-3px 0 -2px;pointer-events:none;border-radius:6px}
 .bpanel{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto;background:rgba(14,18,16,.72);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid var(--edge);border-radius:16px;padding:14px;display:grid;gap:9px;max-height:56vh;overflow:auto}
 .bpanel .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.bpanel h3{margin:0;font:700 22px/1 var(--f-display);text-transform:uppercase;color:var(--gold)}
 .bpanel .muted{color:var(--muted);font-size:12px}.bpanel .bsel{display:grid;gap:6px;background:rgba(255,255,255,.04);border-radius:10px;padding:10px}
@@ -221,7 +221,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* unit cards, like a Clash troop bar: just the picture and the count, small so the base stays in view */
 .card{width:66px;height:66px;min-height:0;padding:3px;gap:0;border-radius:11px;display:grid;place-items:center;text-align:center;
   background:rgba(18,22,18,.82);border-color:rgba(255,255,255,.16);backdrop-filter:blur(4px)}
-.card .ci{width:100%;height:50px;margin:0}
+.card .ci{width:100%;height:50px;margin:0;object-fit:cover}
 .card .cn,.card .ck{display:none}
 .card .cc{position:absolute;top:2px;left:5px;font:700 13px/1 var(--f-display);color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000}
 .card.on{background:rgba(255,210,122,.32);border:2px solid var(--gold);box-shadow:0 0 12px rgba(255,210,122,.55)}.card.on .cc{color:#fff}
@@ -3226,28 +3226,28 @@ let unlockAll=false;try{unlockAll=localStorage.getItem('tc.unlockAll')==='1';}ca
 const levelLocked=c=>!tut&&!unlockAll&&unlockLv(c.k)>levelFor(serviceXp,PLAYER_HQ).L;
 function cardLocked(i){return levelLocked(cards[i])||(tut&&((tut.step<2&&cards[i].k==='strike')||(tut.step>=2&&cards[i].k!=='strike')));}
 function armCard(i){if(state!=='battle'||!cards[i]||cards[i].n<=0||cardLocked(i))return;armed=armed===i?null:i;zone.visible=zoneEdge.visible=armed!=null&&cards[armed].k!=='strike';refreshCards();haptic();}
-// unit pictures for the cards: each model is rendered once per faction on a small separate canvas and kept as an image
+// unit pictures for the cards: each model is rendered once per faction on a small separate canvas and kept as an image.
+// The picture is fully solid, with its own lit backdrop: phones (many Androids above all) wash out see-through pictures.
 let thumbR=null;const thumbs={},thumbScene=new T.Scene(),thumbCam=new T.PerspectiveCamera(28,1.6,.01,100);
-thumbScene.add(new T.HemisphereLight(0xfff4e0,0x3a4430,.62));{const l=new T.DirectionalLight(0xfff2e0,1.0);l.position.set(2,4,3);thumbScene.add(l);}
+{const v=document.createElement('canvas');v.width=8;v.height=128;const x=v.getContext('2d'),gr=x.createLinearGradient(0,0,0,128);
+  gr.addColorStop(0,'#7c8270');gr.addColorStop(.6,'#565c4a');gr.addColorStop(1,'#353a2c');x.fillStyle=gr;x.fillRect(0,0,8,128);
+  const bg=new T.CanvasTexture(v);bg.encoding=T.sRGBEncoding;thumbScene.background=bg;}
+thumbScene.add(new T.HemisphereLight(0xfff6e8,0x4a5440,.95));
+{const l=new T.DirectionalLight(0xfff2e0,1.25);l.position.set(2,4,3);thumbScene.add(l);
+  const rim=new T.DirectionalLight(0xe8f0ff,.9);rim.position.set(-3,2.5,-4);thumbScene.add(rim);} // a back light outlines dark camo against the backdrop
 function unitModel(k){if(k==='tank')return tankFor(cur).g;if(k==='truck'||k==='jlav')return truckFor(cur,k==='jlav').g;if(k==='heli')return heliFor(cur).g;
   if(k==='strike'){const j=jetFor(cur);j.ab.visible=false;return j.g;}if(k==='drone')return cur==='ru'?makeLancet():makeQuad();if(k==='mortar')return makeMortarTeam(0,0).g;
   const g=new T.Group();[[0,0,0],[-.13,.1,.25],[-.12,-.11,-.2]].forEach(([x,z,y])=>soldier(x,z,0,y,M.camo,g));return g;}
 function thumb(k){const key=cur+k;if(thumbs[key])return thumbs[key];
-  try{if(!thumbR){thumbR=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});thumbR.setSize(192,120);
-      thumbR.outputEncoding=T.sRGBEncoding;thumbR.toneMapping=T.ACESFilmicToneMapping;thumbR.toneMappingExposure=.95;}
+  try{if(!thumbR){thumbR=new T.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true});thumbR.setSize(192,120);
+      thumbR.outputEncoding=T.sRGBEncoding;thumbR.toneMapping=T.ACESFilmicToneMapping;thumbR.toneMappingExposure=1.1;}
     const g=unitModel(k);if(g.parent)g.parent.remove(g);thumbScene.add(g);g.position.set(0,0,0);g.rotation.set(0,0,0);g.visible=true;
     g.traverse(o=>{if(o.material&&!Array.isArray(o.material)&&o.material.transparent&&o.material.opacity<1)o.visible=false;}); // see-through rotor discs read as haze on a small card
     g.updateMatrixWorld(true);
     // small or thin units are framed closer so they fill the card like the vehicles do
     const bx=new T.Box3().setFromObject(g),c=bx.getCenter(V()),sz=bx.getSize(V()),r=Math.max(sz.x*.5,sz.y*.8,sz.z*.42)*({heli:.58,rifle:.86,mortar:.9,drone:.86,strike:.84}[k]||1);
-    thumbCam.position.copy(c).add(V(.42,.5,.76).normalize().multiplyScalar(r*3.1));thumbCam.lookAt(c);
-    // drawn once on black and once on white, and the see-through part worked out from the difference:
-    // many Android phones save a see-through WebGL picture with light, washed-out edges, a plain picture never
-    const shot=bg=>{thumbR.setClearColor(bg,1);thumbR.render(thumbScene,thumbCam);const v=document.createElement('canvas');v.width=192;v.height=120;const x=v.getContext('2d');x.drawImage(thumbR.domElement,0,0);return [v,x.getImageData(0,0,192,120)];};
-    const [cv,dk]=shot(0),lt=shot(0xffffff)[1],d=dk.data,w=lt.data;
-    for(let i=0;i<d.length;i+=4){const al=clamp(1-((w[i]-d[i])+(w[i+1]-d[i+1])+(w[i+2]-d[i+2]))/765,0,1);
-      if(al<.02){d[i]=d[i+1]=d[i+2]=d[i+3]=0;continue;}d[i]=Math.min(255,d[i]/al);d[i+1]=Math.min(255,d[i+1]/al);d[i+2]=Math.min(255,d[i+2]/al);d[i+3]=Math.round(al*255);}
-    cv.getContext('2d').putImageData(dk,0,0);const url=cv.toDataURL();thumbScene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});
+    thumbCam.position.copy(c).add(V(.42,.5,.76).normalize().multiplyScalar(r*3.1));thumbCam.lookAt(c);thumbR.render(thumbScene,thumbCam);
+    const url=thumbR.domElement.toDataURL();thumbScene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});
     const img=new Image();img.onload=()=>{xrDirty=true;};img.src=url;return thumbs[key]={url,img};}catch(_){return thumbs[key]={url:'',img:null};}}
 function refreshCards(){const tray=$('tray');tray.innerHTML='';
   cards.forEach((c,i)=>{const b=document.createElement('button');b.type='button';b.className='card'+(armed===i?' on':'')+(tut&&!cardLocked(i)&&armed!==i&&c.n>0?' hint':'');
@@ -3449,7 +3449,7 @@ function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
   xrCards.forEach((m,i)=>{const c=cards[i],{ctx:x,c:cv,t}=m.userData;m.visible=state==='battle'&&!!c;if(!m.visible)return;const on=armed===i,lock=c.n<=0||cardLocked(i);
     x.clearRect(0,0,256,196);x.fillStyle=on?'rgba(255,210,122,.95)':lock?'rgba(30,32,28,.6)':'rgba(30,38,26,.92)';rrect(x,0,0,256,196,18);x.fill();
     x.strokeStyle=on?'#fff':'rgba(255,255,255,.35)';x.lineWidth=4;x.stroke();const th=thumb(c.k);
-    if(th.img&&th.img.complete&&th.img.naturalWidth){x.globalAlpha=lock?.45:1;x.drawImage(th.img,40,4,176,110);x.globalAlpha=1;}
+    if(th.img&&th.img.complete&&th.img.naturalWidth){x.save();x.globalAlpha=lock?.45:1;rrect(x,40,6,176,108,12);x.clip();x.drawImage(th.img,40,6,176,110);x.restore();}
     x.fillStyle=on?'#2a1e05':lock?'#888':'#efe9da';const nm=(c.per?c.per+'× ':'')+NAME(c.k);let fs=28;x.font=`700 ${fs}px sans-serif`;while(x.measureText(nm).width>232&&fs>16){fs-=2;x.font=`700 ${fs}px sans-serif`;}
     x.fillText(nm,12,142);x.font='600 34px sans-serif';x.fillText(levelLocked(c)?'Lv '+unlockLv(c.k):'×'+c.n,12,184);t.needsUpdate=true;});
   const xk=state==='menu'&&xrTutPick?'tutpick':state;
