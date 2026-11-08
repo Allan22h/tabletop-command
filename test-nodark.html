@@ -3242,8 +3242,8 @@ function thumb(k){const key=cur+k;if(thumbs[key])return thumbs[key];
     const g=unitModel(k);if(g.parent)g.parent.remove(g);thumbScene.add(g);g.position.set(0,0,0);g.rotation.set(0,0,0);g.visible=true;
     g.traverse(o=>{if(o.material&&!Array.isArray(o.material)&&o.material.transparent&&o.material.opacity<1)o.visible=false;}); // see-through rotor discs read as haze on a small card
     g.updateMatrixWorld(true);
-    // small or thin units are framed closer so they fill the card like the vehicles do
-    const bx=new T.Box3().setFromObject(g),c=bx.getCenter(V()),sz=bx.getSize(V()),r=Math.max(sz.x*.5,sz.y*.8,sz.z*.42)*({heli:.58,rifle:.86,mortar:.9,drone:.86,strike:.84}[k]||1);
+    // small or thin units are framed closer so they fill the card like the vehicles do; the trucks a little farther so the front wheel stays in
+    const bx=new T.Box3().setFromObject(g),c=bx.getCenter(V()),sz=bx.getSize(V()),r=Math.max(sz.x*.5,sz.y*.8,sz.z*.42)*({heli:.58,rifle:.86,mortar:.9,drone:.86,strike:.84,truck:1.38,jlav:1.38}[k]||1);if(k==='truck'||k==='jlav')c.y-=sz.y*.18;
     thumbCam.position.copy(c).add(V(.42,.5,.76).normalize().multiplyScalar(r*3.1));thumbCam.lookAt(c);thumbR.render(thumbScene,thumbCam);
     const url=thumbR.domElement.toDataURL();thumbScene.remove(g);g.traverse(o=>{if(o.geometry)o.geometry.dispose();});
     const img=new Image();img.onload=()=>{xrDirty=true;};img.src=url;return thumbs[key]={url,img};}catch(_){return thumbs[key]={url:'',img:null};}}
