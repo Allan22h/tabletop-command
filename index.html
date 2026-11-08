@@ -221,7 +221,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* unit cards, like a Clash troop bar: just the picture and the count, small so the base stays in view */
 .card{width:66px;height:66px;min-height:0;padding:3px;gap:0;border-radius:11px;display:grid;place-items:center;text-align:center;
   background:rgba(18,22,18,.82);border-color:rgba(255,255,255,.16);backdrop-filter:blur(4px)}
-.card .ci{position:absolute;top:3px;left:3px;width:calc(100% - 6px);height:calc(100% - 6px);margin:0;object-fit:cover;border-radius:8px} /* the picture fills the card, leaving the same edge all round */
+.card .ci{position:absolute;top:3px;left:3px;width:calc(100% - 6px);height:calc(100% - 6px);margin:0;object-fit:contain;border-radius:8px} /* the picture fills the card, leaving the same edge all round */
 .card .cn,.card .ck{display:none}
 .card .cc{position:absolute;top:2px;left:5px;font:700 13px/1 var(--f-display);color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000}
 .card.on{background:rgba(255,210,122,.32);border:2px solid var(--gold);box-shadow:0 0 12px rgba(255,210,122,.55)}.card.on .cc{color:#fff}
@@ -288,10 +288,11 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
     padding:2px 7px;gap:7px;font-size:10.5px;font-weight:600;border-radius:8px;text-shadow:0 1px 2px #000,0 0 3px rgba(0,0,0,.7)}
   #app:has(#basePanel:not([hidden])) .hud .res{gap:3px}#app:has(#basePanel:not([hidden])) .hud .res .dot{width:18px;height:18px;margin:-3px 0;background-size:contain}
   #app:has(#basePanel:not([hidden])) #fsBtn{padding:2px 7px;font-size:15px;background:rgba(10,13,12,.14);border-color:rgba(255,255,255,.12);backdrop-filter:none}}
+.bpanel .arow.ic .ico.unit{height:46px;align-self:center;object-fit:contain}
 .bpanel .arow.pick .pkb{grid-column:3;grid-row:1/span 2;display:flex;align-items:center;gap:6px}.bpanel .arow.pick .pkb .tbtn{grid-row:auto;grid-column:auto;min-width:38px;font-size:18px;line-height:1;padding:6px 0}.bpanel .arow.pick .pkb b{min-width:22px;text-align:center;font-size:15px}.bpanel .arow.pick.off>:not(.pkb){opacity:.55}.bpanel .arow.ic.pick .pkb{grid-row:1/span 3}.bpanel .arow.pick .pkb .tbtn:not(:disabled){background:rgba(240,200,110,.2);border-color:var(--gold);color:var(--gold);font-weight:700;box-shadow:0 0 0 1px rgba(240,200,110,.25),0 2px 6px rgba(0,0,0,.35)}.bpanel .arow.pick .pkb .tbtn:not(:disabled):hover{background:rgba(240,200,110,.32)}.bpanel .arow.pick .pkb .tbtn:not(:disabled):active{background:var(--gold);color:#2a1e05}.bpanel .arow.pick .pkb .tbtn:disabled{opacity:.3;box-shadow:none}.bpanel .arow.ic.off:not(.pick){opacity:.55}
 /* phone landscape: the side panel is narrow, so the - and + get their own line inside the row and nothing runs past the panel's edge */
 @media (max-height:520px) and (orientation:landscape){#app:not(.xr) .bpanel .arow.ic.pick{grid-template-columns:40px minmax(0,1fr);min-height:0;padding:6px 7px;column-gap:7px}
-  #app:not(.xr) .bpanel .arow.ic.pick .ico{width:40px;height:40px}
+  #app:not(.xr) .bpanel .arow.ic.pick .ico{width:40px;height:40px}#app:not(.xr) .bpanel .arow.ic.pick .ico.unit{height:30px}
   #app:not(.xr) .bpanel .arow.ic.pick .pkb{grid-column:1/-1;grid-row:4;justify-content:space-between;margin-top:3px}
   #app:not(.xr) .bpanel .arow.ic.pick .pkb .tbtn{flex:1;min-width:0;padding:5px 0}}
 @media (max-width:899px){#app:not(.xr) .bpanel.pickArmy:not(.peek){max-height:64vh}}
@@ -2126,7 +2127,8 @@ function iconFor(k,lv){lv=lv||1;const key=k+':'+lv;if(ICON[key]!==undefined)retu
     const cam=new T.PerspectiveCamera(26,1,.01,200),dir=V(.95,.8,1.25).normalize();cam.position.copy(c).addScaledVector(dir,rad/Math.sin(13*Math.PI/180)*.9);cam.lookAt(c);
     iconR.render(s,cam);ICON[key]=iconR.domElement.toDataURL();}catch(e){console.warn('icon',k,e);}
   return ICON[key];}
-const ico=(k,lv,cls)=>{const u=iconFor(k,lv);return u?`<img class="ico${cls?' '+cls:''}" alt="" src="${u}">`:'';};
+// troops use the same picture and lighting as the raid cards, framed close
+const ico=(k,lv,cls)=>{if(TR[k]&&!lv){const t=thumb(k);if(t.url)return `<img class="ico unit${cls?' '+cls:''}" alt="" src="${t.url}">`;}const u=iconFor(k,lv);return u?`<img class="ico${cls?' '+cls:''}" alt="" src="${u}">`:'';};
 const RES_ICON={},RES_IMG={};
 function makeResIcons(){let r;try{r=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});}catch(_){return;}
   r.setSize(128,128);r.outputEncoding=T.sRGBEncoding;r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=.95;r.setClearColor(0,0);
@@ -3227,19 +3229,15 @@ const levelLocked=c=>!tut&&!unlockAll&&unlockLv(c.k)>levelFor(serviceXp,PLAYER_H
 function cardLocked(i){return levelLocked(cards[i])||(tut&&((tut.step<2&&cards[i].k==='strike')||(tut.step>=2&&cards[i].k!=='strike')));}
 function armCard(i){if(state!=='battle'||!cards[i]||cards[i].n<=0||cardLocked(i))return;armed=armed===i?null:i;zone.visible=zoneEdge.visible=armed!=null&&cards[armed].k!=='strike';refreshCards();haptic();}
 // unit pictures for the cards: each model is rendered once per faction on a small separate canvas and kept as an image.
-// The picture is fully solid, with its own lit backdrop: phones (many Androids above all) wash out see-through pictures.
+// No backdrop: a warm key light and a cool back light give every unit a bright outline, so thin dark troops stay crisp on a dark card.
 let thumbR=null;const thumbs={},thumbScene=new T.Scene(),thumbCam=new T.PerspectiveCamera(28,1.6,.01,100);
-{const v=document.createElement('canvas');v.width=8;v.height=128;const x=v.getContext('2d'),gr=x.createLinearGradient(0,0,0,128);
-  gr.addColorStop(0,'#7c8270');gr.addColorStop(.6,'#565c4a');gr.addColorStop(1,'#353a2c');x.fillStyle=gr;x.fillRect(0,0,8,128);
-  const bg=new T.CanvasTexture(v);bg.encoding=T.sRGBEncoding;thumbScene.background=bg;}
-thumbScene.add(new T.HemisphereLight(0xfff6e8,0x4a5440,.95));
-{const l=new T.DirectionalLight(0xfff2e0,1.25);l.position.set(2,4,3);thumbScene.add(l);
-  const rim=new T.DirectionalLight(0xe8f0ff,.9);rim.position.set(-3,2.5,-4);thumbScene.add(rim);} // a back light outlines dark camo against the backdrop
+thumbScene.add(new T.HemisphereLight(0xe8ecff,0x20261a,.45));
+{const l=new T.DirectionalLight(0xffe2b8,2.3);l.position.set(3,4,2.5);thumbScene.add(l);const rim=new T.DirectionalLight(0xbfd8ff,1.8);rim.position.set(-3,3,-4);thumbScene.add(rim);}
 function unitModel(k){if(k==='tank')return tankFor(cur).g;if(k==='truck'||k==='jlav')return truckFor(cur,k==='jlav').g;if(k==='heli')return heliFor(cur).g;
   if(k==='strike'){const j=jetFor(cur);j.ab.visible=false;return j.g;}if(k==='drone')return cur==='ru'?makeLancet():makeQuad();if(k==='mortar')return makeMortarTeam(0,0).g;
   const g=new T.Group();[[0,0,0],[-.13,.1,.25],[-.12,-.11,-.2]].forEach(([x,z,y])=>soldier(x,z,0,y,M.camo,g));return g;}
 function thumb(k){const key=cur+k;if(thumbs[key])return thumbs[key];
-  try{if(!thumbR){thumbR=new T.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true});thumbR.setSize(192,120);
+  try{if(!thumbR){thumbR=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});thumbR.setSize(192,120);thumbR.setClearColor(0,0);
       thumbR.outputEncoding=T.sRGBEncoding;thumbR.toneMapping=T.ACESFilmicToneMapping;thumbR.toneMappingExposure=1.1;}
     const g=unitModel(k);if(g.parent)g.parent.remove(g);thumbScene.add(g);g.position.set(0,0,0);g.rotation.set(0,0,0);g.visible=true;
     g.traverse(o=>{if(o.material&&!Array.isArray(o.material)&&o.material.transparent&&o.material.opacity<1)o.visible=false;}); // see-through rotor discs read as haze on a small card
