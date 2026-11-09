@@ -3582,7 +3582,7 @@ $('xrBtn').onclick=enterXR;
 /* ---------- the world map in the headset: a globe floating over the table. The flat map runs unseen in its frame and keeps the world
    (bases, shields, regions); the globe shows its picture and bases. Point at a base and pinch it, then Attack opens your army as on a phone.
    Right stick or a squeeze-and-drag spins it ---------- */
-var globeOn=false;let GL=null,glSel=null,glHover=null,glSpin=0,glSpinTo=null,glGrab=null,glQ=[],glZoom=1,glPull=null;
+var globeOn=false;let GL=null,glSel=null,glHover=null,glSpin=0,glSpinTo=null,glGrab=null,glQ=[],glZoom=1,glPull=null,glZoomT=1,glVel=0,glTilt=0,glTiltT=0,glTiltV=0;
 const GL_R=.22,GL_FN={nato:'USA / NATO',ru:'Russia',cn:'China',eu:'Europe / Middle East'},GL_FC={nato:'#4f86d9',ru:'#d0533f',cn:'#e0b23a',eu:'#4fae7a'};
 function glTex(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;return {c,x:c.getContext('2d'),t};}
 // the map's frame, made if needed and kept out of sight; waits until its world is ready
@@ -3638,13 +3638,13 @@ function buildGlobe(w){if(GL){stage.remove(GL.holder);GL.holder.traverse(o=>{if(
   const strip=glTex(1000,150),stripM=new T.Mesh(new T.PlaneGeometry(.4,.06),new T.MeshBasicMaterial({map:strip.t,transparent:true,depthTest:false}));stripM.renderOrder=12;stripM.position.set(0,-R-.1,.12);holder.add(stripM);
   {const x=strip.x;[['‹ Base',10,300,0],['Find a match',330,660,1]].forEach(([t,a,b,hi])=>{x.fillStyle=hi?'#f2c46b':'rgba(20,24,21,.92)';rrect(x,a,20,b-a,110,26);x.fill();
     x.fillStyle=hi?'#1a1408':'#fff';x.font='800 46px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(t,(a+b)/2,76);});strip.t.needsUpdate=true;}
-  GL={holder,tilt,spin,pins,hits,sel,card,cardM,stripM,R};glSpin=0;glZoom=1;glPull=null;glSpinTo=null;glQ=[];spin.rotation.y=0;}
+  GL={holder,tilt,spin,pins,hits,sel,card,cardM,stripM,R};glSpin=0;glZoom=glZoomT=1;glPull=null;glVel=glTilt=glTiltT=glTiltV=0;glSpinTo=null;glQ=[];spin.rotation.y=0;}
 const glBtns={card:[],strip:[[10,300,'base'],[330,660,'match']]};
 function glDrawCard(){if(!GL)return;const {x,c,t}=GL.card;x.clearRect(0,0,c.width,c.height);GL.cardM.visible=true;glBtns.card=[];
   x.fillStyle='rgba(16,20,17,.94)';rrect(x,6,6,888,548,34);x.fill();x.strokeStyle='rgba(255,255,255,.14)';x.lineWidth=3;x.stroke();x.textBaseline='middle';
   const btn=(X,w,label,hi,act)=>{x.fillStyle=hi?'#f2c46b':'rgba(255,255,255,.09)';rrect(x,X,420,w,100,22);x.fill();x.fillStyle=hi?'#1a1408':'#fff';x.font='800 36px sans-serif';x.textAlign='center';x.fillText(label,X+w/2,472);x.textAlign='left';glBtns.card.push([X,X+w,act]);};
   if(!glSel){x.fillStyle='#ffd27a';x.font='800 50px sans-serif';x.fillText('WORLD MAP',44,90);x.fillStyle='#d8dccf';x.font='500 32px sans-serif';
-    [Verb()+' an enemy base on the globe to see it.','Find a match picks one near your HQ level.','Right stick: spin and zoom. Squeeze both: pull to zoom.'].forEach((s,i)=>x.fillText(s,44,180+i*58));
+    [Verb()+' an enemy base on the globe to see it.','Find a match picks one near your HQ level.','Grip and drag to turn it. Stick: spin and zoom.'].forEach((s,i)=>x.fillText(s,44,180+i*58));
     btn(44,380,'Find a match',1,'match');t.needsUpdate=true;return;}
   const m=glSel.m,col=m.t==='me'?'#ffd27a':GL_FC[m.f];x.fillStyle=col;rrect(x,44,44,96,96,20);x.fill();x.fillStyle='#fff';x.font='800 46px sans-serif';x.textAlign='center';x.fillText(m.t==='me'?'★':m.hq,92,94);x.textAlign='left';
   let fs=52;x.font=`800 ${fs}px sans-serif`;const nm=m.t==='me'?'Your base':m.n;while(x.measureText(nm).width>620&&fs>28){fs-=2;x.font=`800 ${fs}px sans-serif`;}x.fillText(nm,168,80);
@@ -3655,7 +3655,7 @@ function glDrawCard(){if(!GL)return;const {x,c,t}=GL.card;x.clearRect(0,0,c.widt
   x.fillText(m.t==='me'?'Your own base.':glSel.ally?'An ally in your faction. You can only raid other factions.':m.sh?`🛡 Shielded for ${m.sh}h. You can't attack it yet.`:'Win here to take loot and move this region\'s control bar.',44,340);
   if(glSel.ally||m.sh){btn(44,390,'Next target',0,'next');btn(462,390,'Close',0,'close');}else{btn(44,250,'Attack',1,'attack');btn(318,250,'Next',0,'next');btn(592,262,'Close',0,'close');}
   t.needsUpdate=true;}
-function glSelect(pin,turn){if(!GL)return;glSel=pin;if(pin){pin.g.add(GL.sel);GL.sel.visible=true;if(turn){const p=pin.g.position;glSpinTo=Math.atan2(-p.x,p.z);}}else GL.sel.visible=false;
+function glSelect(pin,turn){if(!GL)return;glSel=pin;if(pin){pin.g.add(GL.sel);GL.sel.visible=true;if(turn){const p=pin.g.position;glSpinTo=Math.atan2(-p.x,p.z);glTiltT=Math.atan2(p.y,Math.hypot(p.x,p.z));glTiltV=0;}}else GL.sel.visible=false;
   GL.pins.forEach(p=>p.g.scale.setScalar((p===pin?1.4:1)*GL_R/.36));glDrawCard();haptic();}
 function glMatch(){if(!GL)return;if(!glQ.length)glQ=GL.pins.filter(p=>!p.ally&&!p.m.sh&&p.m.t==='player'&&Math.abs(p.m.hq-PLAYER_HQ)<=1).sort(()=>Math.random()-.5);
   if(!glQ.length)glQ=GL.pins.filter(p=>!p.ally&&!p.m.sh&&p.m.t==='player').sort((a,b)=>Math.abs(a.m.hq-PLAYER_HQ)-Math.abs(b.m.hq-PLAYER_HQ)).slice(0,5);
@@ -3668,17 +3668,29 @@ function globeSelect(c){if(!GL)return;ctrlRay(c);
   if(ui){const card=ui.object===GL.cardM,act=glUV(ui,card?'card':'strip',card?glBtns.card:glBtns.strip,card?900:1000,card?560:150);
     if(act==='base'){haptic();closeGlobe();}else if(act==='match')glMatch();else if(act==='next'){glMatch();}else if(act==='close')glSelect(null);else if(act==='attack'){haptic();glAttack();}return;}
   const h=ray.intersectObjects(GL.hits,false)[0];if(h)glSelect(h.object.userData.pin,false);}
-function globeFrame(dt){if(!GL)return;const hp=V().setFromMatrixPosition(headCam().matrixWorld);
-  // spin: the right stick, a squeeze-and-drag, or easing toward a picked base
-  // zoom: the right stick up and down, or squeeze both and pull apart / push together
-  ctrls.forEach(c=>{const src=c.userData.src,gp=src&&src.gamepad;if(!gp)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0),ay=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
-    if(Math.abs(ax)>.2&&Math.abs(ax)>=Math.abs(ay)){glSpin+=ax*dt*1.6;glSpinTo=null;}else if(Math.abs(ay)>.2)glZoom*=Math.exp(-ay*dt*1.4);});
+function globeFrame(dt){if(!GL)return;const hp=V().setFromMatrixPosition(headCam().matrixWorld);dt=Math.min(dt,.05);
+  // as smooth as the browser globe: the stick and the hand set a speed or a target, the globe eases toward it and coasts when let go
+  // stick: left/right spins, up/down zooms, both with a soft start so small pushes turn it slowly
+  let stickSpin=0,stickZoom=0;ctrls.forEach(c=>{const src=c.userData.src,gp=src&&src.gamepad;if(!gp)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0),ay=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
+    const soft=v=>{const a=Math.max(0,(Math.abs(v)-.15)/.85);return Math.sign(v)*a*a;};if(Math.abs(ax)>=Math.abs(ay))stickSpin+=soft(ax);else stickZoom+=soft(ay);});
+  if(stickSpin){glVel+=(stickSpin*2.4/glZoom-glVel)*Math.min(1,dt*6);glSpinTo=null;}
+  if(stickZoom)glZoomT*=Math.exp(-stickZoom*dt*1.3);
+  // both grips: pull apart / push together to zoom
   const both=ctrls.length>1&&ctrls.every(c=>c.userData.sq);
-  if(both){const d=ctrls[0].position.distanceTo(ctrls[1].position);if(glPull&&glPull.d>.02)glZoom=glPull.z*d/glPull.d;else glPull={d,z:glZoom};}else glPull=null;
-  glZoom=Math.min(2.4,Math.max(.6,glZoom));GL.tilt.scale.setScalar(glZoom);GL.cardM.position.x=GL.R*glZoom+.2;GL.stripM.position.y=-GL.R*glZoom-.1;
-  const sq=!both&&ctrls.find(c=>c.userData.sq);if(sq){const lp=GL.holder.worldToLocal(sq.position.clone());if(glGrab&&glGrab.c===sq){glSpin+=(lp.x-glGrab.x)*7;glSpinTo=null;}glGrab={c:sq,x:lp.x};}else glGrab=null;
-  if(glSpinTo!=null){const d=wrap(glSpinTo-glSpin);glSpin+=d*Math.min(1,dt*4);if(Math.abs(d)<.002)glSpinTo=null;}
-  GL.spin.rotation.y=glSpin;GL.cardM.lookAt(hp);GL.stripM.lookAt(hp);
+  if(both){const d=ctrls[0].position.distanceTo(ctrls[1].position);if(glPull&&glPull.d>.02)glZoomT=glPull.z*d/glPull.d;else glPull={d,z:glZoomT};}else glPull=null;
+  glZoomT=Math.min(2.4,Math.max(.6,glZoomT));glZoom+=(glZoomT-glZoom)*Math.min(1,dt*10);
+  // one grip: the globe turns with your hand round its centre, sideways spins and up/down tilts, and keeps turning when you let go
+  const sq=!both&&ctrls.find(c=>c.userData.sq);
+  if(sq){const lp=GL.holder.worldToLocal(sq.position.clone()),a=Math.atan2(lp.x,lp.z),e=Math.atan2(lp.y,Math.hypot(lp.x,lp.z));
+    if(glGrab&&glGrab.c===sq){const da=wrap(a-glGrab.a),de=e-glGrab.e;glSpin+=da;glTiltT-=de;glVel+=(da/dt-glVel)*Math.min(1,dt*12);glTiltV+=(-de/dt-glTiltV)*Math.min(1,dt*12);glSpinTo=null;}
+    else{glVel=0;glTiltV=0;}glGrab={c:sq,a,e};}
+  else{glGrab=null;if(!stickSpin)glVel*=Math.exp(-dt*2.2);glTiltT+=glTiltV*dt;glTiltV*=Math.exp(-dt*3);if(glSpinTo==null)glSpin+=glVel*dt;}
+  if(Math.abs(glVel)<.002)glVel=0;
+  if(glSpinTo!=null){glVel=0;const d=wrap(glSpinTo-glSpin);glSpin+=d*Math.min(1,dt*4);if(Math.abs(d)<.002)glSpinTo=null;}
+  glTiltT=Math.min(.9,Math.max(-.7,glTiltT));glTilt+=(glTiltT-glTilt)*Math.min(1,dt*14);
+  GL.tilt.rotation.x=-.5+glTilt;GL.tilt.scale.setScalar(glZoom);GL.cardM.position.x=GL.R*glZoom+.2;GL.stripM.position.y=-GL.R*glZoom-.1;
+  // what you see follows the numbers a touch behind, which takes out the shake of the controller
+  GL.spin.rotation.y+=wrap(glSpin-GL.spin.rotation.y)*Math.min(1,dt*20);GL.cardM.lookAt(hp);GL.stripM.lookAt(hp);
   if(GL.sel.visible)GL.sel.scale.setScalar(1+.15*Math.sin(performance.now()/250));
   // the base under the laser grows a little
   let hov=null;for(const c of ctrls){if(!c.userData.src)continue;ctrlRay(c);const h=ray.intersectObjects(GL.hits,false)[0];if(h){hov=h.object.userData.pin;break;}}
