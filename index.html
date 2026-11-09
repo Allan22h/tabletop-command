@@ -3461,7 +3461,7 @@ function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
   const xk=state==='menu'&&xrTutPick?'tutpick':state;
   xrBtns.forEach(b=>{const u=b.userData;b.visible=u.when.split(' ').includes(xk)&&!(state==='base'&&((raidPick&&baseTab==='raid')||coach));if(!b.visible)return;
     if(state==='base'){drawAttackXR(u);return;}
-    const label=u.mode==='cancel'?(cancelArmed()?'Cancel?':'Cancel raid'):state==='ended'&&u.mode==='full'?(mode==='tutorial'?'Full raid':'Raid again'):u.label,hot=u.mode==='full'||(u.mode==='cancel'&&cancelArmed());
+    const label=u.mode==='cancel'?(cancelArmed()?'Cancel?':'Cancel raid'):state==='ended'&&u.mode==='full'?(mapPending?'Back to map':mode==='tutorial'?'Full raid':'Raid again'):u.label,hot=u.mode==='full'||(u.mode==='cancel'&&cancelArmed());
     const {ctx:x,t}=u;x.clearRect(0,0,380,120);x.fillStyle=hot?'rgba(255,210,122,.95)':'rgba(30,38,26,.92)';rrect(x,0,0,380,120,20);x.fill();
     x.fillStyle=hot?'#2a1e05':'#efe9da';x.font='700 42px sans-serif';x.textAlign='center';x.fillText(label,190,76);x.textAlign='left';t.needsUpdate=true;});
   layoutRow(xrCards.filter(m=>m.visible),.22);xrExit.visible=xrMode;layoutRow([...xrBtns,xrExit].filter(m=>m.visible),.4); // exit is the last button in the row
@@ -3544,6 +3544,7 @@ function xrSelect(c){ctrlRay(c);if(xrExit.visible&&ray.intersectObject(xrExit,fa
   if(xrCoachSelect(c)||xrBaseSelect(c))return;ctrlRay(c);const ui=ray.intersectObjects([...xrCards,...xrBtns].filter(m=>m.visible),false)[0];
   if(ui){const u=ui.object.userData;if(u.mode==='cancel'){if(state==='battle')cancelArmed()?cancelRaid():armCancel();return;}if(u.mode==='tuts'||u.mode==='back'){haptic();xrTutPick=u.mode==='tuts';xrDirty=true;return;}if(u.mode==='coach'){haptic();xrTutPick=false;coachStart();return;}xrTutPick=false;if(u.mode==='base'){haptic();enterBase();return;}if(u.mode==='menu'){haptic();goMenu();const ss=rr.xr.getSession&&rr.xr.getSession();if(ss)ss.end().catch(()=>{});}
     else if(u.mode==='full'&&state==='base'&&mapOn&&!mapTarget)openGlobe(); // Attack! opens the world map as a globe
+    else if(u.mode==='full'&&state==='ended'&&mapPending){haptic();enterBase();openGlobe();} // after a raid picked on the map, back to the globe
     else if(u.mode){if(!AC)audioInit();soundOn=true;AC.resume();syncSnd();begin(state==='ended'&&u.mode==='full'?'full':u.mode);}else armCard(u.i);return;}
   const h=ray.intersectObject(ground,false)[0];if(h){const p=scene.worldToLocal(h.point.clone());onGroundTap(p.x,p.z);}}
 function setShadow(k){Object.assign(sun.shadow.camera,{left:-(16+MAPE)*k,right:(16+MAPE)*k,top:(15+MAPE)*k,bottom:-(15+MAPE)*k,near:2*k,far:60*k});sun.shadow.camera.updateProjectionMatrix();flashLights.forEach(l=>l.distance=7*k);}
@@ -3599,8 +3600,11 @@ function mapWorld(cb){if(!mapFrame){mapFrame=document.createElement('iframe');ma
   mapFrame.hidden=false;mapFrame.style.visibility='hidden';
   const ready=()=>{try{const w=mapFrame.contentWindow;return w&&w.eval&&w.eval("typeof cells!=='undefined'&&!!boardImg.getAttribute('href')")?w:null;}catch(_){return null;}};
   let n=0;const tick=()=>{const w=ready();if(w){try{w.tcMapShow&&w.tcMapShow();}catch(_){}cb(w);}else if(++n<100)setTimeout(tick,100);};tick();}
-function openGlobe(){if(globeOn)return;haptic();prompt('Opening the world map…',2);
-  mapWorld(w=>{if(!xrMode)return;buildGlobe(w);globeOn=true;scene.visible=false;xrUI.visible=false;grab=grab2=null;glSel=null;glDrawCard();});}
+function openGlobe(){if(globeOn)return;haptic();prompt('Opening the world map…',2);const res=mapPending; // the raid just fought, if any (the map takes it as it opens)
+  mapWorld(w=>{if(!xrMode)return;buildGlobe(w);globeOn=true;scene.visible=false;xrUI.visible=false;grab=grab2=null;glSel=null;glDrawCard();if(res)glStrike(res.cell);});}
+// back from your raid: the globe turns to the base you hit and your gold salvo flies to it from your base
+function glStrike(cell){if(!GL)return;const me=GL.info.marks.find(m=>m.t==='me'),pin=GL.pins.find(p=>p.m.i===cell);if(!me||!pin||pin.m===me)return;
+  glSelect(pin,true);glDrawCard();const G2=GL;for(let i=0;i<3;i++)setTimeout(()=>{if(GL===G2)glFire(me,pin.m,'#ffd27a');},450+i*260);}
 function closeGlobe(){if(!globeOn)return;globeOn=false;if(GL)stage.remove(GL.holder);scene.visible=true;xrUI.visible=xrMode;xrDirty=true;glGrab=null;
   if(mapFrame){mapFrame.hidden=true;mapFrame.style.visibility='';}}
 function buildGlobe(w){if(GL){stage.remove(GL.holder);GL.holder.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(o.material.map)o.material.map.dispose();o.material.dispose();}});}
