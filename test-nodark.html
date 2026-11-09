@@ -3509,7 +3509,7 @@ function xrFrame(dt){if(globeOn){globeFrame(dt);return;}
   else if(grab){const d=wrap(yawOf(grab.c)-grab.yaw0);scene.rotation.y=grab.rot0+d;scene.position.copy(grab.c.position).add(rotY(grab.pos0.clone().sub(grab.p0),d));}
   // right stick: left/right snap-turns 45 degrees (eased over a quarter second), forward/back zooms in and out about where you look.
   // left stick slides the board under you, so you can travel across the field. Pointing at the base menu, a stick scrolls the menu instead
-  ctrls.forEach((c,i)=>{const src=c.userData.src,gp=src&&src.gamepad;if(!gp||grab||grab2)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0),ay=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
+  ctrls.forEach((c,i)=>{const src=c.userData.src,gp=src&&src.gamepad;if(!gp||src.targetRayMode==='screen'||grab||grab2)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0),ay=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
     if(state==='base'&&xrPanel&&xrPanel.visible&&xpPoint(c))return;
     if(src.handedness==='left'){const m=Math.hypot(ax,ay);if(m<.2)return;const h=headCam();_d.set(0,0,-1).transformDirection(h.matrixWorld);_d.y=0;
       if(_d.lengthSq()<1e-4)return;_d.normalize();const v=.45*Math.sqrt(scene.scale.x/XS)*dt*Math.min(1,(m-.2)/.7)/m; // metres a second, a little faster when zoomed in
@@ -3682,7 +3682,8 @@ function glTouchGest(a,b){if(!GL)return;const now=performance.now(),dt=Math.max(
 function globeFrame(dt){if(!GL)return;const hp=V().setFromMatrixPosition(headCam().matrixWorld);dt=Math.min(dt,.05);
   // as smooth as the browser globe: the stick and the hand set a speed or a target, the globe eases toward it and coasts when let go
   // stick: left/right spins, up/down zooms, both with a soft start so small pushes turn it slowly
-  let stickSpin=0,stickZoom=0;ctrls.forEach(c=>{const src=c.userData.src,gp=src&&src.gamepad;if(!gp)return;const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0),ay=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
+  let stickSpin=0,stickZoom=0;ctrls.forEach(c=>{const src=c.userData.src,gp=src&&src.gamepad;if(!gp||src.targetRayMode==='screen')return; // a phone touch reports the finger's place as a stick
+    const ax=gp.axes.length>2?gp.axes[2]:(gp.axes[0]||0),ay=gp.axes.length>3?gp.axes[3]:(gp.axes[1]||0);
     const soft=v=>{const a=Math.max(0,(Math.abs(v)-.15)/.85);return Math.sign(v)*a*a;};if(Math.abs(ax)>=Math.abs(ay))stickSpin+=soft(ax);else stickZoom+=soft(ay);});
   if(stickSpin){glVel+=(stickSpin*2.4/glZoom-glVel)*Math.min(1,dt*6);glSpinTo=null;}
   if(stickZoom)glZoomT*=Math.exp(-stickZoom*dt*1.3);
