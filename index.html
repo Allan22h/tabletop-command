@@ -4021,7 +4021,7 @@ window.__tcDebug={get dbg(){return {bridgeG,ROAD,BRIDGE,MAPE,mapDecor,battleT,ti
 {const L=$('loading');L.classList.add('ready');setTimeout(()=>L.classList.add('out'),450);setTimeout(()=>{L.hidden=true;},1100);}
 $('rkBadge').onclick=()=>nameDlg(false);
 // the first screen: setting up a new commander, the base while you are still learning, then the world map
-if(!savedFac)facDlg(true);else if(!playerName)nameDlg(true);else{enterBase();if(onboarded&&mapOn)openMap();}
+if(!savedFac)facDlg(true);else if(!playerName)nameDlg(true);else{enterBase();setOnboarded();if(mapOn)openMap();} // a returning player (faction and name already chosen) always starts on the world map
 
 }
 setTimeout(()=>{try{main();}catch(err){document.getElementById('loadTxt').textContent='Could not start: '+err.message;console.error(err);}},60);
