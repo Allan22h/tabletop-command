@@ -327,6 +327,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #mapBtn{position:fixed;z-index:19;width:56px;height:56px;border-radius:50%;border:2px solid rgba(255,255,255,.75);background:linear-gradient(#2b3a46,#141c22);color:#fff;cursor:pointer;
   display:grid;place-items:center;align-content:center;gap:0;padding:0;box-shadow:0 6px 18px rgba(0,0,0,.45);font:22px/1 system-ui,sans-serif}
 #mapBtn small{font:800 10px/1 system-ui,sans-serif;letter-spacing:.04em;margin-top:1px}
+#mapBtn.top{width:42px;height:42px;font-size:16px;border-width:1.5px}#mapBtn.top small{font-size:8px}
 #mapBtn[hidden],#app.xr #mapBtn,#app:has(#basePanel[hidden]) #mapBtn{display:none}
 #attackBtn .atkIc{width:48px;height:48px;border-radius:50%;overflow:hidden;position:relative;background:#2c2522;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
 #attackBtn .atkIc img{position:absolute;display:block;pointer-events:none;max-width:none}
@@ -1570,8 +1571,10 @@ function enterBase(keepCam){$('app').classList.remove('raid');if(state!=='base')
 function placeSideTab(){const p=$('basePanel'),t=$('sideTab');if(p&&t&&!p.hidden)t.style.left=(p.offsetLeft+p.offsetWidth-1)+'px';}
 function placeAttack(){placeSideTab();const b=$('attackBtn'),p=$('basePanel'),mb=$('mapBtn');mb.hidden=b.hidden||p.hidden||!mapOn||!onboarded;if(b.hidden||p.hidden)return;const r=p.getBoundingClientRect(),wide=r.left<=2&&r.right>=innerWidth-2;
   if(wide){b.style.bottom='auto';b.style.top=Math.max(80,r.top-b.offsetHeight-12)+'px';}else{b.style.top='';b.style.bottom='';}atkPaint();
-  // the world map button sits just left of Attack!
-  if(!mb.hidden&&b.offsetWidth){const a=b.getBoundingClientRect();mb.style.top=(a.top+(a.height-mb.offsetHeight)/2)+'px';mb.style.left=(a.left-mb.offsetWidth-10)+'px';}}
+  // the world map button: on an upright phone it sits at the top right, under the full-screen button; elsewhere just left of Attack!
+  if(!mb.hidden&&b.offsetWidth){const top=innerHeight>innerWidth&&innerWidth<700;mb.classList.toggle('top',top);if(top){const f=$('fsBtn'),fr=f&&!f.hidden&&f.offsetWidth?f.getBoundingClientRect():null;
+      mb.style.top=(Math.max(30,fr?fr.bottom:0)+12)+'px';mb.style.left=(innerWidth-mb.offsetWidth-(fr?Math.max(8,innerWidth-fr.right):8))+'px';return;}
+    const a=b.getBoundingClientRect();mb.style.top=(a.top+(a.height-mb.offsetHeight)/2)+'px';mb.style.left=(a.left-mb.offsetWidth-10)+'px';}}
 function atkPaint(){const b=$('attackBtn');if(!b||b.hidden||!b.offsetWidth)return;const d=Math.min(3,devicePixelRatio||1),W=b.offsetWidth,H=b.offsetHeight,sb=$('attackSub').textContent,key=[W,H,d,sb,document.fonts?document.fonts.status:''].join();if(b._ck===key)return;b._ck=key;
   let c=b._cv;if(!c){c=b._cv=document.createElement('canvas');b.prepend(c);}c.width=Math.round(W*d);c.height=Math.round(H*d);const x=c.getContext('2d'),br=b.getBoundingClientRect(),k=br.width/W||1;x.setTransform(d,0,0,d,0,0);
   const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#ffe08f');g.addColorStop(1,'#f0b23c');x.beginPath();rrect(x,1,1,W-2,H-2,(H-2)/2);x.fillStyle=g;x.fill();x.lineWidth=2;x.strokeStyle='#fff';x.stroke();
