@@ -3549,14 +3549,14 @@ const xtEl=$('xrTouch'),xtPts=e=>[...e.touches].slice(0,2).map(t=>({x:t.clientX,
 function screenGround(x,y){const v=rr.xr.getCamera(cam).cameras[0];if(!v)return null;const ip=new T.Matrix4().copy(v.projectionMatrix).invert();
   _o.setFromMatrixPosition(v.matrixWorld);_d.set(x/innerWidth*2-1,1-y/innerHeight*2,.5).applyMatrix4(ip).applyMatrix4(v.matrixWorld).sub(_o).normalize();
   if(_d.y>-.02)return null;const t=(boardY()-_o.y)/_d.y;return t>0&&t<30?_o.clone().addScaledVector(_d,t):null;}
-function xtGest(a,b){const mid=p=>p.length>1?{x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2}:p[0],m0=mid(a),m1=mid(b),p0=screenGround(m0.x,m0.y),p1=screenGround(m1.x,m1.y);
+function xtGest(a,b){if(globeOn){glTouchGest(a,b);return;}const mid=p=>p.length>1?{x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2}:p[0],m0=mid(a),m1=mid(b),p0=screenGround(m0.x,m0.y),p1=screenGround(m1.x,m1.y);
   if(p0&&p1){scene.position.x+=p1.x-p0.x;scene.position.z+=p1.z-p0.z;}
   if(a.length>1&&b.length>1&&p1){const d0=Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y),d1=Math.hypot(b[1].x-b[0].x,b[1].y-b[0].y);
     if(d0>10)scaleBoardAt(p1,d1/d0);turnBoardAt(p1,-wrap(Math.atan2(b[1].y-b[0].y,b[1].x-b[0].x)-Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)));}}
-xtEl.addEventListener('touchstart',e=>{e.preventDefault();const p=xtPts(e);xt={p,s:p[0],moved:p.length>1};if(xt.moved)xtGestT=performance.now();},{passive:false});
+xtEl.addEventListener('touchstart',e=>{e.preventDefault();glTouch=true;glTouchT=performance.now();const p=xtPts(e);xt={p,s:p[0],moved:p.length>1};if(xt.moved)xtGestT=performance.now();},{passive:false});
 xtEl.addEventListener('touchmove',e=>{e.preventDefault();if(!xt)return;const p=xtPts(e);if(p.length!==xt.p.length){xt.p=p;return;}
   if(!xt.moved&&Math.hypot(p[0].x-xt.s.x,p[0].y-xt.s.y)>14)xt.moved=true;if(xt.moved){xtGestT=performance.now();xtGest(xt.p,p);}xt.p=p;},{passive:false});
-xtEl.addEventListener('touchend',e=>{const p=xtPts(e);if(xt&&xt.moved)xtGestT=performance.now();xt=p.length?{p,s:p[0],moved:true}:null;});
+xtEl.addEventListener('touchend',e=>{const p=xtPts(e);if(!p.length){glTouch=false;if(performance.now()-glTouchT>80)glVel=glTiltV=0;}if(xt&&xt.moved)xtGestT=performance.now();xt=p.length?{p,s:p[0],moved:true}:null;});
 // room lighting: where the browser can estimate the real room's light (phones with ARCore; any headset that adds it), the board's sky and sun
 // take the room's color, brightness and main light direction, so the miniature looks lit by your lamp or window. Checked twice a second, eased in.
 let roomLight=null;const _rl=new T.Vector3(),_rc=new T.Color();
@@ -3582,7 +3582,7 @@ $('xrBtn').onclick=enterXR;
 /* ---------- the world map in the headset: a globe floating over the table. The flat map runs unseen in its frame and keeps the world
    (bases, shields, regions); the globe shows its picture and bases. Point at a base and pinch it, then Attack opens your army as on a phone.
    Right stick or a squeeze-and-drag spins it ---------- */
-var globeOn=false;let GL=null,glSel=null,glHover=null,glSpin=0,glSpinTo=null,glGrab=null,glQ=[],glZoom=1,glPull=null,glZoomT=1,glVel=0,glTilt=0,glTiltT=0,glTiltV=0;
+var globeOn=false;let GL=null,glSel=null,glHover=null,glSpin=0,glSpinTo=null,glGrab=null,glQ=[],glZoom=1,glPull=null,glZoomT=1,glVel=0,glTilt=0,glTiltT=0,glTiltV=0,glTouch=false,glTouchT=0;
 const GL_R=.22,GL_FN={nato:'USA / NATO',ru:'Russia',cn:'China',eu:'Europe / Middle East'},GL_FC={nato:'#4f86d9',ru:'#d0533f',cn:'#e0b23a',eu:'#4fae7a'};
 function glTex(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.anisotropy=4;return {c,x:c.getContext('2d'),t};}
 // the map's frame, made if needed and kept out of sight; waits until its world is ready
@@ -3644,7 +3644,7 @@ function glDrawCard(){if(!GL)return;const {x,c,t}=GL.card;x.clearRect(0,0,c.widt
   x.fillStyle='rgba(16,20,17,.94)';rrect(x,6,6,888,548,34);x.fill();x.strokeStyle='rgba(255,255,255,.14)';x.lineWidth=3;x.stroke();x.textBaseline='middle';
   const btn=(X,w,label,hi,act)=>{x.fillStyle=hi?'#f2c46b':'rgba(255,255,255,.09)';rrect(x,X,420,w,100,22);x.fill();x.fillStyle=hi?'#1a1408':'#fff';x.font='800 36px sans-serif';x.textAlign='center';x.fillText(label,X+w/2,472);x.textAlign='left';glBtns.card.push([X,X+w,act]);};
   if(!glSel){x.fillStyle='#ffd27a';x.font='800 50px sans-serif';x.fillText('WORLD MAP',44,90);x.fillStyle='#d8dccf';x.font='500 32px sans-serif';
-    [Verb()+' an enemy base on the globe to see it.','Find a match picks one near your HQ level.','Swipe with the trigger to spin it. Stick: zoom.'].forEach((s,i)=>x.fillText(s,44,180+i*58));
+    [Verb()+' an enemy base on the globe to see it.','Find a match picks one near your HQ level.',xtEl.hidden?'Swipe with the trigger to spin it. Stick: zoom.':'Drag to spin it. Pinch with two fingers to zoom.'].forEach((s,i)=>x.fillText(s,44,180+i*58));
     btn(44,380,'Find a match',1,'match');t.needsUpdate=true;return;}
   const m=glSel.m,col=m.t==='me'?'#ffd27a':GL_FC[m.f];x.fillStyle=col;rrect(x,44,44,96,96,20);x.fill();x.fillStyle='#fff';x.font='800 46px sans-serif';x.textAlign='center';x.fillText(m.t==='me'?'★':m.hq,92,94);x.textAlign='left';
   let fs=52;x.font=`800 ${fs}px sans-serif`;const nm=m.t==='me'?'Your base':m.n;while(x.measureText(nm).width>620&&fs>28){fs-=2;x.font=`800 ${fs}px sans-serif`;}x.fillText(nm,168,80);
@@ -3672,7 +3672,13 @@ function globeSelect(c){if(!GL)return;ctrlRay(c);
 // A short press without sweeping still picks a base.
 const glQi=new T.Quaternion(),glQc=new T.Quaternion(),glDir=new T.Vector3();
 function glAim(c){GL.holder.getWorldQuaternion(glQi).invert();c.getWorldQuaternion(glQc);glDir.set(0,0,-1).applyQuaternion(glQc).applyQuaternion(glQi);return [Math.atan2(glDir.x,-glDir.z),Math.asin(Math.max(-1,Math.min(1,glDir.y)))];}
-function glSwipeStart(c){if(!GL)return;ctrlRay(c);if(ray.intersectObjects([GL.cardM,GL.stripM],false)[0])return;const [y,p]=glAim(c);c.userData.sw={y,p,y0:y,p0:p,moved:false};}
+function glSwipeStart(c){if(!GL||!xtEl.hidden)return; // on a phone the screen's own touches turn the globe
+ctrlRay(c);if(ray.intersectObjects([GL.cardM,GL.stripM],false)[0])return;const [y,p]=glAim(c);c.userData.sw={y,p,y0:y,p0:p,moved:false};}
+// phone: drag to spin and tilt, pinch to zoom; it coasts when you lift your finger
+function glTouchGest(a,b){if(!GL)return;const now=performance.now(),dt=Math.max(.008,Math.min(.1,(now-glTouchT)/1000));glTouchT=now;glSpinTo=null;
+  if(a.length>1&&b.length>1){const d0=Math.hypot(a[1].x-a[0].x,a[1].y-a[0].y),d1=Math.hypot(b[1].x-b[0].x,b[1].y-b[0].y);if(d0>10)glZoomT*=d1/d0;glVel=glTiltV=0;return;}
+  const k=3/Math.max(320,Math.min(innerWidth,innerHeight))/glZoom,dy=(b[0].x-a[0].x)*k,dp=(b[0].y-a[0].y)*k;
+  glSpin+=dy;glTiltT+=dp;glVel+=(dy/dt*.45-glVel)*.5;glTiltV+=(dp/dt*.45-glTiltV)*.5;}
 function globeFrame(dt){if(!GL)return;const hp=V().setFromMatrixPosition(headCam().matrixWorld);dt=Math.min(dt,.05);
   // as smooth as the browser globe: the stick and the hand set a speed or a target, the globe eases toward it and coasts when let go
   // stick: left/right spins, up/down zooms, both with a soft start so small pushes turn it slowly
@@ -3693,7 +3699,7 @@ function globeFrame(dt){if(!GL)return;const hp=V().setFromMatrixPosition(headCam
   if(sq){const lp=GL.holder.worldToLocal(sq.position.clone()),a=Math.atan2(lp.x,lp.z),e=Math.atan2(lp.y,Math.hypot(lp.x,lp.z));
     if(glGrab&&glGrab.c===sq){const da=wrap(a-glGrab.a),de=e-glGrab.e;glSpin+=da;glTiltT-=de;glVel+=(da/dt-glVel)*Math.min(1,dt*12);glTiltV+=(-de/dt-glTiltV)*Math.min(1,dt*12);glSpinTo=null;}
     else{glVel=0;glTiltV=0;}glGrab={c:sq,a,e};}
-  else if(!swiping){glGrab=null;if(!stickSpin)glVel*=Math.exp(-dt*2.2);glTiltT+=glTiltV*dt;glTiltV*=Math.exp(-dt*3);if(glSpinTo==null)glSpin+=glVel*dt;}
+  else if(!swiping&&!glTouch){glGrab=null;if(!stickSpin)glVel*=Math.exp(-dt*2.2);glTiltT+=glTiltV*dt;glTiltV*=Math.exp(-dt*3);if(glSpinTo==null)glSpin+=glVel*dt;}
   if(Math.abs(glVel)<.002)glVel=0;
   if(glSpinTo!=null){glVel=0;const d=wrap(glSpinTo-glSpin);glSpin+=d*Math.min(1,dt*4);if(Math.abs(d)<.002)glSpinTo=null;}
   glTiltT=Math.min(.9,Math.max(-.7,glTiltT));glTilt+=(glTiltT-glTilt)*Math.min(1,dt*14);
