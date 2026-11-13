@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Tabletop Command Raid</title><meta name="color-scheme" content="dark only"><meta name="theme-color" content="#0e1210"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tablecombat</title><meta name="color-scheme" content="dark only"><meta name="theme-color" content="#0e1210"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -311,7 +311,10 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 #settings .sheet{max-height:calc(100% - 24px);overflow:auto;gap:14px}
 .setgrp{display:grid;gap:4px}
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);cursor:pointer}
-.setrow>span:first-child{display:grid;gap:2px;font-weight:600}.setrow small{font-weight:400;font-size:12px;color:var(--muted)}
+.setrow>span:first-child{display:grid;gap:2px;font-weight:600}
+#acctRow{flex-wrap:wrap}#acctRow>span:first-child{flex:1 1 220px}
+.acctform{display:grid;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}.acctform small{font-size:12px;color:var(--muted)}
+.acctform input{font:600 16px var(--f-mono);padding:11px 13px;border-radius:12px;border:1px solid var(--edge);background:rgba(0,0,0,.35);color:var(--ink);min-width:0}.setrow small{font-weight:400;font-size:12px;color:var(--muted)}
 .setrow input{appearance:none;-webkit-appearance:none;flex:none;width:44px;height:26px;border-radius:999px;background:rgba(255,255,255,.18);position:relative;cursor:pointer;transition:background .2s;margin:0}
 .setrow input::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
 .setrow input:checked{background:var(--gold)}.setrow input:checked::after{transform:translateX(18px)}
@@ -441,7 +444,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   <div class="screen" id="menu">
     <div class="sheet">
       <span class="lbl">Raid prototype · <span id="mapName">Operation Iron Delta</span></span>
-      <h1>Tabletop <span>Command</span></h1>
+      <h1>Table<span>combat</span></h1>
       <div class="rank" id="rkBadge" role="button" tabindex="0" title="Change your name" aria-label="Your rank and base. Tap to change your name."><span id="rkIns"></span><div class="rk"><b id="rkName">Recruit</b><div class="xp"><i id="rkFill"></i></div><span id="rkSub"></span></div><span class="rkhq">Your HQ<b id="rkHq">3</b></span></div>
       <p>Deploy units from your cards, break into the compound and destroy the HQ before the 4-minute timer runs out. Loot drops from every building you destroy.</p>
       <div style="display:grid;gap:8px"><span class="lbl">Map</span>
@@ -479,7 +482,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
       <div class="setrow"><span id="setName">Name<small></small></span><button type="button" class="tbtn" id="setNameBtn">Change</button></div>
       <div class="setrow"><span id="setFac">Faction<small></small></span><button type="button" class="tbtn" id="setFacBtn">Change</button></div></div>
     <div class="setgrp"><span class="lbl">Account</span>
-      <div class="setrow"><span>Save your base online<small>Link Google, Apple or email so you never lose your base. Coming with online play.</small></span><button type="button" class="tbtn" disabled>Soon</button></div></div>
+      <div class="setrow" id="acctRow"><span id="acctSt">Offline<small>Your base is saved on this device</small></span><span style="display:flex;gap:6px;flex:none"><button type="button" class="tbtn" id="acctLink">Save with email</button><button type="button" class="tbtn" id="acctIn">Sign in</button><button type="button" class="tbtn" id="acctOut" hidden>Sign out</button></span></div>
+      <div class="acctform" id="acctForm" hidden><small id="acctHelp"></small>
+        <input id="acctEmail" type="email" autocomplete="email" spellcheck="false" maxlength="254" placeholder="you@example.com">
+        <input id="acctCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code from the email" hidden>
+        <div class="namemsg" id="acctMsg"></div>
+        <span style="display:flex;gap:6px"><button type="button" class="primary" id="acctGo" style="flex:1">Send code</button><button type="button" class="secondary" id="acctX">Cancel</button></span></div></div>
     <div class="setgrp"><span class="lbl">Prototype testing</span>
       <label class="setrow"><span>World map<small>Attack! opens the map. Off: Attack! starts a quick raid</small></span><input type="checkbox" id="mapOnSet"></label>
       <label class="setrow"><span>Faction change any day<small>Normally only days 1 to 3 of each month, once a month</small></span><input type="checkbox" id="facAny"></label>
@@ -3063,7 +3071,8 @@ function rankLine(xp,lv){if(lv.pending){const nr=lv.r+1;return `Level ${lv.L} ·
   return `Level ${lv.L} of 200 · ${fmtN(xp-levelXp(lv.L))} / ${fmtN(levelXp(lv.L+1)-levelXp(lv.L))} XP to ${levelName(lv.L+1,cur)}`;}
 /* ---------- the commander's name: chosen on first launch, names the base, and is how the radio addresses you ---------- */
 let playerName='';try{playerName=localStorage.getItem('tc.name')||'';}catch(_){}
-const NAME_OK=/^[\p{L}\p{N} ]{3,15}$/u,cleanName=v=>v.replace(/\s+/g,' ').trim(),nameKey=v=>cleanName(v).toLowerCase();
+// plain letters only, as the server requires: look-alike letters from other alphabets could copy someone's name
+const NAME_OK=/^[A-Za-z0-9 ]{3,15}$/,cleanName=v=>v.replace(/\s+/g,' ').trim(),nameKey=v=>cleanName(v).toLowerCase();
 // names are unique ignoring capitals. Until the server exists this list stands in for names other players already hold
 const TAKEN_NAMES=['ghost','viper','maverick','reaper','iron wolf','alpha','desert fox','shadow','hunter','wolf','falcon','nomad','specter','atlas','rook'];
 const BLOCKED=['nazi','hitler','fuck','shit','bitch','cunt','nigg','fag','rape','whore'];
@@ -3082,22 +3091,32 @@ function nameIdeas(v){const b=cleanName(v),out=[];for(const e of[' '+(10+Math.fl
 const baseName=()=>playerName?playerName+' Base':'My base';
 const whoAmI=()=>{const lv=levelFor(serviceXp,PLAYER_HQ);return rankName(lv.r,cur)+(playerName?' '+playerName:'');};
 const SUGGEST=['Falcon','Ironside','Nomad','Granite','Vega','Kestrel','Rook','Bastion','Halberd','Specter','Atlas','Wolfram'];
-function nameDlg(first){const el=$('nameDlg'),inp=$('nameIn'),pv=$('namePv'),ok=$('nameOk'),msg=$('nameMsg'),sg=$('nameSugs');
+function nameDlg(first,why){const el=$('nameDlg'),inp=$('nameIn'),pv=$('namePv'),ok=$('nameOk'),msg=$('nameMsg'),sg=$('nameSugs');
   // a first name is free; later changes follow the rename rules
   const wait=first?0:renameDays(),paid=!first&&renames>0;
   $('nameLbl').textContent=first?(localStorage.getItem('tc.fac')?'Step 2 of 2 · Commander name':'Commander name'):'Change name';
   el.hidden=false;inp.value=first?'':playerName;$('nameCancel').hidden=!!first;
   $('nameCost').textContent=first?'Nobody else can use your name.':wait?`You changed your name recently. Next change in ${wait} day${wait>1?'s':''}.`:
     paid?`This change costs ${fmtN(RENAME_COST)} gold. After it you wait 30 days to change again.`:'Your first change is free. After it, each change costs 500 gold and you wait 30 days.';
+  if(why)$('nameCost').textContent=why;
   inp.disabled=!!wait;$('nameRnd').disabled=!!wait;
   const upd=()=>{const v=cleanName(inp.value),r=checkName(inp.value);ok.disabled=!r.ok||!!wait;const lv=levelFor(serviceXp,PLAYER_HQ);
     msg.textContent=r.m;msg.className='namemsg'+(r.m?r.ok?' good':' bad':'');
     sg.innerHTML=r.taken?nameIdeas(v).map(x=>`<button type="button">${x}</button>`).join(''):'';sg.querySelectorAll('button').forEach(b=>b.onclick=()=>{inp.value=b.textContent;upd();});
-    pv.innerHTML=r.ok?`Base: <b>${v} Base</b> · Radio: <b>“${rankName(lv.r,cur)} ${v}, objective taken.”</b>`:'';xrDirty=true;};
+    pv.innerHTML=r.ok?`Base: <b>${v} Base</b> · Radio: <b>“${rankName(lv.r,cur)} ${v}, objective taken.”</b>`:'';xrDirty=true;
+    // online, the server knows every name in use: ask it once typing pauses
+    clearTimeout(nameDlg.t);if(r.ok&&!wait&&NET&&NET.st.on){const id=nameDlg.id=(nameDlg.id||0)+1;
+      nameDlg.t=setTimeout(()=>NET.nameFree(v).then(a=>{if(id!==nameDlg.id||a==='ok')return;ok.disabled=true;
+        msg.textContent=a==='taken'?`“${v}” is taken`:'That name is not allowed';msg.className='namemsg bad';xrDirty=true;}).catch(()=>{}),350);}};
   inp.oninput=upd;upd();if(!wait)setTimeout(()=>inp.focus(),50);
   $('nameRnd').onclick=()=>{let v;do{v=SUGGEST[Math.floor(Math.random()*SUGGEST.length)]+' '+(10+Math.floor(Math.random()*90));}while(!checkName(v).ok);inp.value=v;upd();};
-  const done=()=>{const v=cleanName(inp.value);if(wait||!checkName(v).ok)return;
-    if(paid){if(BASE.res.g<RENAME_COST){msg.textContent=`You need ${fmtN(RENAME_COST)} gold for this change.`;msg.className='namemsg bad';return;}BASE.res.g-=RENAME_COST;saveBase();if(state==='base')baseHud();}
+  const done=()=>{const v=cleanName(inp.value);if(wait||!checkName(v).ok||ok.disabled)return;
+    if(paid&&BASE.res.g<RENAME_COST){msg.textContent=`You need ${fmtN(RENAME_COST)} gold for this change.`;msg.className='namemsg bad';return;}
+    // online the server claims the name (two players can't both get it); offline it is claimed on the next start
+    if(NET&&NET.st.on){ok.disabled=true;NET.claimName(v).then(a=>{if(a==='ok')return fin(v);ok.disabled=false;msg.className='namemsg bad';
+      msg.textContent=a==='taken'?`“${v}” is taken`:a==='wait'?'You changed your name recently. Try again later.':'That name is not allowed';xrDirty=true;}).catch(()=>fin(v));}
+    else fin(v);};
+  const fin=v=>{if(paid){BASE.res.g-=RENAME_COST;saveBase();if(state==='base')baseHud();}
     if(!first){renames++;renameAt=Date.now();try{localStorage.setItem('tc.renames',String(renames));localStorage.setItem('tc.renameAt',String(renameAt));}catch(_){}}
     playerName=v;try{localStorage.setItem('tc.name',v);}catch(_){}el.hidden=true;renderBadge();if(state==='base'){baseHud();renderBasePanel();}xrDirty=true;if(first&&state==='menu')enterBase();};
   ok.onclick=done;inp.onkeydown=e=>{if(e.key==='Enter')done();};$('nameCancel').onclick=()=>{el.hidden=true;};}
@@ -3445,7 +3464,7 @@ function drawXR(){if(!xrMode||!xrDirty)return;xrDirty=false;
     if(state==='base'){const lv=levelFor(serviceXp,PLAYER_HQ),im=insigniaImg(lv.r),nm=rankAbbr(lv.r,cur)+(playerName?' '+playerName:'');
       if(im.complete&&im.naturalWidth)x.drawImage(im,22,12,76,76);let fs=58;x.font=`700 ${fs}px sans-serif`;while(x.measureText(nm).width>510&&fs>22){fs-=2;x.font=`700 ${fs}px sans-serif`;}
       x.fillText(nm,108,72);x.font='600 28px sans-serif';x.textAlign='right';x.fillText('Lv '+lv.sub+' · HQ '+PLAYER_HQ,780,70);x.textAlign='left';}
-    else{x.fillText(state==='menu'?'TABLETOP COMMAND':fmtClock(timeLeft),28,74);
+    else{x.fillText(state==='menu'?'TABLECOMBAT':fmtClock(timeLeft),28,74);
     x.font='600 40px sans-serif';if(state==='menu'){const lv=levelFor(serviceXp,PLAYER_HQ);x.font='600 30px sans-serif';x.fillText(levelName(lv.L,cur)+' · HQ '+PLAYER_HQ,470,70);}
     else{x.fillText('★'.repeat(s.stars)+'☆'.repeat(3-s.stars)+'  '+s.pct+'%',230,70);x.fillStyle='#ff9a7a';x.font='600 32px sans-serif';x.fillText('Enemy HQ '+enemyHq(),560,68);}}
     x.fillStyle='#f1ede2';x.font='500 30px sans-serif';{const src=state==='base'||state==='menu'?BASE.res:Object.assign({},loot,{i:BASE.res.i});let px=28;RES.forEach(k=>{const im=RES_IMG[k];if(im&&im.complete){x.drawImage(im,px,90,40,40);px+=44;}x.fillText(fmtN(src[k]||0),px,122);px+=x.measureText(fmtN(src[k]||0)).width+26;});}
@@ -3773,7 +3792,7 @@ function facDlg(first){const el=$('facDlg'),ok=$('facOk');let pick=first?null:nu
     ok.disabled=!pick;ok.textContent=pick?(first?'Continue':'Join '+FAC_NAME[pick]):'Pick a faction';xrDirty=true;};
   document.querySelectorAll('#facPick [data-pick]').forEach(b=>b.onclick=()=>{pick=b.dataset.pick;draw();});draw();
   ok.onclick=()=>{if(!pick)return;try{localStorage.setItem('tc.fac',pick);if(!first)localStorage.setItem('tc.facSeason',seasonKey());}catch(_){}
-    if(savedFac&&savedFac!==pick)resetMap();savedFac=pick;setFaction(pick);el.hidden=true;xrDirty=true;if(first&&!playerName)nameDlg(true);else if(first){if(state==='menu')enterBase();}else openSettings(true);};
+    if(savedFac&&savedFac!==pick)resetMap();savedFac=pick;if(NET&&NET.st.on)NET.setFaction(pick).catch(()=>{});setFaction(pick);el.hidden=true;xrDirty=true;if(first&&!playerName)nameDlg(true);else if(first){if(state==='menu')enterBase();}else openSettings(true);};
   $('facCancel').onclick=()=>{el.hidden=true;openSettings(true);};}
 // falling snow for the winter map: flakes drift down over the board and wrap back to the top
 const snowfall=(()=>{const n=900,p=new Float32Array(n*3);for(let i=0;i<n;i++){p[i*3]=rand(-12,12);p[i*3+1]=rand(0,9);p[i*3+2]=rand(-8,12);}
@@ -4029,6 +4048,106 @@ window.__tcDebug={get dbg(){return {bridgeG,ROAD,BRIDGE,MAPE,mapDecor,battleT,ti
 $('rkBadge').onclick=()=>nameDlg(false);
 // the first screen: setting up a new commander, the base while you are still learning, then the world map
 if(!savedFac)facDlg(true);else if(!playerName)nameDlg(true);else{enterBase();setOnboarded();if(mapOn)openMap();} // a returning player (faction and name already chosen) always starts on the world map
+
+/* ---------- online: a guest account made on first start, names and factions checked by the server, email-code sign-in and a cloud copy of the save.
+   Talks to Supabase with plain fetch (no third-party script on the page). Only the publishable key lives here: the database's own rules
+   (row level security, checked functions) decide what a player may read or change. Offline, or if the server is down, the game plays as before ---------- */
+var NET=(()=>{
+  const LIVE='https://aijclbdleodaoypcwkkt.supabase.co',KEY='sb_publishable_R93RYgRRIzshBdyEGyF5qA_pF4iplw0';
+  // a test server can stand in only while the page itself runs on this computer, so a link can never send players' sign-ins elsewhere
+  let URL_=LIVE;try{const q=new URLSearchParams(location.search).get('sb'),h=location.hostname;
+    if(q&&/^(localhost|127\.0\.0\.1|\[::1\])$/.test(h)&&/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(q))URL_=q;}catch(_){}
+  const ls={get:k=>{try{return localStorage.getItem(k);}catch(_){return null;}},set:(k,v)=>{try{localStorage.setItem(k,v);}catch(_){}},del:k=>{try{localStorage.removeItem(k);}catch(_){}}};
+  let ses=null;try{ses=JSON.parse(ls.get('tc.auth')||'null');}catch(_){}
+  const st={on:false,email:null,busy:false,err:''};
+  const keep=s=>{ses=s?{a:s.access_token,r:s.refresh_token,x:(s.expires_at||Math.floor(Date.now()/1e3)+(s.expires_in||3600)),id:s.user&&s.user.id,email:s.user&&s.user.email||null}:null;
+    if(ses){ls.set('tc.auth',JSON.stringify(ses));st.email=ses.email;}else ls.del('tc.auth');};
+  async function call(path,o={}){const h={apikey:KEY,'Content-Type':'application/json'};if(o.auth!==false&&ses)h.Authorization='Bearer '+ses.a;
+    const r=await fetch(URL_+path,{method:o.method||'POST',headers:Object.assign(h,o.headers||{}),body:o.body===undefined?undefined:JSON.stringify(o.body),keepalive:!!o.keepalive});
+    const t=await r.text();let j=null;try{j=t?JSON.parse(t):null;}catch(_){}
+    if(!r.ok){const e=new Error((j&&(j.msg||j.message||j.error_description||j.error))||('HTTP '+r.status));e.status=r.status;e.code=j&&(j.error_code||j.code);throw e;}return j;}
+  // a session that works: refreshed when near its end, or a new guest account when there is none
+  async function ready(){if(ses&&ses.x-60>Date.now()/1e3)return true;
+    if(ses&&ses.r){try{keep(await call('/auth/v1/token?grant_type=refresh_token',{auth:false,body:{refresh_token:ses.r}}));return true;}
+      catch(e){if(e.status>=400&&e.status<500)keep(null);else return false;}}
+    try{keep(await call('/auth/v1/signup',{auth:false,body:{}}));return true;}catch(_){return false;}}
+  const rpc=async(f,a)=>{if(!await ready())throw new Error('offline');return call('/rest/v1/rpc/'+f,{body:a||{}});};
+
+  /* the cloud save: every tc.* setting of this device except the sign-in itself and test switches */
+  const SKIP=new Set(['tc.auth','tc.localAt','tc.pushed','tc.perf','tc.unlockAll','tc.facAny','tc.base.bak']);
+  const mine=k=>k&&k.startsWith('tc.')&&!SKIP.has(k);
+  function snap(){const o={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(mine(k))o[k]=localStorage.getItem(k);}}catch(_){}return o;}
+  // a short fingerprint of the save, to know whether it changed since it last went up
+const sig=o=>{const t=JSON.stringify(Object.keys(o).sort().map(k=>[k,o[k]]));let h=0x811c9dc5;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(36)+'.'+t.length;};
+  // a save from the server is checked before it touches this device: only tc.* text values, nothing oversized
+  function valid(d){if(!d||typeof d!=='object'||d.v!==1||typeof d.at!=='number'||!d.ls||typeof d.ls!=='object')return false;
+    let n=0;for(const k in d.ls){if(!mine(k)||typeof d.ls[k]!=='string')return false;n+=k.length+d.ls[k].length;}return n<95000;}
+  function apply(d){try{const old=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(mine(k))old.push(k);}old.forEach(k=>localStorage.removeItem(k));}catch(_){}
+    for(const k in d.ls)ls.set(k,d.ls[k]);ls.set('tc.localAt',String(d.at));ls.set('tc.pushed',sig(d.ls));}
+  async function pull(){const r=await call('/rest/v1/saves?select=data&user_id=eq.'+encodeURIComponent(ses.id),{method:'GET'});return r&&r[0]?r[0].data:null;}
+  // a copy without a base (storage wiped while the game is open, or a brand-new player) never replaces the one online
+  async function push(force,keepalive){if(!st.on||!ses||!ls.get('tc.auth'))return;const o=snap(),s=sig(o);if(!o['tc.base']||(!force&&s===ls.get('tc.pushed')))return;
+    const at=Date.now();ls.set('tc.localAt',String(at));
+    try{await call('/rest/v1/saves?on_conflict=user_id',{headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:{user_id:ses.id,data:{v:1,at,ls:o}},keepalive});ls.set('tc.pushed',s);}
+    catch(e){if(e.status===401&&await ready())try{await call('/rest/v1/saves?on_conflict=user_id',{headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:{user_id:ses.id,data:{v:1,at,ls:o}}});ls.set('tc.pushed',s);}catch(_){}}}
+  // newest wins: a newer copy from another device replaces this one (and the game restarts on it); otherwise this device's copy goes up
+  async function sync(){const d=await pull();const local=+ls.get('tc.localAt')||0;
+    if(d&&valid(d)&&d.at>local&&sig(d.ls)!==sig(snap())){apply(d);location.reload();return true;}
+    await push(!d);return false;}
+
+  /* names and factions: the server has the final word */
+  async function profile(){const r=await rpc('my_profile');const p=r&&r[0]||{};
+    if(p.name&&p.name!==playerName){playerName=p.name;ls.set('tc.name',p.name);renderBadge();}
+    else if(!p.name&&playerName){const r2=await rpc('claim_name',{n:playerName});
+      if(r2==='taken'){ls.del('tc.name');playerName='';renderBadge();nameDlg(true,'Another commander already has your name. Pick a new one.');}}
+    if(p.faction&&p.faction!==savedFac&&FAC_NAME[p.faction]){ls.set('tc.fac',p.faction);if(savedFac)resetMap();savedFac=p.faction;setFaction(p.faction);}
+    else if(!p.faction&&savedFac)await rpc('set_faction',{f:savedFac});}
+
+  // no server at start (offline, or it is down): the game plays on this device and tries again every minute
+  let timer=0;
+  async function start(){if(!await ready())return void setTimeout(start,60000);st.on=true;st.email=ses.email;
+    try{if(await sync())return;await profile();}catch(e){if(!e.status){st.on=false;return void setTimeout(start,60000);}console.warn('online:',e.message);}
+    if(timer)return;timer=setInterval(()=>push(false),30000);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)push(false,true);});}
+
+  /* email codes: a guest adds an email to keep the base, or signs in to an account made on another device */
+  async function sendCode(email,link){st.err='';
+    if(link){if(!await ready())throw new Error('offline');await call('/auth/v1/user',{method:'PUT',body:{email}});}
+    else await call('/auth/v1/otp',{auth:false,body:{email,create_user:false}});}
+  async function verify(email,token,link){
+    const r=await call('/auth/v1/verify',{auth:link,body:{type:link?'email_change':'email',email,token}});
+    if(r&&r.access_token)keep(r);else if(link){ses.x=0;await ready();}
+    if(ses&&link&&!ses.email){ses.email=email;ls.set('tc.auth',JSON.stringify(ses));}st.email=ses&&ses.email;
+    if(!link){ls.del('tc.localAt');const d=await pull();if(d&&valid(d)){apply(d);location.reload();}else await push(true);}}
+  async function signOut(){try{await call('/auth/v1/logout',{body:{}});}catch(_){}keep(null);st.on=false;
+    // this device keeps playing on a fresh guest account; the signed-out account's base stays safe online
+    try{const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('tc.'))ks.push(k);}ks.forEach(k=>localStorage.removeItem(k));}catch(_){}location.reload();}
+
+  return {st,start,push,nameFree:n=>rpc('name_free',{n}),claimName:n=>rpc('claim_name',{n}),setFaction:f=>rpc('set_faction',{f}),sendCode,verify,signOut};
+})();
+// Settings → Account: the state of this device's account, and the email-code steps (text only, never as HTML)
+{let mode=null,step=0,mail='',coolUntil=0;
+  const f=$('acctForm'),em=$('acctEmail'),cd=$('acctCode'),go=$('acctGo'),msg=$('acctMsg'),say=(t,bad)=>{msg.textContent=t;msg.className='namemsg'+(t?bad?' bad':' good':'');xrDirty=true;};
+  const EMAIL=/^[^\s@]{1,64}@[^\s@]{1,190}\.[A-Za-z]{2,24}$/;
+  function acctSync(){const st=NET.st,t=$('acctSt');t.firstChild.textContent=!st.on?'Offline ':st.email?'Signed in ':'Guest account ';
+    t.querySelector('small').textContent=!st.on?'Your base is saved on this device. It goes online when the server can be reached':st.email?st.email+' · your base is saved online':'Saved online on this device only. Add an email to keep it if this device is lost';
+    $('acctLink').hidden=!st.on||!!st.email;$('acctIn').hidden=!st.on||!!st.email;$('acctOut').hidden=!st.on||!st.email;if(!st.on)f.hidden=true;}
+  function open(m){mode=m;step=0;f.hidden=false;em.hidden=false;em.disabled=false;cd.hidden=true;cd.value='';go.textContent='Send code';say('');
+    $('acctHelp').textContent=m==='link'?'We email you a code. Your base then stays with that email, on any device.':'Sign in with the email you saved your base with. This replaces the base on this device with that one.';
+    setTimeout(()=>em.focus(),50);}
+  const errText=e=>/rate|seconds|too many/i.test(e.message)?'Too many tries. Wait a minute and try again.':/already|exists|registered/i.test(e.message)?'That email already has a base. Use Sign in instead.':
+    /expired|invalid|token/i.test(e.message)?'That code is wrong or has expired.':/not.*found|signups not allowed/i.test(e.message)?'No base is saved with that email.':'Could not reach the server. Try again.';
+  async function next(){if(go.disabled)return;
+    if(step===0){mail=em.value.trim();if(!EMAIL.test(mail))return say('Enter a valid email address.',true);if(Date.now()<coolUntil)return say('Wait a minute before asking for another code.',true);
+      go.disabled=true;say('Sending…');try{await NET.sendCode(mail,mode==='link');coolUntil=Date.now()+60000;step=1;em.disabled=true;cd.hidden=false;go.textContent='Confirm';say('Code sent. Check your email (and spam).');setTimeout(()=>cd.focus(),50);}
+      catch(e){say(errText(e),true);}go.disabled=false;}
+    else{const c=cd.value.replace(/\D/g,'');if(c.length<6||c.length>10)return say('Enter the code from the email.',true);
+      go.disabled=true;say('Checking…');try{await NET.verify(mail,c,mode==='link');f.hidden=true;acctSync();prompt('Your base is saved with your email',3);}catch(e){say(errText(e),true);}go.disabled=false;}}
+  $('acctLink').onclick=()=>open('link');$('acctIn').onclick=()=>open('in');$('acctX').onclick=()=>{f.hidden=true;xrDirty=true;};go.onclick=next;
+  em.onkeydown=cd.onkeydown=e=>{if(e.key==='Enter')next();};
+  $('acctOut').onclick=()=>{if(confirm('Sign out? Your base stays saved with your email. This device starts a new guest base.'))NET.signOut();};
+  const _sync=syncSettings;syncSettings=function(){_sync();acctSync();};}
+NET.start();
 
 }
 setTimeout(()=>{try{main();}catch(err){document.getElementById('loadTxt').textContent='Could not start: '+err.message;console.error(err);}},60);
